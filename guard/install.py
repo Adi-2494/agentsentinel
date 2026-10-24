@@ -1,6 +1,6 @@
-"""Register the Live Guard hook in a project's .claude/settings.json.
+"""Register the Live Guard hooks for Claude Code (.claude/settings.json) or Cursor (.cursor/hooks.json).
 
-Usage: python guard/install.py /path/to/project
+Usage: python guard/install.py [--cursor] /path/to/project
 Existing settings and other hooks are kept; re-running is safe.
 """
 import json
@@ -13,9 +13,35 @@ MATCHER = "Read|Bash|Write|Edit|MultiEdit|NotebookEdit|Grep|Glob"
 POST_MATCHER = "Bash|Read|Grep|WebFetch|WebSearch|mcp__.*"
 
 
-def hook_command() -> str:
+CURSOR_EVENTS = {  # event -> matcher ("" = everything)
+    "beforeShellExecution": "",
+    "beforeReadFile": "",
+    "preToolUse": "Write|Edit|MultiEdit|StrReplace|Create|ApplyPatch",
+    "beforeMCPExecution": "",
+    "afterShellExecution": "",
+}
+
+
+def hook_command(script: str = "claude_hook.py") -> str:
     python = ROOT / ".venv" / "bin" / "python"
-    return f'"{python if python.exists() else sys.executable}" "{ROOT / "guard" / "claude_hook.py"}"'
+    return f'"{python if python.exists() else sys.executable}" "{ROOT / "guard" / script}"'
+
+
+def install_cursor(project: Path) -> Path:
+    path = project / ".cursor" / "hooks.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    config = json.loads(path.read_text()) if path.exists() else {}
+    config.setdefault("version", 1)
+    cmd = hook_command("cursor_hook.py")
+    for event, matcher in CURSOR_EVENTS.items():
+        entries = config.setdefault("hooks", {}).setdefault(event, [])
+        entries[:] = [e for e in entries if "cursor_hook.py" not in e.get("command", "")]
+        entry = {"command": cmd, "timeout": 10}
+        if matcher:
+            entry["matcher"] = matcher
+        entries.append(entry)
+    path.write_text(json.dumps(config, indent=2) + "\n")
+    return path
 
 
 def install(project: Path) -> Path:
@@ -34,6 +60,9 @@ def install(project: Path) -> Path:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    args = [a for a in sys.argv[1:] if a != "--cursor"]
+    if len(args) != 1:
         sys.exit(__doc__)
-    print(f"Hook installed in {install(Path(sys.argv[1]).expanduser().resolve())}")
+    target = Path(args[0]).expanduser().resolve()
+    done = install_cursor(target) if "--cursor" in sys.argv else install(target)
+    print(f"Hooks installed in {done}")

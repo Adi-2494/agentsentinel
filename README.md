@@ -69,7 +69,8 @@ Developer's laptop                          GitHub
 | B3 | ⭐ Two-view manipulation check | ✅ |
 | B4 | AI-trap scanner for PR text, comments, `CLAUDE.md`, `.cursorrules`, MCP configs, `.claude/settings.json` hooks; rules plus one Claude Haiku call for reworded tricks | ✅ |
 | B5 | PR comment and failing check | ✅ |
-| | Cursor hook and MCP server | 🔜 Planned |
+| | Cursor hook: shell, file reads, writes and MCP calls (`.cursor/hooks.json`) | ✅ built and tested against Cursor's documented hook format; not yet run in live Cursor |
+| | MCP server with `check_command`, `check_file_content`, `scan_text_for_injection` (rules only) | ✅ tested live in Claude Code |
 | | Benchmark: with vs without AgentSentinel across Claude models | 🔜 Planned |
 
 ## Results so far
@@ -105,7 +106,7 @@ git clone https://github.com/Adi-2494/agentsentinel.git
 cd agentsentinel
 python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
 cp .env.example .env          # LLM_BACKEND=claude_code, MAIN_MODEL=sonnet, CHECK_MODEL=haiku
-.venv/bin/pytest -q           # 235 tests, no Claude calls
+.venv/bin/pytest -q           # 255 tests, no Claude calls
 ```
 
 ### A. Live Guard (Claude Code)
@@ -126,6 +127,28 @@ Decisions:
 - **CRITICAL / HIGH**: denied, and Claude is told why
 - **MEDIUM** (e.g. a fetch from an unlisted host): you're asked to confirm
 - If the guard itself crashes, it **fails open** (allows and prints a warning) so a bug can't freeze your session
+
+### Cursor
+
+```bash
+.venv/bin/python guard/install.py --cursor /path/to/your/project
+```
+
+This writes `.cursor/hooks.json` with the same rules wired to Cursor's events:
+
+- `beforeShellExecution`: risky commands, and AI traps in files that `cat`/`grep` would print (allow / ask / deny)
+- `beforeReadFile`: secret files, and AI traps or secrets in the content (allow / deny)
+- `preToolUse` (Write/Edit): secrets and personal data in what's being written (deny on HIGH)
+- `beforeMCPExecution`: secrets inside MCP tool arguments (deny)
+- `afterShellExecution`: AI traps in command output are logged (Cursor can't rewrite output)
+
+### MCP server ("is this safe?" tools)
+
+```bash
+claude mcp add agentsentinel -- "$PWD/.venv/bin/python" "$PWD/guard/mcp_server.py"
+```
+
+Any MCP client can call `check_command`, `check_file_content` and `scan_text_for_injection`. They're rules-only and instant, and results contain masked previews only.
 
 ### B. Merge Gate
 
@@ -180,8 +203,8 @@ The LLM layer is pluggable via `.env`:
 
 | Suite | Tests | What it covers |
 |---|---|---|
-| Unit | 206 | Every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, hook decisions (incl. output cleaning), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
-| Integration | 29 | 3 generated repos and 20 PR branches through the real gate (git diff + Semgrep + Gitleaks); a "fooled reviewer" stand-in proving the manipulation alarm fires; LLM outage fails closed; a 12-step agent session replayed through the real hook |
+| Unit | 225 | Every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
+| Integration | 30 | 3 generated repos and 20 PR branches through the real gate (git diff + Semgrep + Gitleaks); a "fooled reviewer" stand-in proving the manipulation alarm fires; LLM outage fails closed; a 12-step agent session replayed through the real hook; raw MCP JSON-RPC to the server process |
 | Live (opt-in) | 4 | Real Claude calls: `pytest -m llm` |
 
 ```bash
@@ -196,7 +219,7 @@ The LLM layer is pluggable via `.env`:
 core/        config, llm.py (single LLM doorway), store.py (SQLite)
   detectors/ secrets, pii, commands, files
   reviewer/  static_scan, triage, two_view, report
-guard/       claude_hook.py (PreToolUse hook), install.py
+guard/       claude_hook.py (Pre/PostToolUse), cursor_hook.py, mcp_server.py, install.py
 gate/        run_gate.py (Merge Gate entry point)
 dashboard/   app.py (Streamlit), data.py, seed_demo.py
 benchmark/   real_repos.py, results/
