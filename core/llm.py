@@ -51,7 +51,7 @@ _LIMIT_PATTERNS = re.compile(
     re.I,
 )
 _AUTH_PATTERNS = re.compile(
-    r"not logged in|please run /login|invalid api key|authentication|"
+    r"not logged in|please run /login|invalid api key|authenticat|invalid bearer|\b401\b|"
     r"unauthori[sz]ed|oauth token|credentials? (?:are )?(?:missing|invalid|expired)",
     re.I,
 )

@@ -86,3 +86,10 @@ def test_ask_json_gives_up_after_retry(monkeypatch):
     fake_claude(monkeypatch, ok("nope"), ok("still nope"))
     with pytest.raises(llm.LLMBadResponse):
         llm.ask_json("give json", backend="claude_code")
+
+
+def test_invalid_ci_token_is_auth_error(monkeypatch):
+    fake_claude(monkeypatch, FakeProc(json.dumps(
+        {"is_error": True, "result": "Failed to authenticate. API Error: 401 Invalid bearer token"}), returncode=1))
+    with pytest.raises(llm.LLMNotLoggedIn, match="CLAUDE_CODE_OAUTH_TOKEN"):
+        llm.ask_llm("hi", backend="claude_code")
