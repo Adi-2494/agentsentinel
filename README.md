@@ -69,7 +69,7 @@ Developer's laptop                          GitHub
 | B3 | ⭐ Two-view manipulation check | ✅ |
 | B4 | AI-trap scanner for PR text, comments, `CLAUDE.md`, `.cursorrules`, MCP configs, `.claude/settings.json` hooks; rules plus one Claude Haiku call for reworded tricks | ✅ |
 | B5 | PR comment and failing check | ✅ |
-| | Cursor hook: shell, file reads, writes and MCP calls (`.cursor/hooks.json`) | ✅ built and tested against Cursor's documented hook format; not yet run in live Cursor |
+| | Cursor hook: shell, file reads, writes and MCP calls (`.cursor/hooks.json`) | ✅ tested live with `cursor-agent` 2026.10.01 |
 | | MCP server with `check_command`, `check_file_content`, `scan_text_for_injection` (rules only) | ✅ tested live in Claude Code |
 | | Benchmark: with vs without AgentSentinel across Claude models | 🔜 Planned |
 
@@ -141,6 +141,10 @@ This writes `.cursor/hooks.json` with the same rules wired to Cursor's events:
 - `preToolUse` (Write/Edit): secrets and personal data in what's being written (deny on HIGH)
 - `beforeMCPExecution`: secrets inside MCP tool arguments (deny)
 - `afterShellExecution`: AI traps in command output are logged (Cursor can't rewrite output)
+
+Tested live in `cursor-agent`: reading a trapped `SETUP.md`, `cat .env`, and writing a fake AWS key were all blocked.
+
+> **Note:** Cursor also runs Claude Code hooks from `.claude/settings.json`. If a project has both, each event is checked (and logged) twice. Install one per project, or expect duplicate rows in the dashboard.
 
 ### MCP server ("is this safe?" tools)
 
