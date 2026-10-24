@@ -1,0 +1,19 @@
+# Never send secrets or local data to the Docker build
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+data/
+*.db
+*.db-*
+.git
+.venv
+.github
+tests
+examples
+guard
+gate
+**/__pycache__
+.pytest_cache
+.DS_Store

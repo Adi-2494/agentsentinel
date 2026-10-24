@@ -67,3 +67,21 @@ def test_app_renders_without_errors(db, tmp_path, monkeypatch, use_data):
                       "Manipulation alerts"]
     if use_data:
         assert [m.value for m in at.metric] == ["2", "2", "1", "1 / 2", "1"]
+
+
+def test_demo_log_is_labelled_and_safe(tmp_path, monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    from core.detectors import pii, secrets
+    from dashboard.seed_demo import seed
+    demo = seed(tmp_path / "demo.db")
+    import sqlite3
+    assert sqlite3.connect(demo).execute("PRAGMA journal_mode").fetchone()[0] == "delete"
+    demo.chmod(0o444)  # like the root-owned file inside the container
+    df = data.load_events(demo)
+    assert len(df) > 20 and df["detail_obj"].map(lambda d: d.get("demo")).all()
+    blob = " ".join(df["detail"])
+    assert not secrets.scan(blob) and not [f for f in pii.scan(blob) if f.severity == "HIGH"]
+    monkeypatch.setattr("core.config.DB_PATH", tmp_path / "missing.db")
+    monkeypatch.setenv("AGENTSENTINEL_DEMO_DB", str(demo))
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    assert not at.exception and any("Demo data" in w.value for w in at.warning)

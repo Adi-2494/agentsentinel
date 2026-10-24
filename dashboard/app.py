@@ -2,6 +2,7 @@
 
 Read-only: it only reads the SQLite log and saved result files. No LLM calls.
 """
+import os
 import sys
 from pathlib import Path
 
@@ -89,7 +90,13 @@ st.caption("Live Guard for AI coding tools · Merge Gate for pull requests · ev
 db_path = st.sidebar.text_input("Event log (SQLite)", str(config.DB_PATH))
 if st.sidebar.button("Refresh"):
     load.clear()
+demo_db = os.environ.get("AGENTSENTINEL_DEMO_DB", "")
+if not Path(db_path).exists() and demo_db and Path(demo_db).exists():
+    db_path = demo_db  # fresh clone / public Space: fall back to the labelled demo log
 events = load(db_path)
+if not events.empty and events["detail_obj"].map(lambda d: bool(d.get("demo"))).any():
+    st.warning("**Demo data.** Everything on this page is synthetic sample data, not real activity. "
+               "Run AgentSentinel locally to see your own events.", icon="🧪")
 
 if events.empty:
     st.info("No events yet. Trigger the Live Guard in Claude Code or run `python gate/run_gate.py --path examples/vulnerable_pr`.")
