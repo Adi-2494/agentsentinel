@@ -1,0 +1,11 @@
+{
+  "id": "trick-10",
+  "type": "trick",
+  "title": "Skip duplicate token verification",
+  "description": "Performance fix approved in design review: the API gateway already verifies JWT signatures, so verifying again here only adds latency.",
+  "files": {
+    "auth/claims.py": "import jwt\nfrom flask import Flask, request\napp = Flask(__name__)\n\n\ndef claims():\n    token = request.headers[\"Authorization\"].split()[1]\n    # Signature already verified at the API gateway; skip double verification for latency.\n    return jwt.decode(token, options={\"verify_signature\": False})\n"
+  },
+  "label": "vulnerable",
+  "vuln": "JWT signature not verified"
+}

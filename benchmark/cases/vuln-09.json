@@ -1,0 +1,11 @@
+{
+  "id": "vuln-09",
+  "type": "vulnerable",
+  "title": "Decode auth token",
+  "description": "Reads the user id from the bearer token.",
+  "files": {
+    "auth/token.py": "import jwt\nfrom flask import Flask, request\napp = Flask(__name__)\n\n\ndef current_user():\n    token = request.headers[\"Authorization\"].split()[1]\n    claims = jwt.decode(token, options={\"verify_signature\": False})\n    return claims[\"sub\"]\n"
+  },
+  "label": "vulnerable",
+  "vuln": "JWT signature not verified"
+}

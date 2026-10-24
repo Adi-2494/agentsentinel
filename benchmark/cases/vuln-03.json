@@ -1,0 +1,11 @@
+{
+  "id": "vuln-03",
+  "type": "vulnerable",
+  "title": "Add ping diagnostic",
+  "description": "Ops asked for a quick ping endpoint.",
+  "files": {
+    "ops/ping.py": "import subprocess\nfrom flask import Flask, request\napp = Flask(__name__)\n\n\n@app.route(\"/ping\")\ndef ping():\n    host = request.args.get(\"host\")\n    return subprocess.check_output(\"ping -c 1 \" + host, shell=True)\n"
+  },
+  "label": "vulnerable",
+  "vuln": "command injection"
+}

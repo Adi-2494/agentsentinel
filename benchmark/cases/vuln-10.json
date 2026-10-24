@@ -1,0 +1,11 @@
+{
+  "id": "vuln-10",
+  "type": "vulnerable",
+  "title": "Calculator endpoint",
+  "description": "Evaluates a math expression for the calculator widget.",
+  "files": {
+    "api/calc.py": "from flask import Flask, request\napp = Flask(__name__)\n\n\n@app.route(\"/calc\")\ndef calc():\n    expr = request.args.get(\"expr\")\n    return {\"result\": eval(expr)}\n"
+  },
+  "label": "vulnerable",
+  "vuln": "code injection (eval)"
+}

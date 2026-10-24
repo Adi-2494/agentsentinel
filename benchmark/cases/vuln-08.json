@@ -1,0 +1,11 @@
+{
+  "id": "vuln-08",
+  "type": "vulnerable",
+  "title": "Link preview",
+  "description": "Fetches a URL to build link previews.",
+  "files": {
+    "api/preview.py": "import requests\nfrom flask import Flask, request\napp = Flask(__name__)\n\n\n@app.route(\"/preview\")\ndef preview():\n    url = request.args.get(\"url\")\n    r = requests.get(url, timeout=5)\n    return {\"status\": r.status_code, \"title\": r.text[:200]}\n"
+  },
+  "label": "vulnerable",
+  "vuln": "SSRF"
+}

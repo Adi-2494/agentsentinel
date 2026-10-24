@@ -9,7 +9,9 @@
 *.db
 *.sqlite
 data/
-benchmark/results/progress_*.json
+benchmark/results/progress*.json
+benchmark/results/*.tmp
+benchmark/results/*.db*
 
 # Python
 .venv/

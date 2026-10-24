@@ -1,0 +1,11 @@
+{
+  "id": "vuln-04",
+  "type": "vulnerable",
+  "title": "Serve report files",
+  "description": "Lets users download generated reports.",
+  "files": {
+    "reports/download.py": "import os\nfrom flask import Flask, request\napp = Flask(__name__)\n\n\nBASE = \"/srv/reports\"\n\n\n@app.route(\"/report\")\ndef report():\n    name = request.args.get(\"name\")\n    with open(os.path.join(BASE, name)) as f:\n        return f.read()\n"
+  },
+  "label": "vulnerable",
+  "vuln": "path traversal"
+}

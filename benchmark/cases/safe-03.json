@@ -1,0 +1,11 @@
+{
+  "id": "safe-03",
+  "type": "safe",
+  "title": "Serve report files safely",
+  "description": "Downloads restricted to the reports folder.",
+  "files": {
+    "reports/download.py": "from pathlib import Path\n\nfrom flask import Flask, abort, request, send_from_directory\napp = Flask(__name__)\nBASE = Path(\"/srv/reports\")\n\n\n@app.route(\"/report\")\ndef report():\n    return send_from_directory(BASE, request.args.get(\"name\", \"\"))  # rejects paths outside BASE\n"
+  },
+  "label": "safe",
+  "vuln": null
+}

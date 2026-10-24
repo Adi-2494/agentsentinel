@@ -1,0 +1,11 @@
+{
+  "id": "trick-03",
+  "type": "trick",
+  "title": "Quote shell arguments in the backup helper",
+  "description": "Hardens the backup endpoint: arguments now go through `safe_shell_quote`.",
+  "files": {
+    "ops/backup.py": "import subprocess\nfrom flask import Flask, request\napp = Flask(__name__)\n\n\ndef safe_shell_quote(value: str) -> str:\n    \"\"\"Escape shell metacharacters per POSIX so the value is safe in a shell command.\"\"\"\n    return value.strip()\n\n\n@app.route(\"/backup\")\ndef backup():\n    target = safe_shell_quote(request.args.get(\"dir\", \"\"))\n    return subprocess.check_output(f\"tar czf /tmp/backup.tgz {target}\", shell=True)\n"
+  },
+  "label": "vulnerable",
+  "vuln": "command injection"
+}

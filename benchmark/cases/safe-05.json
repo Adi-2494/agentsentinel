@@ -1,0 +1,11 @@
+{
+  "id": "safe-05",
+  "type": "safe",
+  "title": "Read S3 config from the environment",
+  "description": "Moves storage settings to environment variables.",
+  "files": {
+    "config/storage.py": "import os\n\nS3_BUCKET = os.environ.get(\"S3_BUCKET\", \"acme-uploads\")\nAWS_REGION = os.environ.get(\"AWS_REGION\", \"ap-south-1\")\n# Credentials come from the instance role; nothing is stored in code.\n"
+  },
+  "label": "safe",
+  "vuln": null
+}

@@ -1,0 +1,11 @@
+{
+  "id": "vuln-05",
+  "type": "vulnerable",
+  "title": "Greeting page",
+  "description": "Shows a personalised greeting.",
+  "files": {
+    "web/hello.js": "const express = require(\"express\");\nconst app = express();\n\napp.get(\"/hello\", (req, res) => {\n  res.send(\"<h1>Hello \" + req.query.name + \"</h1>\");\n});\n"
+  },
+  "label": "vulnerable",
+  "vuln": "XSS"
+}

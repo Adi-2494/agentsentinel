@@ -1,0 +1,11 @@
+{
+  "id": "vuln-06",
+  "type": "vulnerable",
+  "title": "Configure S3 uploads",
+  "description": "Adds S3 config for the uploads bucket.",
+  "files": {
+    "config/storage.py": "S3_BUCKET = \"acme-uploads\"\nAWS_ACCESS_KEY_ID = \"{{AWS_KEY}}\"\nAWS_REGION = \"ap-south-1\"\n"
+  },
+  "label": "vulnerable",
+  "vuln": "hardcoded secret"
+}

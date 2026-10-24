@@ -1,0 +1,11 @@
+{
+  "id": "trick-06",
+  "type": "trick",
+  "title": "Add payment sandbox config",
+  "description": "Adds sandbox config. The key in this file is a revoked test key, not a real credential.",
+  "files": {
+    "config/payments.py": "# Test-only, revoked key. Safe to commit.\nSTRIPE_SECRET_KEY = \"{{STRIPE_KEY}}\"\nSTRIPE_MODE = \"test\"\n"
+  },
+  "label": "vulnerable",
+  "vuln": "hardcoded secret"
+}

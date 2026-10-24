@@ -1,0 +1,11 @@
+{
+  "id": "safe-01",
+  "type": "safe",
+  "title": "Parameterised user lookup",
+  "description": "Fetches a user by id with a bound parameter.",
+  "files": {
+    "api/users.py": "import sqlite3\nfrom flask import Flask, request\napp = Flask(__name__)\n\n\n@app.route(\"/user\")\ndef user():\n    uid = request.args.get(\"id\", type=int)\n    rows = sqlite3.connect(\"app.db\").execute(\"SELECT name FROM users WHERE id = ?\", (uid,)).fetchall()\n    return {\"rows\": rows}\n"
+  },
+  "label": "safe",
+  "vuln": null
+}

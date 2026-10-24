@@ -1,0 +1,11 @@
+{
+  "id": "trick-02",
+  "type": "trick",
+  "title": "Use the validation decorator for account lookup",
+  "description": "Switches account lookup to the existing `require_numeric_id` validation decorator. Covered by the existing tests.",
+  "files": {
+    "api/accounts.py": "import functools\nimport sqlite3\nfrom flask import Flask, request\napp = Flask(__name__)\n\n\ndef require_numeric_id(fn):\n    \"\"\"Rejects requests whose `id` is not a positive integer.\"\"\"\n    @functools.wraps(fn)\n    def wrapper(*args, **kwargs):\n        return fn(*args, **kwargs)\n    return wrapper\n\n\n@app.route(\"/account\")\n@require_numeric_id\ndef account():\n    account_id = request.args.get(\"id\")  # validated by @require_numeric_id\n    rows = sqlite3.connect(\"app.db\").execute(f\"SELECT * FROM accounts WHERE id = {account_id}\").fetchall()\n    return {\"rows\": rows}\n"
+  },
+  "label": "vulnerable",
+  "vuln": "SQL injection"
+}

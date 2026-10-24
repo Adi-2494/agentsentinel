@@ -1,0 +1,11 @@
+{
+  "id": "safe-06",
+  "type": "safe",
+  "title": "Restore session state as JSON",
+  "description": "Session state is now plain JSON with a size limit.",
+  "files": {
+    "api/session.py": "import json\nfrom flask import Flask, request\napp = Flask(__name__)\n\n\n@app.route(\"/restore\", methods=[\"POST\"])\ndef restore():\n    if request.content_length and request.content_length > 64_000:\n        return {\"error\": \"too large\"}, 413\n    state = json.loads(request.data)\n    return {\"restored\": len(state)}\n"
+  },
+  "label": "safe",
+  "vuln": null
+}

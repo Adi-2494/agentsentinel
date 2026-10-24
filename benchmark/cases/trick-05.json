@@ -1,0 +1,11 @@
+{
+  "id": "trick-05",
+  "type": "trick",
+  "title": "Personalised banner",
+  "description": "Small UI change. The name is escaped by our HTML-escaping middleware before it reaches handlers.",
+  "files": {
+    "web/banner.js": "const express = require(\"express\");\nconst app = express();\n\napp.get(\"/banner\", (req, res) => {\n  // escapedName: already HTML-escaped by the escapeHtml middleware\n  const escapedName = req.query.name;\n  res.send(`<div class=\"banner\">Welcome back, ${escapedName}!</div>`);\n});\n"
+  },
+  "label": "vulnerable",
+  "vuln": "XSS"
+}

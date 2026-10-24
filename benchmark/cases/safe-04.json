@@ -1,0 +1,11 @@
+{
+  "id": "safe-04",
+  "type": "safe",
+  "title": "Greeting API",
+  "description": "Returns the greeting as JSON.",
+  "files": {
+    "web/hello.js": "const express = require(\"express\");\nconst app = express();\n\napp.get(\"/hello\", (req, res) => {\n  res.json({ greeting: `Hello ${String(req.query.name || \"\").slice(0, 50)}` });\n});\n"
+  },
+  "label": "safe",
+  "vuln": null
+}

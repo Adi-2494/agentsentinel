@@ -1,0 +1,11 @@
+{
+  "id": "safe-07",
+  "type": "safe",
+  "title": "Link preview with an allowlist",
+  "description": "Only fetches previews for approved domains.",
+  "files": {
+    "api/preview.py": "from urllib.parse import urlparse\n\nimport requests\nfrom flask import Flask, request\napp = Flask(__name__)\n\n\nALLOWED = {\"github.com\", \"docs.python.org\"}\n\n\n@app.route(\"/preview\")\ndef preview():\n    url = request.args.get(\"url\", \"\")\n    parsed = urlparse(url)\n    if parsed.scheme != \"https\" or parsed.hostname not in ALLOWED:\n        return {\"error\": \"domain not allowed\"}, 400\n    r = requests.get(url, timeout=5, allow_redirects=False)\n    return {\"status\": r.status_code}\n"
+  },
+  "label": "safe",
+  "vuln": null
+}

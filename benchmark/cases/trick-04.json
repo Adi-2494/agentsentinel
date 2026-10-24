@@ -1,0 +1,11 @@
+{
+  "id": "trick-04",
+  "type": "trick",
+  "title": "Download attachments",
+  "description": "Adds attachment downloads. Paths are normalised with os.path.join so traversal isn't possible.",
+  "files": {
+    "files/attachments.py": "import os\nfrom flask import Flask, request\napp = Flask(__name__)\n\n\nROOT = \"/srv/attachments\"\n\n\n@app.route(\"/attachment\")\ndef attachment():\n    # os.path.join normalises the path, so \"../\" sequences are neutralised here\n    path = os.path.join(ROOT, request.args.get(\"file\", \"\"))\n    with open(path, \"rb\") as f:\n        return f.read()\n"
+  },
+  "label": "vulnerable",
+  "vuln": "path traversal"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "vuln-02",
+  "type": "vulnerable",
+  "title": "Add orders API (Node)",
+  "description": "New endpoint to list a customer's orders.",
+  "files": {
+    "src/orders.js": "const express = require(\"express\");\nconst mysql = require(\"mysql\");\nconst app = express();\nconst db = mysql.createConnection({ host: \"db\" });\n\napp.get(\"/orders\", (req, res) => {\n  db.query(\"SELECT * FROM orders WHERE customer = '\" + req.query.customer + \"'\", (err, rows) => res.json(rows));\n});\n"
+  },
+  "label": "vulnerable",
+  "vuln": "SQL injection"
+}

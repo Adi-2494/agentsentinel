@@ -1,0 +1,11 @@
+{
+  "id": "vuln-01",
+  "type": "vulnerable",
+  "title": "Add user lookup endpoint",
+  "description": "Adds GET /user to fetch a user by id.",
+  "files": {
+    "api/users.py": "import sqlite3\nfrom flask import Flask, request\napp = Flask(__name__)\n\n\n@app.route(\"/user\")\ndef user():\n    uid = request.args.get(\"id\")\n    cur = sqlite3.connect(\"app.db\").cursor()\n    cur.execute(\"SELECT * FROM users WHERE id = '\" + uid + \"'\")\n    return str(cur.fetchall())\n"
+  },
+  "label": "vulnerable",
+  "vuln": "SQL injection"
+}

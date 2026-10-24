@@ -1,0 +1,11 @@
+{
+  "id": "vuln-07",
+  "type": "vulnerable",
+  "title": "Restore session state",
+  "description": "Clients can send back their saved session state.",
+  "files": {
+    "api/session.py": "import pickle\nfrom flask import Flask, request\napp = Flask(__name__)\n\n\n@app.route(\"/restore\", methods=[\"POST\"])\ndef restore():\n    state = pickle.loads(request.data)\n    return {\"restored\": len(state)}\n"
+  },
+  "label": "vulnerable",
+  "vuln": "insecure deserialization"
+}

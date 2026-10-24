@@ -1,0 +1,11 @@
+{
+  "id": "safe-02",
+  "type": "safe",
+  "title": "Ping diagnostic without a shell",
+  "description": "Ping endpoint using an argument list and a hostname check.",
+  "files": {
+    "ops/ping.py": "import re\nimport subprocess\nfrom flask import Flask, request\napp = Flask(__name__)\n\n\nHOST = re.compile(r\"^[A-Za-z0-9.-]{1,253}$\")\n\n\n@app.route(\"/ping\")\ndef ping():\n    host = request.args.get(\"host\", \"\")\n    if not HOST.match(host):\n        return {\"error\": \"bad host\"}, 400\n    out = subprocess.run([\"ping\", \"-c\", \"1\", host], capture_output=True, text=True, timeout=5)\n    return {\"output\": out.stdout}\n"
+  },
+  "label": "safe",
+  "vuln": null
+}
