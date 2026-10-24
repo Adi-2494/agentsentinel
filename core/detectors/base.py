@@ -38,7 +38,7 @@ def redact_spans(text: str, findings: list[Finding], label: str = "[REDACTED]") 
     out, pos = [], 0
     for s, e in merged:
         out.append(text[pos:s])
-        out.append(label)
+        out.append(label + "\n" * text.count("\n", s, e))  # keep line numbers stable
         pos = e
     out.append(text[pos:])
     return "".join(out)

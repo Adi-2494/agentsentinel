@@ -1,0 +1,1279 @@
+[
+  {
+    "repo": "NodeGoat",
+    "url": "https://github.com/OWASP/NodeGoat.git",
+    "kind": "vulnerable",
+    "head": "c5cb68a7084e4ae7dcc60e6a98768720a81841e8",
+    "prs": [
+      {
+        "sha": "9f9513eb",
+        "subject": "Add blank space after strong tag",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "phone_in",
+            "tool": "agentsentinel",
+            "category": "pii",
+            "severity": "MEDIUM",
+            "file": "app/views/contributions.html"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "69e3d0d5",
+        "subject": "Fix path traversal vulnerability",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "636cf838",
+        "subject": "Move tutorial into a separate router",
+        "files": 2,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "express-open-redirect",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": "app/routes/index.js"
+          },
+          {
+            "rule": "res-render-injection",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": "app/routes/tutorial.js"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "ea13d3fb",
+        "subject": "doc: annotate server.js with extra info regarding session and static assets",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "express-cookie-session-default-name",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": "server.js"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "ea58b519",
+        "subject": "fix: spelling on the app page",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "semgrep could not parse 1 file(s); other files were scanned",
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "b2f06862",
+        "subject": "fix: mongodb 4.4 is compatible",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "4cabb569",
+        "subject": "docs: minor update for inline code style",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "9336e34a",
+        "subject": "fix: sync lockfile",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "a47594e8",
+        "subject": "fix: update instructions about tutorial",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "5848aad1",
+        "subject": "fix: revert marked changes back to make sure we use the vulnerable version",
+        "files": 2,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "88e6e2b9",
+        "subject": "Fix Mongo version to before OP_QUERY deprecation",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "1f052006",
+        "subject": "chore: update gitignore",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "76a43619",
+        "subject": "docs: README file cleanup",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "719cb17b",
+        "subject": "Update links in description",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "semgrep could not parse 1 file(s); other files were scanned",
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "a9e3703a",
+        "subject": "E2E CI: Enable video recording, upload on failure",
+        "files": 2,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "github-actions-mutable-action-tag",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": ".github/workflows/e2e-test.yml"
+          },
+          {
+            "rule": "github-actions-mutable-action-tag",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": ".github/workflows/e2e-test.yml"
+          },
+          {
+            "rule": "github-actions-mutable-action-tag",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": ".github/workflows/e2e-test.yml"
+          },
+          {
+            "rule": "github-actions-mutable-action-tag",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": ".github/workflows/e2e-test.yml"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      }
+    ]
+  },
+  {
+    "repo": "pygoat",
+    "url": "https://github.com/adeyosemanputra/pygoat.git",
+    "kind": "vulnerable",
+    "head": "46fef968f3f44d1191363baf936aaa3335dc5c6d",
+    "prs": [
+      {
+        "sha": "46fef968",
+        "subject": "Add test CI, SECURITY.md, missing migrations and v3 install docs (#562)",
+        "files": 6,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "github-actions-mutable-action-tag",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": ".github/workflows/tests.yml"
+          },
+          {
+            "rule": "github-actions-mutable-action-tag",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": ".github/workflows/tests.yml"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "e5808ddd",
+        "subject": "Update CHANGELOG for v3.0.0 release (#559)",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "c8dddf8a",
+        "subject": "Fix v3.0.0-pre release blockers found in end-to-end testing (#558)",
+        "files": 11,
+        "exit": 1,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "avoid_app_run_with_bad_host",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": "dockerized_labs/dependency_attack_lab/app.py"
+          },
+          {
+            "rule": "avoid_app_run_with_bad_host",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": "dockerized_labs/open_source_library_attack_lab/app.py"
+          },
+          {
+            "rule": "avoid_app_run_with_bad_host",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": "dockerized_labs/package_injection_lab/app.py"
+          },
+          {
+            "rule": "generic-api-key",
+            "tool": "gitleaks",
+            "category": "secret",
+            "severity": "CRITICAL",
+            "file": "dockerized_labs/dependency_attack_lab/app.py"
+          },
+          {
+            "rule": "generic-api-key",
+            "tool": "gitleaks",
+            "category": "secret",
+            "severity": "CRITICAL",
+            "file": "dockerized_labs/package_injection_lab/app.py"
+          },
+          {
+            "rule": "stripe-access-token",
+            "tool": "gitleaks",
+            "category": "secret",
+            "severity": "CRITICAL",
+            "file": "dockerized_labs/package_injection_lab/app.py"
+          },
+          {
+            "rule": "hardcoded_credential",
+            "tool": "agentsentinel",
+            "category": "secret",
+            "severity": "HIGH",
+            "file": "dockerized_labs/dependency_attack_lab/app.py"
+          },
+          {
+            "rule": "email",
+            "tool": "agentsentinel",
+            "category": "pii",
+            "severity": "MEDIUM",
+            "file": "dockerized_labs/open_source_library_attack_lab/app.py"
+          },
+          {
+            "rule": "email",
+            "tool": "agentsentinel",
+            "category": "pii",
+            "severity": "MEDIUM",
+            "file": "dockerized_labs/open_source_library_attack_lab/app.py"
+          },
+          {
+            "rule": "email",
+            "tool": "agentsentinel",
+            "category": "pii",
+            "severity": "MEDIUM",
+            "file": "dockerized_labs/open_source_library_attack_lab/app.py"
+          },
+          {
+            "rule": "email",
+            "tool": "agentsentinel",
+            "category": "pii",
+            "severity": "MEDIUM",
+            "file": "dockerized_labs/open_source_library_attack_lab/app.py"
+          },
+          {
+            "rule": "email",
+            "tool": "agentsentinel",
+            "category": "pii",
+            "severity": "MEDIUM",
+            "file": "dockerized_labs/open_source_library_attack_lab/app.py"
+          },
+          {
+            "rule": "hardcoded_credential",
+            "tool": "agentsentinel",
+            "category": "secret",
+            "severity": "HIGH",
+            "file": "dockerized_labs/package_injection_lab/app.py"
+          },
+          {
+            "rule": "hardcoded_credential",
+            "tool": "agentsentinel",
+            "category": "secret",
+            "severity": "HIGH",
+            "file": "introduction/tests.py"
+          },
+          {
+            "rule": "email",
+            "tool": "agentsentinel",
+            "category": "pii",
+            "severity": "MEDIUM",
+            "file": "introduction/tests.py"
+          }
+        ],
+        "errors": [
+          "semgrep could not parse 1 file(s); other files were scanned",
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "c9dd0def",
+        "subject": "Implemented Traefik Forward Auth (#408)",
+        "files": 7,
+        "exit": 1,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "subprocess-injection",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "HIGH",
+            "file": "challenge/views.py"
+          },
+          {
+            "rule": "hardcoded_credential",
+            "tool": "agentsentinel",
+            "category": "secret",
+            "severity": "HIGH",
+            "file": "pygoat/settings.py"
+          },
+          {
+            "rule": "hardcoded_credential",
+            "tool": "agentsentinel",
+            "category": "secret",
+            "severity": "HIGH",
+            "file": "pygoat/settings.py"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "dd914cdf",
+        "subject": "Fix dead code in toggle_theme() by implementing theme cookie toggle (#514)",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "avoid_app_run_with_bad_host",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": "dockerized_labs/template_injection_lab/app.py"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "c5ab4fab",
+        "subject": "Fix infinite loop in wait_for_health() when container has no HEALTHCHECK configu",
+        "files": 1,
+        "exit": 1,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "subprocess-injection",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "HIGH",
+            "file": "challenge/views.py"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "fd5cc27e",
+        "subject": "Fix incorrect port availability check in get_free_port (#504)",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "cd0d54af",
+        "subject": "Feature: Add difficulty levels to challenges and labs (#541)",
+        "files": 34,
+        "exit": 1,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "subprocess-injection",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "HIGH",
+            "file": "challenge/views.py"
+          },
+          {
+            "rule": "hardcoded_credential",
+            "tool": "agentsentinel",
+            "category": "secret",
+            "severity": "HIGH",
+            "file": "pygoat/settings.py"
+          },
+          {
+            "rule": "hardcoded_credential",
+            "tool": "agentsentinel",
+            "category": "secret",
+            "severity": "HIGH",
+            "file": "pygoat/settings.py"
+          }
+        ],
+        "errors": [
+          "semgrep could not parse 4 file(s); other files were scanned",
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "89f96e45",
+        "subject": "refactor: remove redundant static CSS files and implement centralized UI compone",
+        "files": 36,
+        "exit": 1,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "subprocess-injection",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "HIGH",
+            "file": "challenge/views.py"
+          },
+          {
+            "rule": "hardcoded_credential",
+            "tool": "agentsentinel",
+            "category": "secret",
+            "severity": "HIGH",
+            "file": "pygoat/settings.py"
+          },
+          {
+            "rule": "hardcoded_credential",
+            "tool": "agentsentinel",
+            "category": "secret",
+            "severity": "HIGH",
+            "file": "pygoat/settings.py"
+          }
+        ],
+        "errors": [
+          "semgrep could not parse 3 file(s); other files were scanned",
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "67152861",
+        "subject": "Migrate labs json file to dedicated labs model (#535)",
+        "files": 17,
+        "exit": 1,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "subprocess-injection",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "HIGH",
+            "file": "challenge/views.py"
+          }
+        ],
+        "errors": [
+          "semgrep could not parse 1 file(s); other files were scanned",
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "fa8fd09e",
+        "subject": "Fix spelling mistakes in challenge/views.py (#515)",
+        "files": 1,
+        "exit": 1,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "subprocess-injection",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "HIGH",
+            "file": "challenge/views.py"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "92246e51",
+        "subject": "Chore/remove unused lab artifacts (#461)",
+        "files": 2,
+        "exit": 1,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "avoid_app_run_with_bad_host",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": "dockerized_labs/sde/app.py"
+          },
+          {
+            "rule": "jwt-python-hardcoded-secret",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "HIGH",
+            "file": "dockerized_labs/sec_misconfig/app.py"
+          },
+          {
+            "rule": "avoid_app_run_with_bad_host",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": "dockerized_labs/sec_misconfig/app.py"
+          },
+          {
+            "rule": "stripe-access-token",
+            "tool": "gitleaks",
+            "category": "secret",
+            "severity": "CRITICAL",
+            "file": "dockerized_labs/sec_misconfig/app.py"
+          },
+          {
+            "rule": "stripe-access-token",
+            "tool": "gitleaks",
+            "category": "secret",
+            "severity": "CRITICAL",
+            "file": "dockerized_labs/sec_misconfig/app.py"
+          },
+          {
+            "rule": "generic-api-key",
+            "tool": "gitleaks",
+            "category": "secret",
+            "severity": "CRITICAL",
+            "file": "dockerized_labs/sec_misconfig/app.py"
+          },
+          {
+            "rule": "credentials_in_url",
+            "tool": "agentsentinel",
+            "category": "secret",
+            "severity": "HIGH",
+            "file": "dockerized_labs/sde/app.py"
+          },
+          {
+            "rule": "credentials_in_url",
+            "tool": "agentsentinel",
+            "category": "secret",
+            "severity": "HIGH",
+            "file": "dockerized_labs/sec_misconfig/app.py"
+          },
+          {
+            "rule": "credentials_in_url",
+            "tool": "agentsentinel",
+            "category": "secret",
+            "severity": "HIGH",
+            "file": "dockerized_labs/sec_misconfig/app.py"
+          },
+          {
+            "rule": "hardcoded_credential",
+            "tool": "agentsentinel",
+            "category": "secret",
+            "severity": "HIGH",
+            "file": "dockerized_labs/sec_misconfig/app.py"
+          },
+          {
+            "rule": "hardcoded_credential",
+            "tool": "agentsentinel",
+            "category": "secret",
+            "severity": "HIGH",
+            "file": "dockerized_labs/sec_misconfig/app.py"
+          },
+          {
+            "rule": "hardcoded_credential",
+            "tool": "agentsentinel",
+            "category": "secret",
+            "severity": "HIGH",
+            "file": "dockerized_labs/sec_misconfig/app.py"
+          },
+          {
+            "rule": "hardcoded_credential",
+            "tool": "agentsentinel",
+            "category": "secret",
+            "severity": "HIGH",
+            "file": "dockerized_labs/sec_misconfig/app.py"
+          },
+          {
+            "rule": "hardcoded_credential",
+            "tool": "agentsentinel",
+            "category": "secret",
+            "severity": "HIGH",
+            "file": "dockerized_labs/sec_misconfig/app.py"
+          },
+          {
+            "rule": "hardcoded_credential",
+            "tool": "agentsentinel",
+            "category": "secret",
+            "severity": "HIGH",
+            "file": "dockerized_labs/sec_misconfig/app.py"
+          },
+          {
+            "rule": "hardcoded_credential",
+            "tool": "agentsentinel",
+            "category": "secret",
+            "severity": "HIGH",
+            "file": "dockerized_labs/sec_misconfig/app.py"
+          },
+          {
+            "rule": "email",
+            "tool": "agentsentinel",
+            "category": "pii",
+            "severity": "MEDIUM",
+            "file": "dockerized_labs/sec_misconfig/app.py"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "42e713fc",
+        "subject": "fix: add missing return statement in crypto_failure view for unauthenticated use",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "008acf00",
+        "subject": "fix(ci): install flake8 after requirements.txt and remove stale linter pins (#43",
+        "files": 2,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "github-actions-mutable-action-tag",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": ".github/workflows/flake8.yml"
+          },
+          {
+            "rule": "github-actions-mutable-action-tag",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": ".github/workflows/flake8.yml"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "2a0835e8",
+        "subject": "fix(ci): pin flake8>=7.3.0 to resolve pycodestyle compatibility failure (#429)",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "github-actions-mutable-action-tag",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": ".github/workflows/flake8.yml"
+          },
+          {
+            "rule": "github-actions-mutable-action-tag",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": ".github/workflows/flake8.yml"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      }
+    ]
+  },
+  {
+    "repo": "dvpwa",
+    "url": "https://github.com/anxolerd/dvpwa.git",
+    "kind": "vulnerable",
+    "head": "a1d8f89fac2e57093189853c6527c2b01fc1d9c1",
+    "prs": [
+      {
+        "sha": "a1d8f89f",
+        "subject": "Add StandWithUkraine banner",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "b11d0415",
+        "subject": "Describe bad choice for passwords storage in README",
+        "files": 2,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "21238f21",
+        "subject": "Fix TYPO",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "25a2eba3",
+        "subject": "Fix XSS vulnerability (make it vulnerable again), add description",
+        "files": 2,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "be6c9404",
+        "subject": "Start writing doc on vulnerabilities",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "69ed91f4",
+        "subject": "Expose database port",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "5ee2dc23",
+        "subject": "Update dependencies",
+        "files": 6,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "feef74f7",
+        "subject": "Add log when app started",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "1cdd1669",
+        "subject": "Add info about which port to visit to README",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "2f855d6d",
+        "subject": ":card_file_box: Add semicolon",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "16db6187",
+        "subject": ":bug: Fix broken sql query",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "8ecfa2f9",
+        "subject": "Fix code-blocks in README",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "ea6ff4ae",
+        "subject": "Add MIT LICENSE",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "e9aa69ec",
+        "subject": "Add README",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      }
+    ]
+  },
+  {
+    "repo": "markupsafe",
+    "url": "https://github.com/pallets/markupsafe.git",
+    "kind": "clean",
+    "head": "4e111271b1494995708a9e878a10829b5e10c7ba",
+    "prs": [
+      {
+        "sha": "4e111271",
+        "subject": "update dependencies",
+        "files": 2,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "92c867bf",
+        "subject": "drop python 3.10",
+        "files": 4,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "uv-missing-dependency-cooldown",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": "pyproject.toml"
+          },
+          {
+            "rule": "email",
+            "tool": "agentsentinel",
+            "category": "pii",
+            "severity": "MEDIUM",
+            "file": "pyproject.toml"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "ece26078",
+        "subject": "release version 3.0.4",
+        "files": 3,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "uv-missing-dependency-cooldown",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": "pyproject.toml"
+          },
+          {
+            "rule": "email",
+            "tool": "agentsentinel",
+            "category": "pii",
+            "severity": "MEDIUM",
+            "file": "pyproject.toml"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "620bc809",
+        "subject": "split archs",
+        "files": 2,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "uv-missing-dependency-cooldown",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": "pyproject.toml"
+          },
+          {
+            "rule": "email",
+            "tool": "agentsentinel",
+            "category": "pii",
+            "severity": "MEDIUM",
+            "file": "pyproject.toml"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "d8ae19e6",
+        "subject": "fix wheel builds",
+        "files": 2,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "uv-missing-dependency-cooldown",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": "pyproject.toml"
+          },
+          {
+            "rule": "email",
+            "tool": "agentsentinel",
+            "category": "pii",
+            "severity": "MEDIUM",
+            "file": "pyproject.toml"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "87e64f96",
+        "subject": "build Android and iOS wheels",
+        "files": 3,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "uv-missing-dependency-cooldown",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": "pyproject.toml"
+          },
+          {
+            "rule": "email",
+            "tool": "agentsentinel",
+            "category": "pii",
+            "severity": "MEDIUM",
+            "file": "pyproject.toml"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "0ddd6eac",
+        "subject": "build ppc64le wheels",
+        "files": 3,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "uv-missing-dependency-cooldown",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": "pyproject.toml"
+          },
+          {
+            "rule": "email",
+            "tool": "agentsentinel",
+            "category": "pii",
+            "severity": "MEDIUM",
+            "file": "pyproject.toml"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "39b9aae5",
+        "subject": "build armv7l wheels",
+        "files": 3,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "uv-missing-dependency-cooldown",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": "pyproject.toml"
+          },
+          {
+            "rule": "email",
+            "tool": "agentsentinel",
+            "category": "pii",
+            "severity": "MEDIUM",
+            "file": "pyproject.toml"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "d3e833de",
+        "subject": "add zizmor to scan workflows",
+        "files": 5,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "546a01ff",
+        "subject": "remove updating release",
+        "files": 1,
+        "exit": 1,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "run-shell-injection",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "HIGH",
+            "file": ".github/workflows/publish.yaml"
+          }
+        ],
+        "errors": [
+          "semgrep could not parse 1 file(s); other files were scanned",
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "df5d5817",
+        "subject": "improve performance of `striptags`",
+        "files": 2,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "b74f397c",
+        "subject": "mention 3.15",
+        "files": 1,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "d07eea10",
+        "subject": "test Python 3.15",
+        "files": 2,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "uv-missing-dependency-cooldown",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": "pyproject.toml"
+          },
+          {
+            "rule": "email",
+            "tool": "agentsentinel",
+            "category": "pii",
+            "severity": "MEDIUM",
+            "file": "pyproject.toml"
+          }
+        ],
+        "errors": [
+          "semgrep could not parse 1 file(s); other files were scanned",
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "f02a96e5",
+        "subject": "update dependencies",
+        "files": 7,
+        "exit": 1,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "run-shell-injection",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "HIGH",
+            "file": ".github/workflows/publish.yaml"
+          },
+          {
+            "rule": "run-shell-injection",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "HIGH",
+            "file": ".github/workflows/publish.yaml"
+          }
+        ],
+        "errors": [
+          "semgrep could not parse 3 file(s); other files were scanned",
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      },
+      {
+        "sha": "c392c4e0",
+        "subject": "start version 3.0.4",
+        "files": 3,
+        "exit": 0,
+        "manipulation": false,
+        "findings": [
+          {
+            "rule": "uv-missing-dependency-cooldown",
+            "tool": "semgrep",
+            "category": "vuln",
+            "severity": "MEDIUM",
+            "file": "pyproject.toml"
+          },
+          {
+            "rule": "email",
+            "tool": "agentsentinel",
+            "category": "pii",
+            "severity": "MEDIUM",
+            "file": "pyproject.toml"
+          }
+        ],
+        "errors": [
+          "LLM disabled (--no-llm): static scan only, no triage / two-view check"
+        ]
+      }
+    ]
+  }
+]

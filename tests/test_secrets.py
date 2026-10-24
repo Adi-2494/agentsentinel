@@ -65,3 +65,24 @@ def test_redact_replaces_only_secret_value():
     assert FAKE["openai_key"] not in out
     assert "[REDACTED]" in out and out.startswith("API_KEY = ")
     assert found and found[0].preview.endswith("*")  # preview is masked
+
+
+def test_redaction_keeps_line_numbers_for_multiline_secrets():
+    pem = "a\n-----BEGIN " + "RSA PRIVATE KEY-----\nMIIE\nAAAA\n-----END RSA PRIVATE KEY-----\nb"
+    out, _ = secrets.redact(pem)
+    assert out.count("\n") == pem.count("\n") and "MIIE" not in out
+    assert out.splitlines()[-1] == "b"
+
+
+@pytest.mark.parametrize("text", [
+    '"parse-passwd": "^1.0.0"',
+    '"registry-auth-token": "~3.0.1"',
+    '"secret-handshake": ">=2.1.0"',
+    'auth_token_version = "1.4.2"',
+])
+def test_version_specs_are_not_secrets(text):
+    assert secrets.scan(text) == []
+
+
+def test_real_password_still_detected_next_to_versions():
+    assert secrets.scan('"password": "' + "Adm1n!pass" + '"')

@@ -9,6 +9,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -28,13 +29,29 @@ def files_from_path(path: Path) -> list[Path]:
                   and not SKIP_DIRS.intersection(p.relative_to(path).parts))
 
 
-def files_from_git(base: str, head: str, repo: Path) -> list[Path]:
+def files_from_git(base: str, head: str, repo: Path, dest: Path) -> tuple[list[Path], list[str]]:
+    """Write each changed file's content AT `head` into `dest` and return those paths.
+
+    Contents come from the commit itself (git show), never from whatever is
+    checked out, so the gate always judges exactly the PR's code.
+    """
     out = subprocess.run(
         ["git", "diff", "--name-only", "--diff-filter=ACMR", f"{base}...{head}"],
         capture_output=True, text=True, cwd=repo, check=True,
     ).stdout
-    return [repo / line for line in out.splitlines()
-            if line.strip() and not SKIP_DIRS.intersection(Path(line).parts)]
+    files, errors = [], []
+    for rel in out.splitlines():
+        if not rel.strip() or SKIP_DIRS.intersection(Path(rel).parts):
+            continue
+        blob = subprocess.run(["git", "show", f"{head}:{rel}"], capture_output=True, cwd=repo)
+        if blob.returncode != 0:
+            errors.append(f"could not read {rel} at {head}: {blob.stderr.decode(errors='replace')[:200]}")
+            continue
+        target = dest / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(blob.stdout)
+        files.append(target)
+    return files, errors
 
 
 def run(files: list[Path], root: Path, pr_body: str = "", use_llm: bool = True) -> GateResult:
@@ -94,20 +111,20 @@ def main(argv=None) -> int:
     ap.add_argument("--label", default="", help="name for this run in the dashboard (e.g. PR #3)")
     args = ap.parse_args(argv)
 
-    if args.path:
-        root = args.path if args.path.is_dir() else args.path.parent
-        files = files_from_path(args.path)
-    else:
-        root = args.repo
-        files = files_from_git(args.base, args.head, root)
-
     pr_body = ""
     if args.pr_body_file and args.pr_body_file.exists():
         pr_body = args.pr_body_file.read_text()
     elif args.pr_body_env:
         pr_body = os.environ.get(args.pr_body_env, "")
 
-    result = run(files, root, pr_body, use_llm=not args.no_llm)
+    if args.path:
+        root = args.path if args.path.is_dir() else args.path.parent
+        result = run(files_from_path(args.path), root, pr_body, use_llm=not args.no_llm)
+    else:
+        with tempfile.TemporaryDirectory(prefix="agentsentinel-pr-") as tmp:
+            files, read_errors = files_from_git(args.base, args.head, args.repo, Path(tmp))
+            result = run(files, Path(tmp), pr_body, use_llm=not args.no_llm)
+            result.errors = read_errors + result.errors
     md = build_markdown(result)
     print(md)
     if args.comment_out:

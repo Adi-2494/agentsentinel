@@ -124,3 +124,10 @@ def test_static_scan_finds_sqli_and_not_in_safe():
     good, _ = scan_files([EX / "safe_pr" / "user_lookup.py"], EX / "safe_pr")
     assert [(f.tool, f.file, f.line) for f in bad if f.category == "vuln"] == [("semgrep", "orders.py", 12)]
     assert not [f for f in good if f.category == "vuln"]
+
+
+def test_lockfiles_skip_regex_rules(tmp_path):
+    lock = tmp_path / "package-lock.json"
+    lock.write_text('{"dependencies": {"parse-passwd": "^1.0.0", "x-secret-lib": "beta-build-77"}}\n')
+    findings, _ = scan_files([lock], tmp_path)
+    assert not [f for f in findings if f.tool == "agentsentinel"]

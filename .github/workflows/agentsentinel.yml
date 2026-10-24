@@ -16,14 +16,21 @@ concurrency:
 jobs:
   tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    env:
+      GITLEAKS_VERSION: "8.30.1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install -r requirements.txt semgrep
-      - run: pytest -q
+      - name: Install dependencies + scanners (integration tests need both)
+        run: |
+          pip install -r requirements.txt semgrep
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+      - name: Unit + integration tests (no Claude calls)
+        run: pytest -q -rs
 
   merge-gate:
     if: github.event_name == 'pull_request'

@@ -20,6 +20,12 @@ CODE_SUFFIXES = {
     ".yml", ".yaml", ".json", ".toml", ".ini", ".cfg", ".env", ".tf", ".html",
     ".md", ".txt",
 }
+# Machine-generated dependency locks: package names like "parse-passwd" look like
+# credentials to regex rules. Gitleaks (entropy + allowlists) still scans them.
+LOCK_FILES = {
+    "package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "pnpm-lock.yaml", "poetry.lock",
+    "Pipfile.lock", "uv.lock", "Cargo.lock", "go.sum", "composer.lock", "Gemfile.lock",
+}
 
 
 @dataclass
@@ -45,12 +51,13 @@ def _line_of(text: str, offset: int) -> int:
 
 def _snippet(path: Path, line: int, context: int = 3) -> str:
     try:
-        lines = path.read_text(errors="replace").splitlines()
+        text = path.read_text(errors="replace")
     except OSError:
         return ""
+    # redact the whole file first (rules see real line starts), then cut + number
+    lines = secrets.redact(pii.redact(text)[0])[0].splitlines()
     lo, hi = max(0, line - 1 - context), min(len(lines), line + context)
-    block = "\n".join(f"{i + 1:>4}| {lines[i]}" for i in range(lo, hi))
-    return secrets.redact(pii.redact(block)[0])[0]
+    return "\n".join(f"{i + 1:>4}| {lines[i]}" for i in range(lo, hi))
 
 
 def run_semgrep(files: list[Path], root: Path) -> tuple[list[dict], list[str]]:
@@ -67,7 +74,11 @@ def run_semgrep(files: list[Path], root: Path) -> tuple[list[dict], list[str]]:
         data = json.loads(proc.stdout)
     except json.JSONDecodeError:
         return [], [f"semgrep failed: {proc.stderr.strip()[:300]}"]
-    errors = [e.get("message", str(e))[:200] for e in data.get("errors", [])]
+    raw = [e.get("message", str(e)) for e in data.get("errors", [])]
+    syntax = [m for m in raw if "Syntax error" in m]
+    errors = [m[:200] for m in raw if "Syntax error" not in m]
+    if syntax:
+        errors.append(f"semgrep could not parse {len(syntax)} file(s); other files were scanned")
     return data.get("results", []), errors
 
 
@@ -102,8 +113,10 @@ def scan_files(files: list[Path], root: Path) -> tuple[list[ScanFinding], list[s
     seen: set[tuple] = set()
 
     def add(tool, rule, category, severity, path, line, message):
-        key = (category, rel(path), line)
-        if key in seen:  # same issue reported by two tools
+        # same issue reported by two tools / rules -> keep one; but different
+        # kinds of personal data on one line are separate findings
+        key = (category, rel(path), line, rule if category == "pii" else "")
+        if key in seen:
             return
         seen.add(key)
         findings.append(ScanFinding(
@@ -125,6 +138,8 @@ def scan_files(files: list[Path], root: Path) -> tuple[list[ScanFinding], list[s
             r["_file"], r.get("StartLine", 0), r.get("Description", "Secret detected"))
 
     for f in files:
+        if f.name in LOCK_FILES:
+            continue
         try:
             text = f.read_text(errors="replace")
         except OSError:

@@ -63,7 +63,8 @@ RULES = [
 _PLACEHOLDER = re.compile(
     r"^(?:x+|\*+|\.+|<[^>]*>|\$\{?[A-Z_]+\}?|changeme|change_me|password|secret|"
     r"your[_-].*|example.*|placeholder|dummy|redacted|\[redacted\]|todo|none|null|"
-    r"os\.environ.*|process\.env.*|getenv.*)$",
+    r"os\.environ.*|process\.env.*|getenv.*|"
+    r"[\^~<>=]+\s*v?\d[\w.+-]*|v?\d+\.\d+(?:\.\d+)*(?:[-+][\w.]+)?)$",  # version specs
     re.I,
 )
 
