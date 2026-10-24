@@ -9,7 +9,7 @@ import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from core.detectors import pii, secrets
+from core.detectors import injection, pii, secrets
 from core.detectors.base import mask
 
 SEMGREP_CONFIG = "p/owasp-top-ten"
@@ -18,7 +18,7 @@ CODE_SUFFIXES = {
     ".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rb", ".php", ".cs",
     ".c", ".cpp", ".h", ".kt", ".scala", ".rs", ".swift", ".sh", ".sql",
     ".yml", ".yaml", ".json", ".toml", ".ini", ".cfg", ".env", ".tf", ".html",
-    ".md", ".txt",
+    ".md", ".txt", ".mdc",
 }
 # Machine-generated dependency locks: package names like "parse-passwd" look like
 # credentials to regex rules. Gitleaks (entropy + allowlists) still scans them.
@@ -107,7 +107,8 @@ def scan_files(files: list[Path], root: Path) -> tuple[list[ScanFinding], list[s
     """Scan the given files. Returns (findings, tool errors)."""
     root = root.resolve()
     files = [f.resolve() for f in files if f.is_file() and
-             (f.suffix.lower() in CODE_SUFFIXES or f.name.startswith(".env"))]
+             (f.suffix.lower() in CODE_SUFFIXES or f.name.startswith(".env")
+              or injection.is_ai_config(str(f)))]
     rel = lambda p: str(Path(p).resolve().relative_to(root)) if Path(p).resolve().is_relative_to(root) else str(p)  # noqa: E731
     findings: list[ScanFinding] = []
     seen: set[tuple] = set()
@@ -115,7 +116,7 @@ def scan_files(files: list[Path], root: Path) -> tuple[list[ScanFinding], list[s
     def add(tool, rule, category, severity, path, line, message):
         # same issue reported by two tools / rules -> keep one; but different
         # kinds of personal data on one line are separate findings
-        key = (category, rel(path), line, rule if category == "pii" else "")
+        key = (category, rel(path), line, rule if category in ("pii", "injection") else "")
         if key in seen:
             return
         seen.add(key)
@@ -149,4 +150,19 @@ def scan_files(files: list[Path], root: Path) -> tuple[list[ScanFinding], list[s
                 f"{x.message} ({mask(text[x.start:x.end])})")
         for x in pii.scan(text):
             add("agentsentinel", x.rule, "pii", x.severity, f, _line_of(text, x.start), x.message)
+        for x in injection.scan(text, rel(f)):
+            line = _line_of(text, x.start) if x.start >= 0 else 1
+            add("agentsentinel", x.rule, "injection", x.severity, f, line,
+                f"{x.message}" + (f": {x.preview!r}" if x.preview and x.start >= 0 else ""))
     return findings, errors
+
+
+def scan_pr_text(pr_body: str) -> list[ScanFinding]:
+    """AI-trap rules on the PR description (it is shown to AI reviewers too)."""
+    out = []
+    for x in injection.scan(pr_body):
+        out.append(ScanFinding(
+            id="", tool="agentsentinel", rule=x.rule, category="injection", severity=x.severity,
+            file="PR description", line=_line_of(pr_body, x.start) if x.start >= 0 else 0,
+            message=f"{x.message}: {x.preview!r}"))
+    return out

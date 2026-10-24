@@ -59,15 +59,15 @@ Developer's laptop                          GitHub
 | | Feature | Status |
 |---|---|---|
 | A1 | Secret file lock: `.env`, SSH keys, cloud credentials, kube/docker configs | ✅ |
-| A2 | Redaction of API keys, passwords and personal data (email, Indian phone, Aadhaar with Verhoeff check, PAN, cards with Luhn check) | ✅ (used in the gate and logs) |
-| A3 | Output check: block writes that contain secrets or personal data | 🔜 Planned |
+| A2 | Redaction of API keys, passwords and personal data (email, Indian phone, Aadhaar with Verhoeff check, PAN, cards with Luhn check), including in **command output before the AI sees it** | ✅ |
+| A3 | Output check: block Write/Edit that would save secrets or high-risk personal data | ✅ |
 | A4 | Command block: `curl \| sh`, `rm -rf /`, base64-to-shell, uploads with `curl -d @file` / `scp` / `nc` to unknown hosts | ✅ |
-| A5 | AI-trap scanner: hidden instructions, invisible Unicode | 🔜 Planned |
+| A5 | AI-trap scanner on files the AI reads (Read tool **and** `cat`/`grep`/… in Bash) and on tool output: hidden instructions, zero-width / bidi / tag characters (hidden text is decoded) | ✅ |
 | A6 | Activity log in SQLite (masked previews only) | ✅ |
 | B1 | Semgrep (`p/owasp-top-ten`) plus one batched Claude triage call | ✅ |
 | B2 | Gitleaks plus our secret and PII rules | ✅ |
 | B3 | ⭐ Two-view manipulation check | ✅ |
-| B4 | AI-trap scanner for PR text, `CLAUDE.md`, `.cursorrules`, MCP configs | 🔜 Planned |
+| B4 | AI-trap scanner for PR text, comments, `CLAUDE.md`, `.cursorrules`, MCP configs, `.claude/settings.json` hooks; rules plus one Claude Haiku call for reworded tricks | ✅ |
 | B5 | PR comment and failing check | ✅ |
 | | Cursor hook and MCP server | 🔜 Planned |
 | | Benchmark: with vs without AgentSentinel across Claude models | 🔜 Planned |
@@ -105,7 +105,7 @@ git clone https://github.com/Adi-2494/agentsentinel.git
 cd agentsentinel
 python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
 cp .env.example .env          # LLM_BACKEND=claude_code, MAIN_MODEL=sonnet, CHECK_MODEL=haiku
-.venv/bin/pytest -q           # 177 tests, no Claude calls
+.venv/bin/pytest -q           # 235 tests, no Claude calls
 ```
 
 ### A. Live Guard (Claude Code)
@@ -115,6 +115,13 @@ cp .env.example .env          # LLM_BACKEND=claude_code, MAIN_MODEL=sonnet, CHEC
 ```
 
 This adds a `PreToolUse` hook to that project's `.claude/settings.json` (other settings are kept). Open Claude Code there and ask it to *"read .env"*. It's blocked with a reason, and the event appears in the dashboard.
+
+It registers two hooks:
+
+- **PreToolUse** checks an action before it runs: secret files, risky commands, secrets or personal data in content being written, and AI traps in files about to be read
+- **PostToolUse** cleans tool output (Bash, Read, Grep, WebFetch, MCP) before Claude sees it: traps are cut out and secrets redacted (Bash), or Claude is warned not to follow them (other tools)
+
+Decisions:
 
 - **CRITICAL / HIGH**: denied, and Claude is told why
 - **MEDIUM** (e.g. a fetch from an unlisted host): you're asked to confirm
@@ -173,8 +180,8 @@ The LLM layer is pluggable via `.env`:
 
 | Suite | Tests | What it covers |
 |---|---|---|
-| Unit | 154 | Every detector (positive and negative cases), hook decisions, the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
-| Integration | 23 | 3 generated repos and 15 PR branches through the real gate (git diff + Semgrep + Gitleaks); a "fooled reviewer" stand-in proving the manipulation alarm fires; LLM outage fails closed; a 12-step agent session replayed through the real hook |
+| Unit | 206 | Every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, hook decisions (incl. output cleaning), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
+| Integration | 29 | 3 generated repos and 20 PR branches through the real gate (git diff + Semgrep + Gitleaks); a "fooled reviewer" stand-in proving the manipulation alarm fires; LLM outage fails closed; a 12-step agent session replayed through the real hook |
 | Live (opt-in) | 4 | Real Claude calls: `pytest -m llm` |
 
 ```bash

@@ -9,6 +9,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MATCHER = "Read|Bash|Write|Edit|MultiEdit|NotebookEdit|Grep|Glob"
+# tools whose OUTPUT reaches the model (regex: mcp__.* matches every MCP tool)
+POST_MATCHER = "Bash|Read|Grep|WebFetch|WebSearch|mcp__.*"
 
 
 def hook_command() -> str:
@@ -20,11 +22,13 @@ def install(project: Path) -> Path:
     settings_path = project / ".claude" / "settings.json"
     settings_path.parent.mkdir(parents=True, exist_ok=True)
     settings = json.loads(settings_path.read_text()) if settings_path.exists() else {}
-    pre = settings.setdefault("hooks", {}).setdefault("PreToolUse", [])
     cmd = hook_command()
-    # drop any older AgentSentinel entry, then add the current one
-    pre[:] = [g for g in pre if not any("claude_hook.py" in h.get("command", "") for h in g.get("hooks", []))]
-    pre.append({"matcher": MATCHER, "hooks": [{"type": "command", "command": cmd}]})
+    for event, matcher in (("PreToolUse", MATCHER), ("PostToolUse", POST_MATCHER)):
+        groups = settings.setdefault("hooks", {}).setdefault(event, [])
+        # drop any older AgentSentinel entry, then add the current one
+        groups[:] = [g for g in groups
+                     if not any("claude_hook.py" in h.get("command", "") for h in g.get("hooks", []))]
+        groups.append({"matcher": matcher, "hooks": [{"type": "command", "command": cmd}]})
     settings_path.write_text(json.dumps(settings, indent=2) + "\n")
     return settings_path
 

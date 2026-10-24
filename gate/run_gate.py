@@ -15,10 +15,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core import store  # noqa: E402
-from core.reviewer import static_scan, triage, two_view  # noqa: E402
+from core.reviewer import injection_check, static_scan, triage, two_view  # noqa: E402
 from core.reviewer.report import GateResult, build_markdown  # noqa: E402
 
-SKIP_DIRS = {".git", "_gate", ".venv", "venv", "node_modules", "__pycache__", "dist", "build", ".claude"}
+SKIP_DIRS = {".git", "_gate", ".venv", "venv", "node_modules", "__pycache__", "dist", "build"}
 SKIP_NAMES = {"PR_DESCRIPTION.md"}
 
 
@@ -54,13 +54,25 @@ def files_from_git(base: str, head: str, repo: Path, dest: Path) -> tuple[list[P
     return files, errors
 
 
+def _renumber(findings) -> None:
+    for i, f in enumerate(findings, 1):
+        f.id = f"F{i}"
+
+
 def run(files: list[Path], root: Path, pr_body: str = "", use_llm: bool = True) -> GateResult:
     findings, errors = static_scan.scan_files(files, root)
+    findings += static_scan.scan_pr_text(pr_body)
+    _renumber(findings)
     tv = None
     if use_llm:
         err = triage.triage(findings)
         if err:
             errors.append(f"triage: {err}")
+        llm_findings, err = injection_check.check(files, root, pr_body)
+        if err:
+            errors.append(f"AI-trap check: {err}")
+        findings += llm_findings
+        _renumber(findings)
         code_files = {}
         for f in files:
             if f.suffix.lower() in static_scan.CODE_SUFFIXES - {".md", ".txt", ".json"}:
@@ -75,7 +87,7 @@ def run(files: list[Path], root: Path, pr_body: str = "", use_llm: bool = True) 
     else:
         for f in findings:
             f.triage = {"verdict": "real", "severity": f.severity, "by": "no-llm"}
-        errors.append("LLM disabled (--no-llm): static scan only, no triage / two-view check")
+        errors.append("LLM disabled (--no-llm): static scan only, no triage / two-view / AI-trap LLM check")
     return GateResult(findings=findings, two_view=tv, errors=errors, files_scanned=len(files))
 
 

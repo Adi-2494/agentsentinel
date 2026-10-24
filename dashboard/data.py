@@ -21,7 +21,7 @@ _COMMAND_RULES = {r[0] for r in commands.WHOLE_COMMAND_RULES} | {
 
 def categorise(rule: str, detail: dict) -> str:
     if detail.get("category"):
-        return {"vuln": "vulnerability"}.get(detail["category"], detail["category"])
+        return {"vuln": "vulnerability", "file": "secret_file"}.get(detail["category"], detail["category"])
     if rule == "gate_run":
         return "pr_run"
     if rule == "two_view_manipulation":
@@ -34,7 +34,7 @@ def categorise(rule: str, detail: dict) -> str:
         return "pii"
     if rule in _COMMAND_RULES:
         return "command"
-    if rule.startswith("injection") or rule.startswith("hidden_"):
+    if rule.startswith(("injection", "hidden_", "ai_config", "llm_injection")):
         return "injection"
     return "other"
 

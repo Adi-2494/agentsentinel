@@ -29,7 +29,7 @@ def test_checksums():
 
 
 @pytest.mark.parametrize("text,rule", [
-    ("contact: priya.sharma@example.com", "email"),
+    ("contact: priya.sharma@acme-mail.co.in", "email"),
     ("call +91 98765 43210", "phone_in"),
     ("call 9876543210", "phone_in"),
     ("call 09876-543210", "phone_in"),
@@ -50,6 +50,9 @@ def test_detects_pii(text, rule):
     "call 1234567890",  # Indian mobiles start with 6-9
     "ABCDE1234F",  # 4th char D is not a valid PAN holder type
     "user@localhost",
+    "dev@example.com",
+    "qa@staging.example.org",
+    "bot@ci.test",
 ])
 def test_ignores_non_pii(text):
     assert pii.scan(text) == []

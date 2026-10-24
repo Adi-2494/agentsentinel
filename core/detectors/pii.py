@@ -8,6 +8,9 @@ import re
 from core.detectors.base import Finding, mask, redact_spans
 
 EMAIL = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
+# RFC 2606 / 6761 reserved names: can never belong to a real person
+RESERVED_EMAIL_DOMAIN = re.compile(
+    r"@(?:[\w-]+\.)*(?:example\.(?:com|net|org)|[\w-]+\.(?:test|example|invalid|localhost))$", re.I)
 # +91 98765 43210 / 09876543210 / 9876543210 / 98765-43210
 IN_PHONE = re.compile(r"(?<![\w+])(?:\+91[\s-]?|0)?[6-9](?:[\s-]?\d){9}(?!\d)")
 AADHAAR = re.compile(r"(?<!\d)[2-9]\d{3}[\s-]?\d{4}[\s-]?\d{4}(?!\d)")
@@ -87,7 +90,8 @@ def scan(text: str) -> list[Finding]:
     for m in IN_PHONE.finditer(text):
         add(m, "phone_in", "MEDIUM", "Indian phone number")
     for m in EMAIL.finditer(text):
-        add(m, "email", "MEDIUM", "Email address")
+        if not RESERVED_EMAIL_DOMAIN.search(m.group()):
+            add(m, "email", "MEDIUM", "Email address")
     return findings
 
 
