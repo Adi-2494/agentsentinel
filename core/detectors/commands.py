@@ -80,11 +80,35 @@ def _segments(command: str) -> list[str]:
     return [s.strip() for s in re.split(r"\|\||&&|[|;&\n]", command) if s.strip()]
 
 
+_TOKEN = re.compile(r"""(?:[^\s'"]+|'[^']*'|"(?:\\.|[^"\\])*")+""")
+_SHLEX_MAX = 4096  # shlex builds tokens char by char (quadratic on huge words)
+
+
+_QUOTED_PART = re.compile(r"'([^']*)'|\"((?:\\.|[^\"\\])*)\"")
+_ESCAPE = re.compile(r"\\(.)")
+
+
+def _unquote(m: re.Match) -> str:
+    if m.group(1) is not None:  # '...': literal
+        return m.group(1)
+    return _ESCAPE.sub(r"\1", m.group(2))  # "...": backslash escapes
+
+
+def _fast_tokens(segment: str) -> list[str]:
+    """Linear-time shell-like split: same quoting rules as shlex for the cases we inspect."""
+    return [_QUOTED_PART.sub(_unquote, tok) for tok in _TOKEN.findall(segment)]
+
+
 def _tokens(segment: str) -> list[str]:
+    if len(segment) > _SHLEX_MAX:
+        return _fast_tokens(segment)
     try:
         return shlex.split(segment)
     except ValueError:
         return segment.split()
+
+
+MAX_COMMAND_CHARS = 100_000  # far beyond normal agent use; still scanned, but the user confirms
 
 
 def check(command: str) -> list[Finding]:
@@ -94,6 +118,11 @@ def check(command: str) -> list[Finding]:
         if not any(f.rule == rule and f.preview == preview for f in findings):
             findings.append(Finding(rule=rule, category="command", severity=severity,
                                     message=message, preview=preview[:120]))
+
+    if len(command) > MAX_COMMAND_CHARS:
+        add("command_too_large", "MEDIUM",
+            f"Command is {len(command) // 1000} KB (limit {MAX_COMMAND_CHARS // 1000} KB); confirm before it runs",
+            command[:80])
 
     for rule, pattern, severity, message in WHOLE_COMMAND_RULES:
         m = pattern.search(command)

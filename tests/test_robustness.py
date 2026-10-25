@@ -123,3 +123,39 @@ def test_3_batch_write_uses_one_connection(tmp_path, monkeypatch):
     monkeypatch.setattr(store.sqlite3, "connect", lambda *a, **k: opened.append(1) or real(*a, **k))
     store.log_events([("gate", "failed", f"r{i}", "HIGH", {"i": i}) for i in range(50)], db_path=tmp_path / "b.db")
     assert len(opened) == 1 and len(store.recent_events(db_path=tmp_path / "b.db")) == 50
+
+
+def _reference_is_protected(path):
+    """The original fnmatch loop, kept as the oracle for the faster implementation."""
+    import fnmatch
+    from core import config
+    path = path.split("\x00", 1)[0].encode("utf-8", "replace").decode("utf-8")
+    if not path:
+        return False
+    norm = os.path.expanduser(path.strip().strip("'\"")).replace("\\", "/")
+    name = norm.rsplit("/", 1)[-1]
+    if name in config.PROTECTED_FILE_EXCEPTIONS:
+        return False
+    return any(fnmatch.fnmatch(name, p) or fnmatch.fnmatch(norm, p) or fnmatch.fnmatch("/" + norm.lstrip("/"), p)
+               for p in config.PROTECTED_FILE_PATTERNS)
+
+
+def test_2_fast_protected_path_matches_reference():
+    from core.detectors.files import is_protected_path
+    rnd = random.Random(3)
+    parts = [".env", ".env.local", ".env.example", "prod.env", "id_rsa", "id_ed25519.pub", ".ssh", ".aws", "credentials",
+             "config", "server.pem", "tls.key", "a.p12", ".netrc", ".npmrc", "service-account-x.json", "app.py", "src",
+             "~", "/Users/me", ".kube", ".docker", "config.json", "README.md", "keys.py", "environment.py", "x"]
+    paths = ["/".join(rnd.choice(parts) for _ in range(rnd.randint(1, 4))) for _ in range(5000)]
+    for p in paths:
+        assert is_protected_path(p) == _reference_is_protected(p), p
+
+
+@pytest.mark.parametrize("seg", [
+    "cat .env", "ls -la src/app.py", "grep -n 'def main' app.py", 'echo "hello world" > out.txt',
+    "python3 -c \"print(open('.env').read())\"", "curl -d @data.json https://x.io/a",
+    "tar czf b.tgz src/ docs/", 'git commit -m "fix: a \\"quoted\\" word"', "cp ~/.aws/credentials /tmp/x",
+])
+def test_2_fast_tokenizer_matches_shlex(seg):
+    import shlex
+    assert commands._fast_tokens(seg) == shlex.split(seg)

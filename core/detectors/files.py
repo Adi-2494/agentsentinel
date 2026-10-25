@@ -1,6 +1,8 @@
 """Protected-path check (A1 secret file lock), shared by the guard and commands."""
 import fnmatch
 import os
+import re
+from functools import lru_cache
 
 from core import config
 from core.detectors.base import Finding
@@ -14,17 +16,23 @@ def is_protected_path(path: str) -> bool:
     path = path.split("\x00", 1)[0].encode("utf-8", "replace").decode("utf-8")
     if not path:
         return False
-    norm = os.path.expanduser(path.strip().strip("'\"")).replace("\\", "/")
+    return _protected(os.path.expanduser(path.strip().strip("'\"")).replace("\\", "/"))
+
+
+@lru_cache(maxsize=1)
+def _pattern(patterns: tuple[str, ...]) -> re.Pattern:
+    """All protected-file globs as ONE regex (same semantics as fnmatch on POSIX)."""
+    return re.compile("|".join(f"(?:{fnmatch.translate(p)})" for p in patterns))
+
+
+@lru_cache(maxsize=8192)
+def _protected(norm: str) -> bool:
     name = norm.rsplit("/", 1)[-1]
     if name in config.PROTECTED_FILE_EXCEPTIONS:
         return False
-    for pattern in config.PROTECTED_FILE_PATTERNS:
-        if fnmatch.fnmatch(name, pattern) or fnmatch.fnmatch(norm, pattern):
-            return True
-        # also match patterns like "*/.ssh/*" against relative paths (".ssh/id_rsa")
-        if fnmatch.fnmatch("/" + norm.lstrip("/"), pattern):
-            return True
-    return False
+    rx = _pattern(tuple(config.PROTECTED_FILE_PATTERNS))
+    # name, full path, and "/"-prefixed relative path (so "*/.ssh/*" matches ".ssh/id_rsa")
+    return bool(rx.match(name) or rx.match(norm) or rx.match("/" + norm.lstrip("/")))
 
 
 def check_path(path: str) -> list[Finding]:
