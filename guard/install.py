@@ -36,7 +36,7 @@ def install_cursor(project: Path) -> Path:
     for event, matcher in CURSOR_EVENTS.items():
         entries = config.setdefault("hooks", {}).setdefault(event, [])
         entries[:] = [e for e in entries if "cursor_hook.py" not in e.get("command", "")]
-        entry = {"command": cmd, "timeout": 10}
+        entry = {"command": cmd, "timeout": 10, "failClosed": True}  # Cursor blocks if the hook process dies
         if matcher:
             entry["matcher"] = matcher
         entries.append(entry)

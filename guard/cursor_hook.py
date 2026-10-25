@@ -5,6 +5,7 @@ Cursor sends JSON on stdin (hook_event_name + event fields) and reads
 Rules only, no LLM. Register with:  python guard/install.py --cursor <project>
 """
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -106,9 +107,13 @@ def main() -> int:
                 "cwd": event.get("cwd", "") or ",".join(event.get("workspace_roots") or [])})
         reason = _reason(findings)
         print(json.dumps({"permission": decision, "user_message": reason, "agent_message": reason}))
-    except Exception as e:  # fail open, like the Claude Code hook
-        print(f"AgentSentinel cursor hook error (action allowed): {e}", file=sys.stderr)
-        print(json.dumps({"permission": "allow"}))
+    except Exception as e:  # fail closed, like the Claude Code hook
+        print(f"AgentSentinel cursor hook error: {e}", file=sys.stderr)
+        if os.environ.get("AGENTSENTINEL_FAIL_OPEN") == "1":
+            print(json.dumps({"permission": "allow"}))
+        else:
+            msg = f"AgentSentinel could not check this action, so it was blocked for safety ({str(e)[:160]})"
+            print(json.dumps({"permission": "deny", "user_message": msg, "agent_message": msg}))
     return 0
 
 

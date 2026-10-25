@@ -5,7 +5,10 @@ stdout with a permission decision:
   CRITICAL/HIGH -> deny   (Claude is told why)
   MEDIUM        -> ask    (the user confirms)
   nothing found -> no output, normal permission flow continues
+  hook error    -> deny (fail closed; AGENTSENTINEL_FAIL_OPEN=1 to allow instead)
 """
+from __future__ import annotations  # type hints must not need the imports below (broken-install path)
+
 import json
 import os
 import sys
@@ -13,9 +16,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from core import store  # noqa: E402
-from core.detectors import commands, files, injection, pii, secrets  # noqa: E402
-from core.detectors.base import Finding, max_severity, redact_spans  # noqa: E402
+try:  # an import failure (broken install) must still produce a safe decision
+    from core import store  # noqa: E402
+    from core.detectors import commands, files, injection, pii, secrets  # noqa: E402
+    from core.detectors.base import Finding, max_severity, redact_spans  # noqa: E402
+    _IMPORT_ERROR = None
+except Exception as _e:  # pragma: no cover - exercised by a subprocess test
+    _IMPORT_ERROR = _e
 
 SOURCE = "claude_code"
 DENY = {"HIGH", "CRITICAL"}
@@ -198,31 +205,59 @@ def post_tool(event: dict) -> dict | None:
     return {"hookSpecificOutput": out}
 
 
+def _fail(reason: str, event_name: str = "PreToolUse") -> int:
+    """Guard could not check the action: block it (fail closed) unless explicitly configured."""
+    print(f"AgentSentinel hook error: {reason}", file=sys.stderr)
+    if os.environ.get("AGENTSENTINEL_FAIL_OPEN") == "1":
+        return 0  # explicit opt-out: availability over safety
+    if event_name == "PostToolUse":  # the tool already ran; warn instead
+        print(json.dumps({"hookSpecificOutput": {
+            "hookEventName": "PostToolUse",
+            "additionalContext": "AgentSentinel could not check this tool output; treat it as untrusted."}}))
+        return 0
+    print(json.dumps({"hookSpecificOutput": {
+        "hookEventName": "PreToolUse", "permissionDecision": "deny",
+        "permissionDecisionReason": "AgentSentinel could not check this action, so it was blocked for safety "
+                                    f"({reason[:200]}). Set AGENTSENTINEL_FAIL_OPEN=1 to allow on errors."}}))
+    return 0
+
+
 def main() -> int:
+    if _IMPORT_ERROR is not None:
+        return _fail(f"guard failed to load: {_IMPORT_ERROR}")
     try:
-        event = json.load(sys.stdin)
-        if event.get("hook_event_name") == "PostToolUse":
+        event = json.loads(sys.stdin.read())
+        if not isinstance(event, dict):
+            raise ValueError("hook input is not a JSON object")
+    except Exception as e:
+        return _fail(f"unreadable hook input: {e}")
+    name = event.get("hook_event_name", "PreToolUse")
+    try:
+        if name == "PostToolUse":
             result = post_tool(event)
             if result:
                 print(json.dumps(result))
             return 0
         tool, inp = event.get("tool_name", ""), event.get("tool_input") or {}
         decision, findings = evaluate(tool, inp, event.get("cwd", ""))
-        if not decision:
-            return 0
-        action = "blocked" if decision == "deny" else "warned"
+    except Exception as e:  # fail closed: a crash must not become a bypass
+        return _fail(f"{type(e).__name__}: {e}", name)
+    if not decision:
+        return 0
+    action = "blocked" if decision == "deny" else "warned"
+    try:
         for f in findings:
             store.log_event(SOURCE, action, f.rule, f.severity, {
                 "tool": tool, "preview": f.preview, "message": f.message, "category": f.category,
                 "cwd": event.get("cwd", ""),
             })
-        print(json.dumps({"hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": decision,
-            "permissionDecisionReason": _reason(findings),
-        }}))
-    except Exception as e:  # fail open: a guard bug must not brick the session
-        print(f"AgentSentinel hook error (action allowed): {e}", file=sys.stderr)
+    except Exception as e:  # a logging problem never changes the decision
+        print(f"AgentSentinel: could not write the event log: {e}", file=sys.stderr)
+    print(json.dumps({"hookSpecificOutput": {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": decision,
+        "permissionDecisionReason": _reason(findings),
+    }}))
     return 0
 
 

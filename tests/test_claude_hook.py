@@ -62,9 +62,31 @@ def test_hook_allows_silently(tmp_path):
     assert p.returncode == 0 and p.stdout == ""
 
 
-def test_hook_fails_open_on_garbage(tmp_path):
+def test_hook_fails_closed_on_garbage(tmp_path):
     p = run_hook("not json", tmp_path / "e.db")
-    assert p.returncode == 0 and p.stdout == "" and "hook error" in p.stderr
+    out = json.loads(p.stdout)["hookSpecificOutput"]
+    assert p.returncode == 0 and out["permissionDecision"] == "deny" and "hook error" in p.stderr
+
+
+def test_hook_fail_open_is_explicit_opt_out(tmp_path):
+    env = {**os.environ, "AGENTSENTINEL_DB": str(tmp_path / "e.db"), "AGENTSENTINEL_FAIL_OPEN": "1"}
+    p = subprocess.run([sys.executable, str(HOOK)], input="not json", text=True, capture_output=True, env=env)
+    assert p.stdout == ""
+
+
+def test_hook_crash_inside_evaluation_denies(tmp_path):
+    # tool_input of the wrong type makes evaluation raise
+    p = run_hook(json.dumps({"tool_name": "Bash", "tool_input": {"command": ["not", "a", "string"]}}),
+                 tmp_path / "e.db")
+    assert json.loads(p.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_log_failure_does_not_change_decision(tmp_path):
+    bad_db = tmp_path / "nodir" / "x.db"
+    (tmp_path / "nodir").write_text("a file, not a directory")
+    p = run_hook(json.dumps({"tool_name": "Read", "tool_input": {"file_path": "/p/.env"}}), bad_db)
+    assert json.loads(p.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
+    assert "could not write the event log" in p.stderr
 
 
 def test_read_scans_file_content(tmp_path):
@@ -144,3 +166,16 @@ def test_files_over_scan_limit_need_confirmation(tmp_path, monkeypatch):
     decision, findings = evaluate("Read", {"file_path": str(big)})
     assert decision == "ask" and findings[0].rule == "file_too_large_to_scan"
     assert evaluate("Bash", {"command": f"cat {big}"}, str(tmp_path))[0] == "ask"
+
+
+def test_broken_install_still_denies(tmp_path):
+    """The hook file alone, without the core package next to it, must not allow actions."""
+    import shutil
+    (tmp_path / "guard").mkdir()
+    lone = tmp_path / "guard" / "claude_hook.py"
+    shutil.copy(HOOK, lone)
+    p = subprocess.run([sys.executable, str(lone)], input=json.dumps({"tool_name": "Bash", "tool_input":
+                        {"command": "cat .env"}}), text=True, capture_output=True, timeout=30,
+                       env={k: v for k, v in os.environ.items() if k != "PYTHONPATH"})
+    out = json.loads(p.stdout)["hookSpecificOutput"]
+    assert out["permissionDecision"] == "deny" and "failed to load" in out["permissionDecisionReason"]

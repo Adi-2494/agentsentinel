@@ -59,9 +59,9 @@ def test_after_shell_logs_but_prints_nothing(tmp_path):
     assert sqlite3.connect(db).execute("SELECT action FROM events").fetchone() == ("warned",)
 
 
-def test_garbage_input_fails_open(tmp_path):
+def test_garbage_input_fails_closed(tmp_path):
     p = subprocess.run([sys.executable, str(HOOK)], input="nope", text=True, capture_output=True, timeout=30)
-    assert json.loads(p.stdout) == {"permission": "allow"} and "hook error" in p.stderr
+    assert json.loads(p.stdout)["permission"] == "deny" and "hook error" in p.stderr
 
 
 def test_install_cursor(tmp_path):
@@ -71,3 +71,4 @@ def test_install_cursor(tmp_path):
     cfg = json.loads(p.read_text())
     assert cfg["version"] == 1 and set(cfg["hooks"]) == set(CURSOR_EVENTS)
     assert all(len(v) == 1 and "cursor_hook.py" in v[0]["command"] for v in cfg["hooks"].values())
+    assert all(v[0]["failClosed"] is True for v in cfg["hooks"].values())
