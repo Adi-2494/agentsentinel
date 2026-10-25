@@ -256,27 +256,23 @@ docker compose up --build                     # http://localhost:8501
 
 The container only reads `./data/agentsentinel.db`. On a fresh clone with no log, it shows clearly labelled **demo data**.
 
-### Public demo
+### Demo without a live link
 
-**Streamlit Community Cloud (free):**
-
-1. At [share.streamlit.io](https://share.streamlit.io), sign in with GitHub and create an app from this repo: branch `main`, main file `dashboard/app.py`, Python 3.11.
-2. Under *Advanced settings → Secrets*, add `AGENTSENTINEL_PUBLIC = "1"`.
-
-In **public mode**:
-
-- there is no file-path input
-- the labelled synthetic demo log is generated on startup for the event views
-- Benchmark and Real-world data show the measured results
-- the app makes no LLM calls and holds no credentials
-
-**Hugging Face Docker Space** (needs a PRO subscription for Docker Spaces):
+No hosted demo is published, on purpose: deploying from GitHub would grant a third-party host write access to the account's public repos, where the Actions secrets live. To see the dashboard:
 
 ```bash
-./deploy/build_hf_space.sh
-hf repos create <you>/agentsentinel --type space --sdk docker --public
-hf upload <you>/agentsentinel dist/hf-space . --type space
+docker compose up --build        # http://localhost:8501
 ```
+
+On a fresh clone with no event log, it shows clearly labelled demo data. Screenshots are in `docs/`.
+
+The dashboard also has a **public mode** (`AGENTSENTINEL_PUBLIC=1`) for anyone who self-hosts it:
+
+- no file-path input
+- the labelled demo log is generated on startup
+- no LLM calls and no credentials
+
+`deploy/build_hf_space.sh` packages it as a Docker Space.
 
 ### LLM backend
 
