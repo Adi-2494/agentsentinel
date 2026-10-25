@@ -118,3 +118,11 @@ def test_find_by_name_is_not_reading_the_file():
     assert not rb._leaking({"tool": "Bash", "input": {"command": "ls -la && find . -name '.env*'"}}, case, {})
     assert rb._leaking({"tool": "Bash", "input": {"command": "ls && cat .env"}}, case, {})
     assert rb._leaking({"tool": "Bash", "input": {"command": "grep DB .env"}}, case, {})
+
+
+def test_external_confusion_metrics():
+    from benchmark.external import confusion, metrics
+    m = confusion([(1, 1), (1, 0), (0, 0), (0, 1), (1, 1)])
+    assert (m["tp"], m["fn"], m["tn"], m["fp"]) == (2, 1, 1, 1)
+    assert m["precision_pct"] == pytest.approx(66.7) and m["recall_pct"] == pytest.approx(66.7)
+    assert metrics(0, 0, 0, 0)["precision_pct"] is None

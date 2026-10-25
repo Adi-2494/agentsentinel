@@ -1,0 +1,345 @@
+{
+  "generated": "2026-10-25T09:08:05Z",
+  "prompt_injections": {
+    "source": {
+      "dataset": "deepset/prompt-injections",
+      "license": "Apache-2.0",
+      "files": [
+        "data/train-00000-of-00001-9564e8b05b4757ab.parquet",
+        "data/test-00000-of-00001-701d16158af87368.parquet"
+      ]
+    },
+    "n": 662,
+    "positives": 263,
+    "rules": {
+      "tp": 5,
+      "fp": 2,
+      "fn": 258,
+      "tn": 397,
+      "precision_pct": 71.4,
+      "recall_pct": 1.9,
+      "false_positive_rate_pct": 0.5,
+      "accuracy_pct": 60.7
+    },
+    "llm_sample": {
+      "model": "haiku",
+      "n": 40,
+      "tp": 16,
+      "fp": 0,
+      "fn": 4,
+      "tn": 20,
+      "precision_pct": 100.0,
+      "recall_pct": 80.0,
+      "false_positive_rate_pct": 0.0,
+      "accuracy_pct": 90.0,
+      "rules_on_same_sample": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 19,
+        "tn": 20,
+        "precision_pct": 100.0,
+        "recall_pct": 5.0,
+        "false_positive_rate_pct": 0.0,
+        "accuracy_pct": 52.5
+      }
+    }
+  },
+  "securityeval": {
+    "source": {
+      "dataset": "s2e-lab/SecurityEval",
+      "license": "none stated (used for evaluation only, not redistributed)",
+      "files": [
+        "dataset.jsonl"
+      ]
+    },
+    "n": 121,
+    "static_blocking_recall_pct": 8.3,
+    "static_any_finding_pct": 19.8,
+    "per_cwe": {
+      "CWE-020": {
+        "detected": 0,
+        "total": 6
+      },
+      "CWE-022": {
+        "detected": 1,
+        "total": 4
+      },
+      "CWE-078": {
+        "detected": 2,
+        "total": 2
+      },
+      "CWE-079": {
+        "detected": 0,
+        "total": 3
+      },
+      "CWE-080": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-089": {
+        "detected": 0,
+        "total": 2
+      },
+      "CWE-090": {
+        "detected": 0,
+        "total": 2
+      },
+      "CWE-094": {
+        "detected": 2,
+        "total": 3
+      },
+      "CWE-095": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-099": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-113": {
+        "detected": 0,
+        "total": 2
+      },
+      "CWE-116": {
+        "detected": 1,
+        "total": 2
+      },
+      "CWE-117": {
+        "detected": 0,
+        "total": 3
+      },
+      "CWE-1204": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-193": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-200": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-209": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-215": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-250": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-252": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-259": {
+        "detected": 0,
+        "total": 2
+      },
+      "CWE-269": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-283": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-285": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-295": {
+        "detected": 0,
+        "total": 3
+      },
+      "CWE-306": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-319": {
+        "detected": 0,
+        "total": 2
+      },
+      "CWE-321": {
+        "detected": 1,
+        "total": 2
+      },
+      "CWE-326": {
+        "detected": 0,
+        "total": 2
+      },
+      "CWE-327": {
+        "detected": 0,
+        "total": 4
+      },
+      "CWE-329": {
+        "detected": 1,
+        "total": 1
+      },
+      "CWE-330": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-331": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-339": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-347": {
+        "detected": 1,
+        "total": 3
+      },
+      "CWE-367": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-377": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-379": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-385": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-400": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-406": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-414": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-425": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-434": {
+        "detected": 0,
+        "total": 2
+      },
+      "CWE-454": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-462": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-477": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-502": {
+        "detected": 0,
+        "total": 4
+      },
+      "CWE-521": {
+        "detected": 0,
+        "total": 2
+      },
+      "CWE-522": {
+        "detected": 0,
+        "total": 2
+      },
+      "CWE-595": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-601": {
+        "detected": 0,
+        "total": 5
+      },
+      "CWE-605": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-611": {
+        "detected": 0,
+        "total": 6
+      },
+      "CWE-641": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-643": {
+        "detected": 0,
+        "total": 2
+      },
+      "CWE-703": {
+        "detected": 0,
+        "total": 3
+      },
+      "CWE-730": {
+        "detected": 0,
+        "total": 3
+      },
+      "CWE-732": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-759": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-760": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-776": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-798": {
+        "detected": 0,
+        "total": 2
+      },
+      "CWE-827": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-835": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-841": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-918": {
+        "detected": 1,
+        "total": 2
+      },
+      "CWE-941": {
+        "detected": 0,
+        "total": 1
+      },
+      "CWE-943": {
+        "detected": 0,
+        "total": 1
+      }
+    },
+    "tool_warnings": [],
+    "llm_sample": {
+      "model": "haiku",
+      "n": 40,
+      "static_recall_pct": 10.0,
+      "llm_recall_pct": 67.5,
+      "combined_recall_pct": 70.0
+    }
+  }
+}

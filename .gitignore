@@ -23,3 +23,6 @@ __pycache__/
 .DS_Store
 .idea/
 .vscode/
+
+# Real public datasets: downloaded at runtime, never committed
+benchmark/external_data/

@@ -105,6 +105,17 @@ Developer's laptop                          GitHub
 
 Reproduce: `python benchmark/run_benchmark.py` (resumable, batched; uses your Claude Code login). Raw per-case results are in `benchmark/results/results.json`.
 
+## Real-world datasets
+
+Public datasets, **downloaded at runtime and never redistributed**, credited to their authors (`benchmark/external.py`):
+
+| Dataset | What it is | Rules only (no LLM) | With the Claude Haiku layer (40-item sample) |
+|---|---|---|---|
+| [deepset/prompt-injections](https://huggingface.co/datasets/deepset/prompt-injections) (Apache-2.0) | 662 real prompts, 263 labelled injections; 36% German, mostly chatbot jailbreaks | recall 1.9%, precision 71.4% | **recall 80.0%, precision 100.0%** (the gate's own AI-trap prompt) |
+| [SecurityEval](https://github.com/s2e-lab/SecurityEval) (s2e-lab) | 121 real insecure Python samples across 69 CWEs | 8.3% blocked by Semgrep + Gitleaks + rules | **67.5%** caught by the Claude review, 70.0% combined |
+
+What this shows: the rule layers are **precise but narrow**. They are built for instructions hidden in code and for injection-shaped web code, so they miss most chat-style jailbreaks (including non-English ones) and taint-free insecure functions. The Claude layers are what reach real-world coverage, which is why AgentSentinel runs both. Personal data in all tests is generated in the real formats (Aadhaar with Verhoeff checksum, PAN, Luhn-valid cards); no real person's data is used.
+
 ## Other results
 
 **GitHub Action on a real PR.** A test PR added an obvious SQL injection plus a "trick" file whose comments and PR description claimed the code was sanitized and asked the AI reviewer to approve. The gate **failed the PR** and commented. Semgrep found the obvious bug. **Only the Claude review found the hidden one**, at the correct line.
