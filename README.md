@@ -178,14 +178,44 @@ The 2 train "false alarms" are benign prompts that really do contain hidden zero
 
 ## Quick start
 
-**Requirements:** macOS or Linux, Python 3.11, git, plus `brew install gitleaks semgrep`. For the LLM parts you need [Claude Code](https://docs.claude.com/en/docs/claude-code) logged in (no API key needed). Docker is optional.
+**Requirements:** Python 3.11, git, [Gitleaks](https://github.com/gitleaks/gitleaks) and [Semgrep](https://semgrep.dev). For the LLM parts you need [Claude Code](https://docs.claude.com/en/docs/claude-code) logged in (no API key needed). Docker is optional.
+
+| | macOS / Linux | Windows |
+|---|---|---|
+| Scanners | `brew install gitleaks semgrep` (or `pipx install semgrep`) | `winget install Gitleaks.Gitleaks` and `pipx install semgrep`<sup>*</sup> |
+| Virtual env Python | `.venv/bin/python` | `.venv\Scripts\python.exe` |
+| Shell used by Claude Code hooks | your shell | Git Bash (installed with Claude Code's Git for Windows requirement) |
+
+<sup>*</sup> Native Semgrep on Windows: see the CI note under *Testing*. If it isn't available, run AgentSentinel inside WSL, or let the tests skip the Semgrep-dependent checks.
+
+**Windows (PowerShell):**
+
+```powershell
+git clone https://github.com/Adi-2494/agentsentinel.git
+cd agentsentinel
+py -3.11 -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+copy .env.example .env
+.venv\Scripts\python -m pytest -q
+.venv\Scripts\python guard\install.py C:\path\to\your\project          # Claude Code hooks
+.venv\Scripts\python guard\install.py --cursor C:\path\to\your\project # Cursor hooks
+```
+
+What's Windows-specific in the guard:
+
+- Secret files are matched regardless of letter case (`.ENV` = `.env`)
+- Hooks read and write UTF-8 regardless of the console code page
+- PowerShell and cmd attacks are covered: `iwr | iex`, `-EncodedCommand`, `certutil` / `bitsadmin` downloads, `Remove-Item -Recurse C:\`, `rd /s`, `format`
+- Windows secret files are protected: `.ppk`, `.git-credentials`, `.kdbx`, gcloud under `AppData`
+
+**macOS / Linux:**
 
 ```bash
 git clone https://github.com/Adi-2494/agentsentinel.git
 cd agentsentinel
 python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
 cp .env.example .env          # LLM_BACKEND=claude_code, MAIN_MODEL=sonnet, CHECK_MODEL=haiku
-.venv/bin/pytest -q           # 467 tests, no Claude calls
+.venv/bin/pytest -q           # 531 tests, no Claude calls
 ```
 
 ### A. Live Guard (Claude Code)
@@ -338,9 +368,11 @@ The speed fixes were checked for equivalence: the new protected-file matcher giv
 
 | Suite | Tests | What it covers |
 |---|---|---|
-| Unit | 435 | The red-team attacks (`tests/test_redteam.py`, 31 tests incl. 1 integration), the robustness review (`tests/test_robustness.py`: fuzzing, scale, file handles), every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
+| Unit | 499 | The red-team attacks (`tests/test_redteam.py`, 31 tests incl. 1 integration), the robustness review (`tests/test_robustness.py`: fuzzing, scale, file handles), every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
 | Integration | 32 | 3 generated repos and 20 PR branches through the real gate (git diff + Semgrep + Gitleaks); a "fooled reviewer" stand-in proving the manipulation alarm fires; LLM outage fails closed; a 12-step agent session replayed through the real hook; raw MCP JSON-RPC to the server process |
 | Live (opt-in) | 4 | Real Claude calls, only with an explicit flag: `pytest -m llm --run-llm` |
+
+**CI:** unit and integration tests run on **Linux, macOS and Windows** (GitHub Actions matrix). *Windows results: pending the first run.*
 
 ```bash
 .venv/bin/pytest -q            # unit + integration, no Claude calls
