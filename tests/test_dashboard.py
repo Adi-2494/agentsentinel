@@ -120,3 +120,15 @@ def test_public_mode_hides_path_input(monkeypatch, tmp_path):
     monkeypatch.setenv("AGENTSENTINEL_PUBLIC", "1")
     at = AppTest.from_file(APP, default_timeout=30).run()
     assert not at.exception and len(at.sidebar.text_input) == 0
+
+
+def test_public_mode_seeds_demo_without_docker(monkeypatch, tmp_path):
+    """Streamlit Community Cloud: no demo DB env, no log -> labelled demo data is generated."""
+    from streamlit.testing.v1 import AppTest
+    monkeypatch.setattr("core.config.DB_PATH", tmp_path / "none.db")
+    monkeypatch.delenv("AGENTSENTINEL_DEMO_DB", raising=False)
+    monkeypatch.setenv("AGENTSENTINEL_PUBLIC", "1")
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    assert not at.exception
+    assert any("Demo data" in w.value for w in at.warning)
+    assert int(at.metric[0].value) > 0

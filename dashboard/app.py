@@ -84,7 +84,25 @@ def events_table(df: pd.DataFrame):
 
 
 # ---------------------------------------------------------------- layout
-PUBLIC = os.environ.get("AGENTSENTINEL_PUBLIC") == "1"  # hosted demo: no file-path input
+def _setting(name: str) -> str:
+    """Env var, or a Streamlit secret (how Streamlit Community Cloud passes settings)."""
+    if os.environ.get(name):
+        return os.environ[name]
+    try:
+        return str(st.secrets.get(name, ""))
+    except Exception:  # no secrets file locally
+        return ""
+
+
+@st.cache_resource
+def _seeded_demo_db() -> str:
+    """Hosted demo without a build step: create the labelled synthetic log once per server."""
+    import tempfile
+    from dashboard.seed_demo import seed
+    return str(seed(Path(tempfile.gettempdir()) / "agentsentinel_demo.db"))
+
+
+PUBLIC = _setting("AGENTSENTINEL_PUBLIC") == "1"  # hosted demo: no file-path input
 st.title("🛡️ AgentSentinel")
 st.caption("Live Guard for AI coding tools · Merge Gate for pull requests · " + (
     "public demo: event views use synthetic data; Benchmark and Real-world data show measured results"
@@ -97,7 +115,9 @@ else:
         load.clear()
 demo_db = os.environ.get("AGENTSENTINEL_DEMO_DB", "")
 if not Path(db_path).exists() and demo_db and Path(demo_db).exists():
-    db_path = demo_db  # fresh clone / public Space: fall back to the labelled demo log
+    db_path = demo_db  # fresh clone / Docker image: fall back to the labelled demo log
+elif PUBLIC and not Path(db_path).exists():
+    db_path = _seeded_demo_db()  # hosted demo (e.g. Streamlit Community Cloud)
 events = load(db_path)
 if not events.empty and events["detail_obj"].map(lambda d: bool(d.get("demo"))).any():
     st.warning("**Demo data.** Everything on this page is synthetic sample data, not real activity. "
