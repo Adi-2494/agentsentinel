@@ -21,14 +21,15 @@ def is_protected_path(path: str) -> bool:
 
 @lru_cache(maxsize=1)
 def _pattern(patterns: tuple[str, ...]) -> re.Pattern:
-    """All protected-file globs as ONE regex (same semantics as fnmatch on POSIX)."""
-    return re.compile("|".join(f"(?:{fnmatch.translate(p)})" for p in patterns))
+    """All protected-file globs as ONE case-insensitive regex. macOS (APFS) and Windows (NTFS)
+    are case-insensitive: ".ENV" opens ".env", so the lock must not depend on letter case."""
+    return re.compile("|".join(f"(?:{fnmatch.translate(p)})" for p in patterns), re.IGNORECASE)
 
 
 @lru_cache(maxsize=8192)
 def _protected(norm: str) -> bool:
     name = norm.rsplit("/", 1)[-1]
-    if name in config.PROTECTED_FILE_EXCEPTIONS:
+    if name.lower() in {e.lower() for e in config.PROTECTED_FILE_EXCEPTIONS}:
         return False
     rx = _pattern(tuple(config.PROTECTED_FILE_PATTERNS))
     # name, full path, and "/"-prefixed relative path (so "*/.ssh/*" matches ".ssh/id_rsa")

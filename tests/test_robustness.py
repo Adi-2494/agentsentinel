@@ -134,10 +134,11 @@ def _reference_is_protected(path):
         return False
     norm = os.path.expanduser(path.strip().strip("'\"")).replace("\\", "/")
     name = norm.rsplit("/", 1)[-1]
-    if name in config.PROTECTED_FILE_EXCEPTIONS:
+    if name.lower() in {e.lower() for e in config.PROTECTED_FILE_EXCEPTIONS}:
         return False
-    return any(fnmatch.fnmatch(name, p) or fnmatch.fnmatch(norm, p) or fnmatch.fnmatch("/" + norm.lstrip("/"), p)
-               for p in config.PROTECTED_FILE_PATTERNS)
+    lo = lambda x: x.lower()  # noqa: E731  (case-insensitive file systems)
+    return any(fnmatch.fnmatchcase(lo(name), lo(p)) or fnmatch.fnmatchcase(lo(norm), lo(p))
+               or fnmatch.fnmatchcase(lo("/" + norm.lstrip("/")), lo(p)) for p in config.PROTECTED_FILE_PATTERNS)
 
 
 def test_2_fast_protected_path_matches_reference():
