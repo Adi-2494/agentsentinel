@@ -99,16 +99,17 @@ def run(files: list[Path], root: Path, pr_body: str = "", use_llm: bool = True,
 def log_result(result: GateResult, label: str) -> None:
     try:
         action = "failed" if result.failed else "passed"
-        for f in result.real:
-            store.log_event("gate", action, f.rule, result.severity(f),
-                            {"pr": label, "file": f.file, "line": f.line, "tool": f.tool, "category": f.category})
+        rows = [("gate", action, f.rule, result.severity(f),
+                 {"pr": label, "file": f.file, "line": f.line, "tool": f.tool, "category": f.category})
+                for f in result.real]
         if result.manipulation:
-            store.log_event("gate", action, "two_view_manipulation", "CRITICAL",
-                            {"pr": label, "reason": result.two_view.reason})
-        store.log_event("gate", action, "gate_run", "HIGH" if result.failed else "LOW",
-                        {"pr": label, "files": result.files_scanned, "real": len(result.real),
-                         "blocking": len(result.blocking), "false_alarms": len(result.false_alarms),
-                         "manipulation": result.manipulation})
+            rows.append(("gate", action, "two_view_manipulation", "CRITICAL",
+                         {"pr": label, "reason": result.two_view.reason}))
+        rows.append(("gate", action, "gate_run", "HIGH" if result.failed else "LOW",
+                     {"pr": label, "files": result.files_scanned, "real": len(result.real),
+                      "blocking": len(result.blocking), "false_alarms": len(result.false_alarms),
+                      "manipulation": result.manipulation}))
+        store.log_events(rows)  # one connection for the whole run
     except Exception as e:  # logging must never break the gate
         print(f"warning: could not log to SQLite: {e}", file=sys.stderr)
 

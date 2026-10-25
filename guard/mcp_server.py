@@ -24,12 +24,12 @@ mcp = MCPServer("agentsentinel", version="0.1.0",
 def _report(findings: list[Finding], tool: str) -> dict:
     sev = max_severity(findings)
     decision = "deny" if sev in DENY else "ask" if sev == "MEDIUM" else "allow"
-    for f in findings:
-        try:
-            store.log_event("mcp", "blocked" if decision == "deny" else "warned", f.rule, f.severity,
-                            {"tool": tool, "preview": f.preview, "message": f.message, "category": f.category})
-        except Exception:  # logging must never break a check
-            pass
+    try:  # one connection for all findings; logging must never break a check
+        store.log_events([("mcp", "blocked" if decision == "deny" else "warned", f.rule, f.severity,
+                           {"tool": tool, "preview": f.preview, "message": f.message, "category": f.category})
+                          for f in findings])
+    except Exception:
+        pass
     return {
         "safe": decision == "allow",
         "decision": decision,

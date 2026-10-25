@@ -54,8 +54,11 @@ def load_events(db_path: Path | str | None = None) -> pd.DataFrame:
     cols = ["id", "time", "source", "action", "rule", "severity", "detail"]
     if not path.exists():
         return pd.DataFrame(columns=cols + ["category", "info", "where", "tool", "detail_obj"])
-    with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as conn:
+    conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    try:  # sqlite3's `with` only commits; close explicitly (the dashboard is long-running)
         df = pd.read_sql_query(f"SELECT {', '.join(cols)} FROM events ORDER BY id DESC", conn)
+    finally:
+        conn.close()
     parsed = df["detail"].map(_parse)
     df["time"] = pd.to_datetime(df["time"], utc=True, errors="coerce")
     df["category"] = [categorise(r, d) for r, d in zip(df["rule"], parsed)]

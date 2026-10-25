@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from core import store  # noqa: E402
 from core.detectors import files, injection, pii, secrets  # noqa: E402
 from core.detectors.base import Finding, max_severity  # noqa: E402
-from guard.claude_hook import DENY, MAX_READ_BYTES, _reason, evaluate  # noqa: E402
+from guard.claude_hook import DENY, MAX_READ_BYTES, _log, _reason, evaluate  # noqa: E402
 
 SOURCE = "cursor"
 # events whose response schema accepts "ask"
@@ -91,20 +91,18 @@ def main() -> int:
         event = json.load(sys.stdin)
         name = event.get("hook_event_name", "")
         if name in AFTER_EVENTS:  # not a permission event: log only, print nothing
-            for f in after_event(event):
-                store.log_event(SOURCE, "warned", f.rule, f.severity, {
-                    "tool": name, "preview": f.preview, "message": f.message + " (in command output)",
-                    "category": f.category})
+            _log([(SOURCE, "warned", f.rule, f.severity, {
+                "tool": name, "preview": f.preview, "message": f.message + " (in command output)",
+                "category": f.category}) for f in after_event(event)])
             return 0
         decision, findings = evaluate_cursor(event)
         if not decision:
             print(json.dumps({"permission": "allow"}))
             return 0
         action = {"deny": "blocked", "ask": "warned", "allow": "warned"}[decision]
-        for f in findings:
-            store.log_event(SOURCE, action, f.rule, f.severity, {
-                "tool": name, "preview": f.preview, "message": f.message, "category": f.category,
-                "cwd": event.get("cwd", "") or ",".join(event.get("workspace_roots") or [])})
+        _log([(SOURCE, action, f.rule, f.severity, {
+            "tool": name, "preview": f.preview, "message": f.message, "category": f.category,
+            "cwd": event.get("cwd", "") or ",".join(event.get("workspace_roots") or [])}) for f in findings])
         reason = _reason(findings)
         print(json.dumps({"permission": decision, "user_message": reason, "agent_message": reason}))
     except Exception as e:  # fail closed, like the Claude Code hook

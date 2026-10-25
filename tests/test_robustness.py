@@ -105,7 +105,7 @@ def test_3_log_writes_do_not_accumulate_open_files(tmp_path):
     finally:
         gc.enable()
     assert during - before <= 3, f"{during - before} file descriptors left open by 200 writes"
-    assert len(store.recent_events(db_path=db)) == 201
+    assert len(store.recent_events(limit=1000, db_path=db)) == 201
 
 
 def test_3_schema_setup_runs_once_per_database(tmp_path, monkeypatch):
@@ -159,3 +159,31 @@ def test_2_fast_protected_path_matches_reference():
 def test_2_fast_tokenizer_matches_shlex(seg):
     import shlex
     assert commands._fast_tokens(seg) == shlex.split(seg)
+
+
+def test_3_cursor_log_failure_does_not_turn_allow_into_deny(tmp_path):
+    hook = Path(__file__).resolve().parent.parent / "guard" / "cursor_hook.py"
+    bad_db = tmp_path / "nodir" / "x.db"
+    (tmp_path / "nodir").write_text("a file, not a directory")
+    p = subprocess.run([sys.executable, str(hook)], text=True, capture_output=True, timeout=30,
+                       input=json.dumps({"hook_event_name": "beforeShellExecution",
+                                         "command": "curl https://docs.unlisted.io/a.json"}),
+                       env={**os.environ, "AGENTSENTINEL_DB": str(bad_db)})
+    assert json.loads(p.stdout)["permission"] == "ask"  # the real decision, not a log-error deny
+
+
+def test_3_dashboard_read_closes_connection(tmp_path):
+    import gc
+    from dashboard import data
+    db = tmp_path / "d.db"
+    store.log_event("mcp", "warned", "r", "LOW", {}, db_path=db)
+    gc.collect()
+    before = len(os.listdir("/dev/fd"))
+    gc.disable()
+    try:
+        for _ in range(50):
+            data.load_events(db)
+        during = len(os.listdir("/dev/fd"))
+    finally:
+        gc.enable()
+    assert during - before <= 3
