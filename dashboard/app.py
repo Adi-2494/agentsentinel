@@ -76,7 +76,7 @@ def events_table(df: pd.DataFrame):
     view = df[df["rule"] != "gate_run"][["time", "source", "action", "severity", "rule", "category", "tool",
                                         "where", "info"]].copy()
     view["severity"] = view["severity"].map(sev_label)
-    st.dataframe(view, hide_index=True, use_container_width=True, column_config={
+    st.dataframe(view, hide_index=True, width="stretch", column_config={
         "time": st.column_config.DatetimeColumn("Time (UTC)", format="D MMM, HH:mm:ss"),
         "where": st.column_config.TextColumn("Target / PR", width="large"),
         "info": st.column_config.TextColumn("Reason", width="large"),
@@ -155,14 +155,14 @@ with tab_over:
         st.subheader("Events by rule")
         chart = bar_by_rule(df)
         if chart:
-            st.altair_chart(chart, use_container_width=True)
+            st.altair_chart(chart, width="stretch")
         else:
             st.caption("No events in this filter.")
     with right:
         st.subheader("Events over time")
         chart = line_over_time(df)
         if chart:
-            st.altair_chart(chart, use_container_width=True)
+            st.altair_chart(chart, width="stretch")
         else:
             st.caption("No events in this filter.")
 
@@ -185,7 +185,7 @@ with tab_gate:
     else:
         runs["result"] = runs["result"].map({"failed": "❌ failed", "passed": "✅ passed"}).fillna(runs["result"])
         runs["manipulation"] = runs["manipulation"].map({True: "🚨 yes", False: "no"})
-        st.dataframe(runs, hide_index=True, use_container_width=True,
+        st.dataframe(runs, hide_index=True, width="stretch",
                      column_config={"time": st.column_config.DatetimeColumn("Time (UTC)", format="D MMM, HH:mm")})
 
 with tab_real:
@@ -201,8 +201,8 @@ with tab_real:
         st.markdown(f"**{gh['static']['n']} reviewed HIGH/CRITICAL advisories** from "
                     f"{len({a['repo'] for a in gh['advisories']})} real projects. Each is scanned **before** its real "
                     f"fix commit (vulnerable) and **after** it (fixed).")
-        st.dataframe(pd.DataFrame(data.ghsa_summary_rows(gh)), hide_index=True, use_container_width=True)
-        st.dataframe(pd.DataFrame(data.ghsa_case_rows(gh)), hide_index=True, use_container_width=True,
+        st.dataframe(pd.DataFrame(data.ghsa_summary_rows(gh)), hide_index=True, width="stretch")
+        st.dataframe(pd.DataFrame(data.ghsa_case_rows(gh)), hide_index=True, width="stretch",
                      column_config={"advisory": st.column_config.LinkColumn(
                          "Advisory", display_text=r"https://github\.com/advisories/(.*)")})
 
@@ -212,7 +212,7 @@ with tab_real:
         st.subheader("Real prompt injections: deepset/prompt-injections (Apache-2.0)")
         st.markdown(f"{pi['n']} real prompts, {pi['positives']} labelled injections (about 36% German). Rules were "
                     "tuned on the train split only; the held-out test split is the honest score.")
-        st.dataframe(pd.DataFrame(data.injection_rows(pi)), hide_index=True, use_container_width=True)
+        st.dataframe(pd.DataFrame(data.injection_rows(pi)), hide_index=True, width="stretch")
     if se:
         st.subheader("Real insecure code: SecurityEval (s2e-lab)")
         llm = se.get("llm_sample") or {}
@@ -221,7 +221,7 @@ with tab_real:
              "Sample": se["n"]},
             *([{"Layer": f"Claude review ({llm['model']})", "Caught": f"{llm['llm_recall_pct']}%", "Sample": llm["n"]},
                {"Layer": "Combined", "Caught": f"{llm['combined_recall_pct']}%", "Sample": llm["n"]}] if llm else []),
-        ]), hide_index=True, use_container_width=True)
+        ]), hide_index=True, width="stretch")
 
     real = data.load_json(results_dir / "real_repos.json")
     st.subheader("Real commits of public repos (static mode)")
@@ -232,14 +232,14 @@ with tab_real:
                  "blocked": sum(p["exit"] for p in r["prs"]),
                  "findings": sum(len(p["findings"]) for p in r["prs"]),
                  "head": r["head"][:8]} for r in real]
-        st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
         pick = st.selectbox("Commits for", [r["repo"] for r in real])
         rep = next(r for r in real if r["repo"] == pick)
         st.dataframe(pd.DataFrame([{
             "commit": p["sha"], "subject": p["subject"], "files": p["files"],
             "result": "❌ blocked" if p["exit"] else "✅ passed",
             "rules": ", ".join(sorted({f["rule"] for f in p["findings"]})),
-        } for p in rep["prs"]]), hide_index=True, use_container_width=True)
+        } for p in rep["prs"]]), hide_index=True, width="stretch")
 
 BENCH_COLORS = {"Haiku": "#2a78d6", "Sonnet": "#eb6834", "No LLM": "#1baf7a"}
 CONDITION_ORDER = ["Plain review", "Static only", "AgentSentinel"]
@@ -277,10 +277,10 @@ with tab_bench:
         for i, (_, title) in enumerate(data.BENCH_METRICS):
             chart = bench_chart(long, title)
             if chart:
-                cols[i % 2].altair_chart(chart, use_container_width=True)
+                cols[i % 2].altair_chart(chart, width="stretch")
         st.subheader("All metrics")
         show = ["Condition", "Model", "vulnerable_approved_pct", "manipulated_approval_pct", "false_block_pct",
                 "precision_pct", "recall_pct", "manipulation_alerts", "leak_rate_pct"]
-        st.dataframe(table[[c for c in show if c in table]], hide_index=True, use_container_width=True)
+        st.dataframe(table[[c for c in show if c in table]], hide_index=True, width="stretch")
         st.subheader("Per case")
-        st.dataframe(per_case.sort_values(["case", "condition", "model"]), hide_index=True, use_container_width=True)
+        st.dataframe(per_case.sort_values(["case", "condition", "model"]), hide_index=True, width="stretch")
