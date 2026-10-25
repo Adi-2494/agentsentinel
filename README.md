@@ -340,11 +340,11 @@ The speed fixes were checked for equivalence: the new protected-file matcher giv
 |---|---|---|
 | Unit | 435 | The red-team attacks (`tests/test_redteam.py`, 31 tests incl. 1 integration), the robustness review (`tests/test_robustness.py`: fuzzing, scale, file handles), every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
 | Integration | 32 | 3 generated repos and 20 PR branches through the real gate (git diff + Semgrep + Gitleaks); a "fooled reviewer" stand-in proving the manipulation alarm fires; LLM outage fails closed; a 12-step agent session replayed through the real hook; raw MCP JSON-RPC to the server process |
-| Live (opt-in) | 4 | Real Claude calls: `pytest -m llm` |
+| Live (opt-in) | 4 | Real Claude calls, only with an explicit flag: `pytest -m llm --run-llm` |
 
 ```bash
 .venv/bin/pytest -q            # unit + integration, no Claude calls
-.venv/bin/pytest -m llm        # live Claude tests (uses your plan's limit)
+.venv/bin/pytest -m llm --run-llm   # live Claude tests (uses your plan's limit)
 .venv/bin/python benchmark/real_repos.py --workdir /tmp/as-repos   # real public repos
 ```
 

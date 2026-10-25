@@ -187,3 +187,11 @@ def test_3_dashboard_read_closes_connection(tmp_path):
     finally:
         gc.enable()
     assert during - before <= 3
+
+
+def test_live_claude_tests_need_explicit_flag():
+    """Regression: `-m "not integration"` once replaced the default `-m "not llm"` and ran real Claude calls."""
+    p = subprocess.run([sys.executable, "-m", "pytest", "-q", "-m", "not integration",
+                        "tests/integration/test_llm_live.py"], capture_output=True, text=True, timeout=120,
+                       cwd=Path(__file__).resolve().parent.parent)
+    assert "4 skipped" in p.stdout and "passed" not in p.stdout
