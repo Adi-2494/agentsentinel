@@ -25,8 +25,8 @@ AI coding tools like Claude Code and Cursor read files and run shell commands on
 
 | Part | Where it runs | What it does |
 |---|---|---|
-| **A. Live Guard** | On the developer's laptop: Claude Code and Cursor hooks, plus an MCP server | Checks every AI action **before** it happens (secret files, risky commands, uploads, secrets being written, AI traps in files being read) and cleans tool output **after** it. Rules only, so it's instant and uses no LLM calls |
-| **B. Merge Gate** | GitHub Action on every PR, or locally | Semgrep + Gitleaks + PII rules, then Claude **triage** (real vs false alarm) and a **two-view check** that detects reviewer manipulation. Posts a PR comment and fails the check |
+| **A. Live Guard** | On the developer's laptop: Claude Code and Cursor hooks, plus an MCP server | Checks every AI action **before** it happens (secret files, risky commands, uploads, secrets being written, AI traps in files being read) and cleans tool output **after** it. Rules only, so it's instant and uses no LLM calls. **Fails closed** on its own errors |
+| **B. Merge Gate** | GitHub Action on every PR, or locally | Semgrep (public OWASP rules + AgentSentinel's own rules) + Gitleaks + PII rules on **every changed text file**, then Claude **triage** (real vs false alarm), an **AI-trap check** and a **two-view check** that detects reviewer manipulation, in batches so nothing is skipped. Posts a PR comment, fails the check, and **fails closed** if the AI could not run |
 | **C. Dashboard** | Streamlit, locally or in Docker | Blocked actions, PR results, severity and rule charts, benchmark and real-world results |
 
 ### ⭐ The two-view check
@@ -52,7 +52,8 @@ Developer's laptop                          GitHub
                               ▼  ▼
                    AgentSentinel core (Python)
        detectors: secrets · personal data · commands · files · AI traps
-       reviewer:  Semgrep + Gitleaks + Claude triage + AI-trap + two-view
+       reviewer:  Semgrep (OWASP + own rules) + Gitleaks + Claude triage
+                  + AI-trap check + two-view (batched, fails closed)
        MCP server: check_command · check_file_content · scan_text
                               │
            LLM layer: claude -p (Claude Code headless)  |  Ollama (untested)
@@ -65,17 +66,18 @@ Developer's laptop                          GitHub
 
 | | Feature | Status |
 |---|---|---|
-| A1 | Secret file lock: `.env`, SSH keys, cloud credentials, kube/docker configs | ✅ |
+| A1 | Secret file lock: `.env`, SSH keys, cloud credentials, kube/docker configs, including when read through interpreter code (`python -c`, `ruby -e`, `node -e`) | ✅ |
 | A2 | Redaction of API keys, passwords and personal data (email, Indian phone, Aadhaar with Verhoeff check, PAN, cards with Luhn check), including in **command output before the AI sees it** | ✅ |
-| A3 | Output check: block Write/Edit that would save secrets or high-risk personal data | ✅ |
-| A4 | Command block: `curl \| sh`, `rm -rf /`, base64-to-shell, uploads with `curl -d @file` / `scp` / `nc` to unknown hosts | ✅ |
-| A5 | AI-trap scanner on files the AI reads (Read tool **and** `cat`/`grep`/… in Bash) and on tool output: hidden instructions, zero-width / bidi / tag characters (hidden text is decoded) | ✅ |
+| A3 | Output check: block Write/Edit that would save secrets or high-risk personal data, including keys that are split into pieces, base64-encoded, unlabelled (high-entropy) or disguised with a `your_` prefix | ✅ |
+| A4 | Command block: `curl \| sh`, `source <(curl …)`, `eval "$(curl …)"`, download-then-execute, `rm -rf /`, base64-to-shell, file uploads (`curl -d @file`, `scp`, `nc`, gists), even to allowlisted hosts | ✅ |
+| A5 | AI-trap scanner on files the AI reads (Read tool **and** `cat`/`grep`/… in Bash, up to 5 MB, larger files need confirmation) and on tool output: hidden instructions in 6 languages, paraphrase families, Cyrillic/Greek look-alikes, zero-width / bidi / tag characters (hidden text is decoded) | ✅ |
 | A6 | Activity log in SQLite (masked previews only) | ✅ |
-| B1 | Semgrep (`p/owasp-top-ten`) plus one batched Claude triage call | ✅ |
-| B2 | Gitleaks plus our secret and PII rules | ✅ |
-| B3 | ⭐ Two-view manipulation check | ✅ |
-| B4 | AI-trap scanner for PR text, comments, `CLAUDE.md`, `.cursorrules`, MCP configs, `.claude/settings.json` hooks; rules plus one Claude Haiku call for reworded tricks | ✅ |
-| B5 | PR comment and failing check | ✅ |
+| A7 | Fail closed: crashes, unreadable input or a broken install deny the action (`AGENTSENTINEL_FAIL_OPEN=1` to opt out) | ✅ |
+| B1 | Semgrep (`p/owasp-top-ten` + AgentSentinel's own rules for zip-slip, SSRF, path traversal and Node SQLi) plus Claude triage | ✅ |
+| B2 | Gitleaks plus our secret and PII rules, on every changed text file whatever its extension | ✅ |
+| B3 | ⭐ Two-view manipulation check, over every file in 60 KB batches; optional second-opinion model (`REVIEW_ENSEMBLE=1`) | ✅ |
+| B4 | AI-trap scanner for PR text, comments, string literals, Markdown, `CLAUDE.md`, `.cursorrules`, MCP configs, `.claude/settings.json` hooks; rules plus a Claude Haiku check for reworded tricks | ✅ |
+| B5 | PR comment and failing check; **fails closed** when an AI check could not run (`--allow-llm-outage` to override) | ✅ |
 | | Cursor hook: shell, file reads, writes and MCP calls (`.cursor/hooks.json`) | ✅ tested live with `cursor-agent` 2026.10.01 |
 | | MCP server with `check_command`, `check_file_content`, `scan_text_for_injection` (rules only) | ✅ tested live in Claude Code |
 | | Benchmark: 38 cases, with vs without AgentSentinel, on Claude Sonnet and Haiku | ✅ |
@@ -156,14 +158,14 @@ The 2 train "false alarms" are benign prompts that really do contain hidden zero
 
 **GitHub Action on a real PR.** A test PR added an obvious SQL injection plus a "trick" file whose comments and PR description claimed the code was sanitized and asked the AI reviewer to approve. The gate **failed the PR** and commented. Semgrep found the obvious bug. **Only the Claude review found the hidden one**, at the correct line.
 
-**Gaps in rule-based scanning that the LLM layer covers.** These were measured with Semgrep CE and `p/owasp-top-ten`, and each "caught" was verified with a real Claude run:
+**Gaps in public rule-based scanning.** These were measured with Semgrep CE and `p/owasp-top-ten`. Each "caught with Claude" was verified with a real Claude run:
 
-| Bug | Semgrep CE | AgentSentinel (with Claude) |
-|---|---|---|
-| SQL injection where input flows through a helper function | ❌ missed | ✅ caught |
-| Node.js `db.query("…" + req.query.id)` | ❌ missed | ✅ caught |
-| Flask `send_file(os.path.join(BASE, name))` path traversal | ❌ missed | ✅ caught |
-| Express reflected XSS | ⚠️ WARNING only (doesn't block) | ✅ blocked (the Claude review rates it HIGH) |
+| Bug | Semgrep CE (public rules) | AgentSentinel static rules | AgentSentinel with Claude |
+|---|---|---|---|
+| SQL injection where input flows through a helper function | ❌ missed | ❌ missed | ✅ caught |
+| Node.js `db.query("…" + req.query.id)` | ❌ missed | ✅ caught (own rule) | ✅ caught |
+| Flask `send_file(os.path.join(BASE, name))` path traversal | ❌ missed | ✅ caught (own rule) | ✅ caught |
+| Express reflected XSS | ⚠️ WARNING only (doesn't block) | ⚠️ MEDIUM only | ✅ blocked (the Claude review rates it HIGH) |
 
 **Real public repos.** The gate (static mode) was run on recent real commits, each treated as a PR. See `benchmark/real_repos.py`.
 
@@ -243,7 +245,10 @@ Any MCP client can call `check_command`, `check_file_content` and `scan_text_for
 .venv/bin/python gate/run_gate.py --path examples/vulnerable_pr --no-llm
 ```
 
-Exit code `1` means the merge should be blocked.
+Exit code `1` means the merge should be blocked. Useful options:
+
+- `--allow-llm-outage`: don't fail when an AI check could not run. By default the gate **fails closed**.
+- `REVIEW_ENSEMBLE=1` in `.env`: View 2 is also reviewed by `CHECK_MODEL`, a second opinion. One extra Claude call per 60 KB batch.
 
 **GitHub Action:** `.github/workflows/agentsentinel.yml` runs on every pull request. To enable the Claude parts:
 
@@ -252,7 +257,7 @@ claude setup-token                                   # prints a long-lived token
 gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo <you>/<repo>   # paste it when prompted
 ```
 
-Without the secret (for example on PRs from forks), the gate runs **Semgrep + Gitleaks only**.
+Without the secret (for example on PRs from forks), the gate deliberately runs **static checks only**: Semgrep, AgentSentinel's own rules, Gitleaks and the secret, PII and AI-trap rules.
 
 ### C. Dashboard
 
@@ -280,12 +285,14 @@ The LLM layer is pluggable via `.env`:
 
 - `LLM_BACKEND=claude_code` (default): runs `claude -p` using your Claude Code login
 - `LLM_BACKEND=ollama`: a fully offline local model (e.g. `qwen2.5-coder:7b`)
+- `MAIN_MODEL` / `CHECK_MODEL`: the models for the two-view review and for triage / AI-trap checks
+- `REVIEW_ENSEMBLE=1`: second-opinion review (see above). `AGENTSENTINEL_FAIL_OPEN=1`: Live Guard allows on its own errors (not recommended)
 
 ## Red-team hardening
 
-An external red-team test found **16 ways around AgentSentinel**. Every one was reproduced as a test first: **27 of 31 attack tests succeeded** before the fixes. Each was then fixed separately, with its own commit and evidence. **Now 0 of 31 succeed** (`tests/test_redteam.py`; before/after in `docs/redteam/`).
+An external red-team test found **16 ways around AgentSentinel**. Every one was reproduced as a test first: **27 of 31 attack tests succeeded** before the fixes. Each was then fixed separately, with its own commit and evidence. (Item IDs follow the red-team report, not the feature table above.) **Now 0 of 31 succeed** (`tests/test_redteam.py`; before/after in `docs/redteam/`).
 
-| # | Attack | Fix |
+| Report item | Attack | Fix |
 |---|---|---|
 | A1 | `python3 -c "open('.env')"`, `ruby -e`, `node -e` | Secret-file names detected inside interpreter code |
 | A2 | `source <(curl …)`, `eval "$(curl …)"` | `source`/`eval`/`.` of a download blocked; downloads inside `$(…)` noticed |
@@ -335,13 +342,15 @@ Each fix was checked for false alarms: normal developer commands and text, the 8
 core/        config, llm.py (single LLM doorway), store.py (SQLite)
   detectors/ secrets, pii, commands, files, injection (AI traps)
   reviewer/  static_scan, triage, injection_check, two_view, report
+    rules/   agentsentinel.yml (own Semgrep rules: zip-slip, SSRF, path traversal, Node SQLi)
 guard/       claude_hook.py (Pre/PostToolUse), cursor_hook.py, mcp_server.py, install.py
 gate/        run_gate.py (Merge Gate entry point)
 dashboard/   app.py (Streamlit), data.py, seed_demo.py
 deploy/      build_hf_space.sh (self-hosting package)
 benchmark/   cases/ (38), run_benchmark.py, recorder_hook.py, real_repos.py, external.py, ghsa.py, results/
 examples/    vulnerable_pr, trick_pr, safe_pr
-tests/       unit tests + integration/
+tests/       unit tests, integration/, test_redteam.py (31 red-team attacks)
+docs/        screenshots, redteam/ (before / after evidence)
 ```
 
 ## Limitations
@@ -354,6 +363,11 @@ tests/       unit tests + integration/
 - The Python neutralizer is exact (it uses Python's tokenizer and AST). For other languages it's a comment-aware heuristic.
 - Using a Claude subscription in scripts and CI is intended for **personal use on your own repos**. Check Anthropic's current terms, or switch to `LLM_BACKEND=ollama`.
 - The Docker health check only confirms the web server is up, not that the page renders.
+- **Trade-offs of the red-team fixes:**
+  - **Fail-closed** means a bug in the guard blocks work until it's fixed (`AGENTSENTINEL_FAIL_OPEN=1` opts out).
+  - **The AI review costs about 2 Claude calls per 60 KB of changed code.** PRs over about 600 KB fail closed instead of being partly reviewed.
+  - **The high-entropy check may ask** about legitimately random-looking strings.
+  - **Files over 5 MB need confirmation** before the AI reads them.
 - In the GitHub Action, anyone with write access to the repo could read the `CLAUDE_CODE_OAUTH_TOKEN` secret through a workflow change. Keep two-factor login on and don't add untrusted collaborators.
 
 ## Future work
