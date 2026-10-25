@@ -1,4 +1,4 @@
 streamlit>=1.40
 pandas>=2.2
-mcp>=1.2
+mcp>=2.3,<3  # guard/mcp_server.py also runs on 1.x
 pytest>=8.0

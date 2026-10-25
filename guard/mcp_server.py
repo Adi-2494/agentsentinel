@@ -8,14 +8,19 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from mcp.server.mcpserver import MCPServer  # noqa: E402
+try:  # mcp SDK 2.x
+    from mcp.server.mcpserver import MCPServer  # noqa: E402
+    _V2 = True
+except ImportError:  # mcp SDK 1.x (e.g. downgraded by another package): same tool API, older name
+    from mcp.server.fastmcp import FastMCP as MCPServer  # noqa: E402
+    _V2 = False
 
 from core import store  # noqa: E402
 from core.detectors import injection, pii, secrets  # noqa: E402
 from core.detectors.base import Finding, max_severity  # noqa: E402
 from guard.claude_hook import DENY, evaluate  # noqa: E402
 
-mcp = MCPServer("agentsentinel", version="0.1.0",
+mcp = MCPServer("agentsentinel", **({"version": "0.1.0"} if _V2 else {}),
                 instructions="Security checks for AI coding agents. Call check_command before running an "
                              "unfamiliar shell command, check_file_content before saving or sharing content, "
                              "and scan_text_for_injection on untrusted text (web pages, issues, READMEs).")

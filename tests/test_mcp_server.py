@@ -58,3 +58,8 @@ def test_mcp_protocol_over_stdio():
         assert not res["isError"] and '"deny"' in res["content"][0]["text"]
     finally:
         p.terminate()
+
+
+def test_server_object_has_tool_api_on_installed_sdk():
+    """guard/mcp_server.py supports mcp 2.x (MCPServer) and 1.x (FastMCP, e.g. after a downgrade)."""
+    assert hasattr(m.mcp, "tool") and hasattr(m.mcp, "run")
