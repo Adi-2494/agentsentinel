@@ -152,3 +152,31 @@ def test_llm_outage_blocks_unless_explicitly_allowed():
     assert r.failed and "AI review did not complete" in build_markdown(r)
     assert not GateResult([], llm_incomplete=["two-view code review"], allow_llm_outage=True).failed
     assert not GateResult([]).failed  # nothing to review is not an outage
+
+
+def test_batches_cover_every_file_and_split_huge_ones():
+    big = "\n".join(f"X_{i} = {i}" for i in range(20000))  # ~250 KB
+    batches = two_view.build_batches({"a.py": big, "z.py": "import os\nos.system(cmd)\n"})
+    v1_all = "\n".join(b[0] for b in batches)
+    v2_all = "\n".join(b[1] for b in batches)
+    assert len(batches) >= 5 and all(len(b[0]) <= two_view.MAX_CHARS + 500 for b in batches)
+    assert "os.system(cmd)" in v1_all and "os.system" in v2_all and "(part 1/" in v1_all
+    assert "X_19999 = 19999" in v1_all  # last line of the huge file is reviewed too
+
+
+def test_too_many_batches_fails_closed(monkeypatch):
+    monkeypatch.setattr(two_view, "MAX_BATCHES", 1)
+    monkeypatch.setattr(two_view, "ask_json", lambda *a, **k: {"verdict": "safe", "issues": []})
+    big = "\n".join(f"X_{i} = {i}" for i in range(20000))
+    tv = two_view.two_view_check({"a.py": big})
+    assert "incomplete" in tv.reason and tv.view1.verdict == "error"
+
+
+def test_any_batch_with_serious_issue_flags(monkeypatch):
+    def reviewer(prompt, model=None):
+        bad = "os.system" in prompt and "file" in prompt and "PR DESCRIPTION" not in prompt
+        return {"verdict": "vulnerable" if bad else "safe", "issues": [{"severity": "HIGH"}] if bad else []}
+    monkeypatch.setattr(two_view, "ask_json", reviewer)
+    big = "\n".join(f"X_{i} = {i}" for i in range(9000))
+    tv = two_view.two_view_check({"a.py": big, "z.py": "import os\nos.system(c)\n"}, "harmless refactor")
+    assert tv.manipulation_suspected is True
