@@ -20,8 +20,14 @@ dashboard, Docker. 177 tests (unit + integration) and 4 opt-in live tests.
   stayed in WAL mode (unreadable on a read-only FS). All fixed and checked with screenshots.
 - The Docker health check reports healthy even when the page crashes. Always check the rendered page.
 
+## Also done
+- Testing across 3 generated repos (20 PR branches), 4 public repos, live Claude Code and Cursor runs.
+- Output check, AI-trap scanner (code-borne + chat jailbreaks, 6 languages), Cursor hook, MCP server.
+- Benchmark (38 cases, Sonnet + Haiku) and real-world evaluation (50 GitHub advisories,
+  deepset/prompt-injections, SecurityEval).
+- Decided against a hosted demo (third-party GitHub OAuth access); local Docker demo + screenshots.
+
 ## Left
-- A3 output check (scan Write/Edit content) and A5/B4 AI-trap scanner (hidden instructions, invisible Unicode)
-- Cursor hook (if available), MCP server with check tools
-- Benchmark: 30-40 cases, Sonnet and Haiku, with vs without AgentSentinel (resumable, batched)
-- Hugging Face Space (demo data only), final README with benchmark numbers, demo GIF
+- Licence decision (all rights reserved vs open source) before selling.
+- Pin the repo on the GitHub profile.
+- Known gaps: printenv/env rule, JS/TS-aware neutralizer, manual review of "fixed version still blocked".

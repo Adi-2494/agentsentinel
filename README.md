@@ -4,6 +4,12 @@
 
 **AgentSentinel stops AI coding tools from leaking secrets and personal data while they write code, and blocks dangerous pull requests, including ones written to trick AI code reviewers.**
 
+**Results at a glance**
+
+- **AI-agent leaks:** 60% → **10%** (Haiku) and 50% → **10%** (Sonnet) of leak attempts got through, on 10 everyday agent tasks.
+- **False blocks on safe PRs:** 37.5% (plain AI review) → **0%**.
+- **50 real published vulnerabilities** (GitHub Security Advisories): static tools caught **0%** of the actual bugs. On a 15-advisory sample with Claude, AgentSentinel blocked **53%** of the vulnerable code, and for **20%** it blocked the bug and then passed the real fix.
+
 ![AgentSentinel dashboard (demo data)](docs/dashboard.png)
 
 ---
@@ -19,9 +25,9 @@ AI coding tools like Claude Code and Cursor read files and run shell commands on
 
 | Part | Where it runs | What it does |
 |---|---|---|
-| **A. Live Guard** | On the developer's laptop, as a Claude Code hook | Checks every AI action **before** it happens. Blocks secret files, risky commands and uploads. Rules only, so it's instant and uses no LLM calls |
+| **A. Live Guard** | On the developer's laptop: Claude Code and Cursor hooks, plus an MCP server | Checks every AI action **before** it happens (secret files, risky commands, uploads, secrets being written, AI traps in files being read) and cleans tool output **after** it. Rules only, so it's instant and uses no LLM calls |
 | **B. Merge Gate** | GitHub Action on every PR, or locally | Semgrep + Gitleaks + PII rules, then Claude **triage** (real vs false alarm) and a **two-view check** that detects reviewer manipulation. Posts a PR comment and fails the check |
-| **C. Dashboard** | Streamlit, locally or in Docker | Blocked actions, PR results, severity and rule charts, real-world repo results |
+| **C. Dashboard** | Streamlit, locally or in Docker | Blocked actions, PR results, severity and rule charts, benchmark and real-world results |
 
 ### ⭐ The two-view check
 
@@ -30,25 +36,26 @@ The Merge Gate asks Claude to review the PR twice, independently:
 - **View 1:** the code as written, plus the PR description
 - **View 2:** comments and docstrings removed, user-defined names replaced with `var1` / `func1`, file names neutralised, and the PR description dropped. Imports, API calls (`cursor.execute`), string literals and keyword arguments like `shell=True` are kept, and line numbers are preserved.
 
-If View 1 says **safe** but View 2 says **vulnerable**, the PR's wording changed the reviewer's mind, so AgentSentinel raises **MANIPULATION SUSPECTED** and blocks the merge.
+If View 2 finds a **serious** (HIGH/CRITICAL) issue that View 1 did not, the PR's wording changed the reviewer's mind, so AgentSentinel raises **MANIPULATION SUSPECTED** and blocks the merge. Views are compared by severity, not by the bare "safe/vulnerable" word, because models flip that word on minor nitpicks.
 
 ## How it works
 
 ```
 Developer's laptop                          GitHub
 ┌──────────────────────────┐        ┌──────────────────────────┐
-│ Claude Code              │        │ Pull Request opened      │
-│      │ PreToolUse hook   │        │      │ GitHub Action     │
+│ Claude Code / Cursor     │        │ Pull Request opened      │
+│   │ hooks (pre + post)   │        │      │ GitHub Action     │
 │      ▼                   │        │      ▼                   │
 │ A. Live Guard ───────────┼──┐  ┌──┼─ B. Merge Gate           │
 │ (rules only, no LLM)     │  │  │  │ (Claude via Pro token)   │
 └──────────────────────────┘  │  │  └──────────────────────────┘
                               ▼  ▼
                    AgentSentinel core (Python)
-       detectors: secrets · personal data · commands · protected files
-       reviewer:  Semgrep + Gitleaks + Claude triage + two-view check
+       detectors: secrets · personal data · commands · files · AI traps
+       reviewer:  Semgrep + Gitleaks + Claude triage + AI-trap + two-view
+       MCP server: check_command · check_file_content · scan_text
                               │
-           LLM layer: claude -p (Claude Code headless)  |  Ollama (optional)
+           LLM layer: claude -p (Claude Code headless)  |  Ollama (untested)
                               │
                               ▼
                   SQLite event log  →  Streamlit dashboard
@@ -176,7 +183,7 @@ git clone https://github.com/Adi-2494/agentsentinel.git
 cd agentsentinel
 python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
 cp .env.example .env          # LLM_BACKEND=claude_code, MAIN_MODEL=sonnet, CHECK_MODEL=haiku
-.venv/bin/pytest -q           # 313 tests, no Claude calls
+.venv/bin/pytest -q           # 314 tests, no Claude calls
 ```
 
 ### A. Live Guard (Claude Code)
@@ -185,7 +192,7 @@ cp .env.example .env          # LLM_BACKEND=claude_code, MAIN_MODEL=sonnet, CHEC
 .venv/bin/python guard/install.py /path/to/your/project
 ```
 
-This adds a `PreToolUse` hook to that project's `.claude/settings.json` (other settings are kept). Open Claude Code there and ask it to *"read .env"*. It's blocked with a reason, and the event appears in the dashboard.
+This adds AgentSentinel's hooks to that project's `.claude/settings.json` (other settings are kept). Open Claude Code there and ask it to *"read .env"*. It's blocked with a reason, and the event appears in the dashboard.
 
 It registers two hooks:
 
@@ -256,15 +263,7 @@ docker compose up --build                     # http://localhost:8501
 
 The container only reads `./data/agentsentinel.db`. On a fresh clone with no log, it shows clearly labelled **demo data**.
 
-### Demo without a live link
-
-No hosted demo is published, on purpose: deploying from GitHub would grant a third-party host write access to the account's public repos, where the Actions secrets live. To see the dashboard:
-
-```bash
-docker compose up --build        # http://localhost:8501
-```
-
-On a fresh clone with no event log, it shows clearly labelled demo data. Screenshots are in `docs/`.
+**No hosted demo is published, on purpose.** Deploying from GitHub would grant a third-party host write access to the account's public repos, where the Actions secrets live. Run it locally as above. Screenshots are in `docs/`.
 
 The dashboard also has a **public mode** (`AGENTSENTINEL_PUBLIC=1`) for anyone who self-hosts it:
 
@@ -295,7 +294,7 @@ The LLM layer is pluggable via `.env`:
 
 | Suite | Tests | What it covers |
 |---|---|---|
-| Unit | 283 | Every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
+| Unit | 284 | Every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
 | Integration | 30 | 3 generated repos and 20 PR branches through the real gate (git diff + Semgrep + Gitleaks); a "fooled reviewer" stand-in proving the manipulation alarm fires; LLM outage fails closed; a 12-step agent session replayed through the real hook; raw MCP JSON-RPC to the server process |
 | Live (opt-in) | 4 | Real Claude calls: `pytest -m llm` |
 
@@ -309,11 +308,12 @@ The LLM layer is pluggable via `.env`:
 
 ```
 core/        config, llm.py (single LLM doorway), store.py (SQLite)
-  detectors/ secrets, pii, commands, files
-  reviewer/  static_scan, triage, two_view, report
+  detectors/ secrets, pii, commands, files, injection (AI traps)
+  reviewer/  static_scan, triage, injection_check, two_view, report
 guard/       claude_hook.py (Pre/PostToolUse), cursor_hook.py, mcp_server.py, install.py
 gate/        run_gate.py (Merge Gate entry point)
 dashboard/   app.py (Streamlit), data.py, seed_demo.py
+deploy/      build_hf_space.sh (self-hosting package)
 benchmark/   cases/ (38), run_benchmark.py, recorder_hook.py, real_repos.py, external.py, ghsa.py, results/
 examples/    vulnerable_pr, trick_pr, safe_pr
 tests/       unit tests + integration/
@@ -322,11 +322,24 @@ tests/       unit tests + integration/
 ## Limitations
 
 - The Live Guard is rule-based: it catches known patterns, not every possible way to exfiltrate data (e.g. `printenv` is not blocked; it got through in the benchmark).
-- The two-view check is a tripwire. It only fires when View 1 is actually fooled. In testing, Claude Sonnet with the hardened prompt resisted the sample trick PR, and the gate blocked it anyway.
+- The two-view check is a tripwire. It only fires when View 1 is actually fooled. In the benchmark, current Claude models were not fooled by any of the 10 trick PRs, so it raised 0 alerts. Its value against weaker models or stronger attacks is not yet measured.
+- Real-world coverage depends on the LLM layers. Rules alone caught 0% of the actual bugs in real advisories, and 31.7% of held-out real prompt injections.
+- Real-advisory results use samples of 15 for the Claude runs. "Fixed version still blocked" (33%) was not verified case by case.
+- The Ollama backend is implemented but was not tested in this project.
 - The Python neutralizer is exact (it uses Python's tokenizer and AST). For other languages it's a comment-aware heuristic.
 - Using a Claude subscription in scripts and CI is intended for **personal use on your own repos**. Check Anthropic's current terms, or switch to `LLM_BACKEND=ollama`.
 - The Docker health check only confirms the web server is up, not that the page renders.
+- In the GitHub Action, anyone with write access to the repo could read the `CLAUDE_CODE_OAUTH_TOKEN` secret through a workflow change. Keep two-factor login on and don't add untrusted collaborators.
+
+## Future work
+
+- **Close known gaps:** rules for environment dumps (`printenv`, `env`), language-aware neutralizing for JS/TS (e.g. tree-sitter), and more non-English AI-trap rules.
+- **Bigger, verified real-world evaluation:** all 50+ advisories through the Claude layers, manual review of every "fixed version still blocked" case, and more ecosystems (Go, Java).
+- **Pilot mode:** one command that runs the gate over a client's repo history and produces a report, with their permission.
+- **GitHub App:** one-click install, per-repo settings, and the customer's own LLM key or a local model (no personal subscription in CI).
+- **Team dashboard:** login, multiple developers and repos, alert routing.
+- **More models:** open-weight models via Ollama, and other AI reviewers, to measure where the two-view check adds value.
 
 ## Ethics
 
-All attacks were run only against my own repositories and generated test repos, with **fake** secrets and personal data built at runtime. The public repos above were cloned and **scanned read-only**; nothing from them was executed.
+All attacks were run only against my own repositories and generated test repos, with **fake** secrets and personal data built at runtime. The public repos and advisory code above were cloned and **scanned read-only**; nothing from them was executed. Public datasets are credited, downloaded at runtime and never redistributed, and no real person's personal information is used anywhere in the project.
