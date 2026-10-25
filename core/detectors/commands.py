@@ -13,7 +13,7 @@ WHOLE_COMMAND_RULES = [
     ("pipe_to_shell", re.compile(rf"\b{_FETCH}\b[^|;&]*\|\s*(?:{_SHELLS})\b", re.I),
      "CRITICAL", "Downloads a script and runs it directly (curl | sh)"),
     ("shell_from_download", re.compile(
-        rf"\b(?:{_SHELLS})\s+(?:-c\s+)?[\"']?(?:<\(|\$\()\s*{_FETCH}\b", re.I),
+        rf"(?:\b(?:{_SHELLS}|source|eval)|(?:^|[\s;&|])\.)\s+(?:-c\s+)?[\"']?(?:<\(|\$\()\s*{_FETCH}\b", re.I),
      "CRITICAL", "Runs a shell on downloaded content"),
     ("encoded_exec", re.compile(rf"base64\s+(?:-d|--decode|-D)\b[^;&]*\|\s*(?:{_SHELLS})\b", re.I),
      "CRITICAL", "Decodes hidden (base64) content and executes it"),
@@ -94,7 +94,8 @@ def check(command: str) -> list[Finding]:
                         f"Command touches a secret/credential file: {path}", path)
 
         hosts = [h for h in _URL_HOST.findall(seg) if not host_allowed(h)]
-        is_fetch = re.match(rf"^\s*(?:sudo\s+)?{_FETCH}\b", seg, re.I)
+        # a download anywhere in the segment, also inside $(...) / <(...) (not only as the first word)
+        is_fetch = re.search(rf"(?:^|[\s(`$])(?:sudo\s+)?{_FETCH}\b", seg, re.I)
         if is_fetch and hosts:
             upload = _FILE_UPLOAD.search(seg)
             if upload:
