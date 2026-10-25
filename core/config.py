@@ -13,7 +13,7 @@ def _load_dotenv(path: Path) -> None:
     """Minimal .env loader: KEY=VALUE lines; real env vars take precedence."""
     if not path.is_file():
         return
-    for line in path.read_text().splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue

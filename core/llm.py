@@ -91,7 +91,7 @@ def _ask_claude_code(prompt: str, model: str, system: str, timeout: int) -> str:
         try:
             proc = subprocess.run(
                 cmd, input=prompt, capture_output=True, text=True,
-                timeout=timeout, cwd=cwd,
+                timeout=timeout, cwd=cwd, encoding="utf-8", errors="replace"
             )
         except subprocess.TimeoutExpired as e:
             raise LLMError(f"Claude Code timed out after {timeout}s") from e

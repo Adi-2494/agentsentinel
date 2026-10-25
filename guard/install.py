@@ -38,7 +38,7 @@ def hook_command(script: str = "claude_hook.py") -> str:
 def install_cursor(project: Path) -> Path:
     path = project / ".cursor" / "hooks.json"
     path.parent.mkdir(parents=True, exist_ok=True)
-    config = json.loads(path.read_text()) if path.exists() else {}
+    config = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     config.setdefault("version", 1)
     cmd = hook_command("cursor_hook.py")
     for event, matcher in CURSOR_EVENTS.items():
@@ -48,14 +48,14 @@ def install_cursor(project: Path) -> Path:
         if matcher:
             entry["matcher"] = matcher
         entries.append(entry)
-    path.write_text(json.dumps(config, indent=2) + "\n")
+    path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
     return path
 
 
 def install(project: Path) -> Path:
     settings_path = project / ".claude" / "settings.json"
     settings_path.parent.mkdir(parents=True, exist_ok=True)
-    settings = json.loads(settings_path.read_text()) if settings_path.exists() else {}
+    settings = json.loads(settings_path.read_text(encoding="utf-8")) if settings_path.exists() else {}
     cmd = hook_command()
     for event, matcher in (("PreToolUse", MATCHER), ("PostToolUse", POST_MATCHER)):
         groups = settings.setdefault("hooks", {}).setdefault(event, [])
@@ -63,7 +63,7 @@ def install(project: Path) -> Path:
         groups[:] = [g for g in groups
                      if not any("claude_hook.py" in h.get("command", "") for h in g.get("hooks", []))]
         groups.append({"matcher": matcher, "hooks": [{"type": "command", "command": cmd}]})
-    settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+    settings_path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
     return settings_path
 
 

@@ -44,7 +44,7 @@ def collect_text(files: list[Path], root: Path, pr_body: str) -> str:
     for f in files:
         try:
             rel = f.resolve().relative_to(root.resolve()).as_posix()
-            code = f.read_text(errors="replace")
+            code = f.read_text(errors="replace", encoding="utf-8")
         except (OSError, ValueError):
             continue
         if injection.is_ai_config(rel) or f.suffix.lower() in TEXT_SUFFIXES:

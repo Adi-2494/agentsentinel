@@ -349,5 +349,5 @@ def two_view_check(files: dict[str, str], pr_description: str = "",
 if __name__ == "__main__":  # quick look: python -m core.reviewer.two_view file.py
     import sys
     p = Path(sys.argv[1])
-    print(neutralize(p.read_text(), p.name))
-    print(json.dumps({"chars": len(p.read_text())}))
+    print(neutralize(p.read_text(encoding="utf-8"), p.name))
+    print(json.dumps({"chars": len(p.read_text(encoding="utf-8"))}))

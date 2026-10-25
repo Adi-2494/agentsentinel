@@ -96,13 +96,13 @@ def eval_prompt_injections(llm_n: int, model: str) -> dict:
 # ------------------------------------------------------------------ SecurityEval
 def eval_securityeval(llm_n: int, model: str) -> dict:
     from core.reviewer import static_scan
-    rows = [json.loads(line) for line in download("securityeval")[0].read_text().splitlines() if line.strip()]
+    rows = [json.loads(line) for line in download("securityeval")[0].read_text(encoding="utf-8").splitlines() if line.strip()]
     by_id = {}
     with tempfile.TemporaryDirectory(prefix="as-secev-") as tmp:
         files = []
         for r in rows:
             p = Path(tmp) / r["ID"]
-            p.write_text(r["Insecure_code"])
+            p.write_text(r["Insecure_code"], encoding="utf-8")
             files.append(p)
         findings, errors = static_scan.scan_files(files, Path(tmp))  # one Semgrep run for all 121
         for f in findings:
@@ -147,7 +147,7 @@ def main() -> int:
     ap.add_argument("--model", default="haiku")
     ap.add_argument("--only", choices=list(SOURCES), help="run one dataset")
     args = ap.parse_args()
-    previous = json.loads(OUT.read_text()) if OUT.exists() else {}
+    previous = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
     results = {"generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **{
         k: v for k, v in previous.items() if k in SOURCES}}
     try:
@@ -161,7 +161,7 @@ def main() -> int:
                                         if k not in ("per_cwe", "source")}, indent=1))
     except (LLMLimitReached, LLMError) as e:
         print(f"LLM stopped: {e}")
-    OUT.write_text(json.dumps(results, indent=2, ensure_ascii=False))
+    OUT.write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"saved {OUT}")
     return 0
 

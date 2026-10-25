@@ -31,7 +31,7 @@ SESSION = [
 def call(tool, inp, env):
     p = subprocess.run([sys.executable, str(HOOK)], text=True, capture_output=True, timeout=30, env=env,
                        input=json.dumps({"hook_event_name": "PreToolUse", "tool_name": tool,
-                                         "tool_input": inp, "cwd": "/work/app"}))
+                                         "tool_input": inp, "cwd": "/work/app"}), encoding="utf-8", errors="replace")
     assert p.returncode == 0, p.stderr
     return json.loads(p.stdout)["hookSpecificOutput"]["permissionDecision"] if p.stdout else None
 

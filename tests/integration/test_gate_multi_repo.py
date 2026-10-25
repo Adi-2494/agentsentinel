@@ -36,10 +36,10 @@ def gate(repo, branch, tmp_path, body="", llm=False):
     if not llm:
         args.append("--no-llm")
     if body:
-        tmp_path.joinpath("body.txt").write_text(body)
+        tmp_path.joinpath("body.txt").write_text(body, encoding="utf-8")
         args += ["--pr-body-file", str(tmp_path / "body.txt")]
     code = run_gate.main(args)
-    return code, json.loads(out.read_text()), (tmp_path / f"{branch}.md").read_text()
+    return code, json.loads(out.read_text(encoding="utf-8")), (tmp_path / f"{branch}.md").read_text(encoding="utf-8")
 
 
 # ------------------------------------------------ static gate, every PR

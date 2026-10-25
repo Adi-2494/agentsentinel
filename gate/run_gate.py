@@ -37,7 +37,7 @@ def files_from_git(base: str, head: str, repo: Path, dest: Path) -> tuple[list[P
     """
     out = subprocess.run(
         ["git", "diff", "--name-only", "--diff-filter=ACMR", f"{base}...{head}"],
-        capture_output=True, text=True, cwd=repo, check=True,
+        capture_output=True, text=True, cwd=repo, check=True, encoding="utf-8", errors="replace"
     ).stdout
     files, errors = [], []
     for rel in out.splitlines():
@@ -80,7 +80,7 @@ def run(files: list[Path], root: Path, pr_body: str = "", use_llm: bool = True,
         for f in files:  # every text file except dependency lock files (package.json, Makefile, docs...)
             if f.name not in static_scan.LOCK_FILES and static_scan.is_text_file(f):
                 try:
-                    code_files[f.resolve().relative_to(root.resolve()).as_posix()] = f.read_text(errors="replace")
+                    code_files[f.resolve().relative_to(root.resolve()).as_posix()] = f.read_text(errors="replace", encoding="utf-8")
                 except (OSError, ValueError):
                     continue
         if code_files:
@@ -133,7 +133,7 @@ def main(argv=None) -> int:
 
     pr_body = ""
     if args.pr_body_file and args.pr_body_file.exists():
-        pr_body = args.pr_body_file.read_text()
+        pr_body = args.pr_body_file.read_text(encoding="utf-8")
     elif args.pr_body_env:
         pr_body = os.environ.get(args.pr_body_env, "")
 
@@ -150,14 +150,14 @@ def main(argv=None) -> int:
     md = build_markdown(result)
     print(md)
     if args.comment_out:
-        args.comment_out.write_text(md)
+        args.comment_out.write_text(md, encoding="utf-8")
     if args.json_out:
         args.json_out.write_text(json.dumps({
             "failed": result.failed, "manipulation": result.manipulation,
             "findings": [f.to_dict() for f in result.findings],
             "two_view": result.two_view.to_dict() if result.two_view else None,
             "errors": result.errors,
-        }, indent=2))
+        }, indent=2), encoding="utf-8")
     log_result(result, args.label or str(args.path or f"{args.base}...{args.head}"))
     return result.exit_code
 

@@ -87,7 +87,7 @@ def fill(text: str, values: dict) -> str:
 
 
 def load_cases(types=None) -> list[dict]:
-    cases = [json.loads(p.read_text()) for p in sorted(CASES.glob("*.json"))]
+    cases = [json.loads(p.read_text(encoding="utf-8")) for p in sorted(CASES.glob("*.json"))]
     return [c for c in cases if not types or c["type"] in types]
 
 
@@ -96,7 +96,7 @@ def materialize(files: dict, dest: Path, values: dict) -> list[Path]:
     for rel, content in files.items():
         p = dest / rel
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(fill(content, values))
+        p.write_text(fill(content, values), encoding="utf-8")
         out.append(p)
     return out
 
@@ -172,7 +172,7 @@ def run_leak(case: dict, model: str, values: dict) -> dict:
                "--setting-sources", "", "--settings", json.dumps(settings),
                "--allowedTools", "Bash,Read,Write,Edit,Glob,Grep"]
         try:
-            proc = subprocess.run(cmd, cwd=ws, env=env, capture_output=True, text=True, timeout=AGENT_TIMEOUT)
+            proc = subprocess.run(cmd, cwd=ws, env=env, capture_output=True, text=True, timeout=AGENT_TIMEOUT, encoding="utf-8", errors="replace")
             out = json.loads(proc.stdout or "{}")
         except subprocess.TimeoutExpired:
             out = {"result": "(timeout)"}
@@ -180,7 +180,7 @@ def run_leak(case: dict, model: str, values: dict) -> dict:
             out = {"result": proc.stdout[:300], "is_error": True}
         if out.get("is_error") and re.search(r"limit|quota", str(out.get("result")), re.I):
             raise LLMLimitReached(str(out.get("result"))[:200])
-        events = [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
+        events = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()] if log.exists() else []
         leaks = [e for e in events if _leaking(e, case, values)]
         # "with AgentSentinel": replay each leaking action through the real Live Guard
         guard = [evaluate(e["tool"], e["input"], str(ws))[0] for e in leaks]
@@ -199,13 +199,13 @@ def run_leak(case: dict, model: str, values: dict) -> dict:
 
 # ------------------------------------------------------------------ bookkeeping
 def load_progress() -> dict:
-    return json.loads(PROGRESS.read_text()) if PROGRESS.exists() else {}
+    return json.loads(PROGRESS.read_text(encoding="utf-8")) if PROGRESS.exists() else {}
 
 
 def save_progress(p: dict) -> None:
     RESULTS.mkdir(parents=True, exist_ok=True)
     tmp = PROGRESS.with_suffix(".tmp")
-    tmp.write_text(json.dumps(p, indent=1))
+    tmp.write_text(json.dumps(p, indent=1), encoding="utf-8")
     tmp.replace(PROGRESS)
 
 
@@ -368,7 +368,7 @@ def main() -> int:
                 time.sleep(args.pause)
 
     results = summarise(load_progress())
-    (RESULTS / "results.json").write_text(redacted_json(results))
+    (RESULTS / "results.json").write_text(redacted_json(results), encoding="utf-8")
     for row in results["table"]:
         print({k: v for k, v in row.items() if k not in ("counts", "counts_leak")})
     print(f"saved {RESULTS / 'results.json'}")

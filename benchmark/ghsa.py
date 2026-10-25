@@ -38,7 +38,7 @@ MAX_BYTES = 40_000
 
 def gh(*args: str, raw: bool = False) -> str | None:
     cmd = ["gh", "api", *args] + (["-H", "Accept: application/vnd.github.raw"] if raw else [])
-    p = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    p = subprocess.run(cmd, capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace")
     return p.stdout if p.returncode == 0 else None
 
 
@@ -55,7 +55,7 @@ def _candidate_files(files: list[dict], eco: str) -> list[str]:
 
 
 def collect(per_ecosystem: int) -> list[dict]:
-    index = json.loads(INDEX.read_text()) if INDEX.exists() else []
+    index = json.loads(INDEX.read_text(encoding="utf-8")) if INDEX.exists() else []
     have = {r["ghsa"] for r in index}
     per_repo = Counter(r["repo"] for r in index)
     for eco in ("pip", "npm"):
@@ -104,7 +104,7 @@ def collect(per_ecosystem: int) -> list[dict]:
                         for state in ("before", "after"):
                             p = d / state / path
                             p.parent.mkdir(parents=True, exist_ok=True)
-                            p.write_text(v[state])
+                            p.write_text(v[state], encoding="utf-8")
                     record = {"ghsa": a["ghsa_id"], "ecosystem": eco, "severity": a["severity"],
                               "cwes": [c["cwe_id"] for c in a.get("cwes", [])], "repo": full,
                               "fix_commit": sha, "files": list(files), "summary": (a.get("summary") or "")[:140]}
@@ -113,7 +113,7 @@ def collect(per_ecosystem: int) -> list[dict]:
                     per_repo[full] += 1
                     got += 1
                     INDEX.parent.mkdir(parents=True, exist_ok=True)
-                    INDEX.write_text(json.dumps(index, indent=1))
+                    INDEX.write_text(json.dumps(index, indent=1), encoding="utf-8")
                     print(f"{eco:3} {got:3} {a['ghsa_id']} {full} {record['cwes']} files={len(files)}")
     return index
 
@@ -126,7 +126,7 @@ def _gate(rec: dict, state: str, use_llm: bool) -> dict:
             src = CACHE / rec["ghsa"] / state / path
             dst = Path(tmp) / path
             dst.parent.mkdir(parents=True, exist_ok=True)
-            dst.write_text(src.read_text())
+            dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
             files.append(dst)
         r = run_gate.run(files, Path(tmp), "", use_llm=use_llm)
     errs = [e for e in r.errors if "no-llm" not in e]
@@ -147,8 +147,8 @@ def _summary(items: list[dict], key: str) -> dict:
 
 
 def evaluate(llm_n: int, model: str) -> dict:
-    index = json.loads(INDEX.read_text())
-    prev = json.loads(OUT.read_text()) if OUT.exists() else {}
+    index = json.loads(INDEX.read_text(encoding="utf-8"))
+    prev = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
     per = {r["ghsa"]: r for r in prev.get("advisories", [])}
     for rec in index:
         row = per.setdefault(rec["ghsa"], {k: rec[k] for k in ("ghsa", "ecosystem", "severity", "cwes", "repo",
@@ -186,7 +186,7 @@ def _save(per: dict) -> dict:
             cwe_hits[c][0] += r["static"]["before"]["blocked"]
             cwe_hits[c][1] += 1
     out["static_by_cwe"] = {c: {"caught": v[0], "total": v[1]} for c, v in sorted(cwe_hits.items(), key=lambda x: -x[1][1])}
-    OUT.write_text(json.dumps(out, indent=2))
+    OUT.write_text(json.dumps(out, indent=2), encoding="utf-8")
     return out
 
 

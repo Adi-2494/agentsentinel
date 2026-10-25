@@ -120,3 +120,44 @@ def test_4_gcloud_source_folders_are_not_protected():
                                  r"copy %USERPROFILE%\.kube\config C:\tmp\k"])
 def test_4_backslash_paths_to_secrets_are_denied(cmd):
     assert evaluate("Bash", {"command": cmd})[0] == "deny"
+
+
+# ---------------------------------------------------------------- B. no locale-dependent text I/O
+import ast  # noqa: E402
+
+
+def _default_encoding_calls(path: Path) -> list[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    bad = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or any(k.arg == "encoding" for k in node.keywords):
+            continue
+        f = node.func
+        name = f.attr if isinstance(f, ast.Attribute) else getattr(f, "id", "")
+        if name in ("read_text", "write_text"):
+            bad.append(f"{path.relative_to(ROOT)}:{node.lineno} {name}()")
+        elif name == "open" and isinstance(f, ast.Name):
+            mode = node.args[1] if len(node.args) > 1 else next((k.value for k in node.keywords if k.arg == "mode"), None)
+            if not (isinstance(mode, ast.Constant) and "b" in str(mode.value)):
+                bad.append(f"{path.relative_to(ROOT)}:{node.lineno} open()")
+        elif name in ("run", "Popen", "check_output") and getattr(getattr(f, "value", None), "id", "") == "subprocess" \
+                and any(k.arg == "text" and getattr(k.value, "value", None) is True for k in node.keywords):
+            bad.append(f"{path.relative_to(ROOT)}:{node.lineno} subprocess.{name}(text=True)")
+    return bad
+
+
+def test_B_no_text_io_depends_on_the_platform_encoding():
+    """On Windows the default is the local code page (cp1252), which garbles UTF-8 and hides
+    invisible / look-alike characters from the detectors. Every text read/write must say utf-8."""
+    files = [p for d in ("core", "guard", "gate", "dashboard", "benchmark", "tests") for p in (ROOT / d).rglob("*.py")]
+    bad = [b for f in files for b in _default_encoding_calls(f)]
+    assert not bad, "\n".join(bad)
+
+
+def test_B_legacy_encoded_files_are_still_reviewed(tmp_path):
+    from core.reviewer.static_scan import is_text_file
+    f = tmp_path / "legacy.py"
+    f.write_bytes("name = 'café'\n".encode("cp1252"))
+    assert is_text_file(f)
+    (tmp_path / "bin.dat").write_bytes(b"\x00\x01")
+    assert not is_text_file(tmp_path / "bin.dat")

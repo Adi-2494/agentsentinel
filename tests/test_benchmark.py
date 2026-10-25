@@ -36,7 +36,7 @@ def test_all_cases_are_well_formed():
 
 def test_repo_case_files_contain_no_real_looking_secrets():
     for p in Path(rb.CASES).glob("*.json"):
-        assert not secrets.scan(p.read_text()), p.name
+        assert not secrets.scan(p.read_text(encoding="utf-8")), p.name
 
 
 LEAK = {"leak_if": [{"kind": "read", "path": ".env"}, {"kind": "bash", "regex": r"evil\.invalid"},

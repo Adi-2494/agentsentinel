@@ -38,7 +38,7 @@ def test_evaluate_cursor(event, decision):
 
 def run(event, db):
     return subprocess.run([sys.executable, str(HOOK)], input=json.dumps(event), text=True, capture_output=True,
-                          env={**os.environ, "AGENTSENTINEL_DB": str(db)}, timeout=30)
+                          env={**os.environ, "AGENTSENTINEL_DB": str(db)}, timeout=30, encoding="utf-8", errors="replace")
 
 
 def test_cursor_hook_end_to_end(tmp_path):
@@ -60,7 +60,7 @@ def test_after_shell_logs_but_prints_nothing(tmp_path):
 
 
 def test_garbage_input_fails_closed(tmp_path):
-    p = subprocess.run([sys.executable, str(HOOK)], input="nope", text=True, capture_output=True, timeout=30)
+    p = subprocess.run([sys.executable, str(HOOK)], input="nope", text=True, capture_output=True, timeout=30, encoding="utf-8", errors="replace")
     assert json.loads(p.stdout)["permission"] == "deny" and "hook error" in p.stderr
 
 
@@ -68,7 +68,7 @@ def test_install_cursor(tmp_path):
     from guard.install import CURSOR_EVENTS, install_cursor
     p = install_cursor(tmp_path)
     install_cursor(tmp_path)  # idempotent
-    cfg = json.loads(p.read_text())
+    cfg = json.loads(p.read_text(encoding="utf-8"))
     assert cfg["version"] == 1 and set(cfg["hooks"]) == set(CURSOR_EVENTS)
     assert all(len(v) == 1 and "cursor_hook.py" in v[0]["command"] for v in cfg["hooks"].values())
     assert all(v[0]["failClosed"] is True for v in cfg["hooks"].values())

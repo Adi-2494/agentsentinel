@@ -27,7 +27,7 @@ REPOS = [
 
 
 def git(repo: Path, *args: str) -> str:
-    return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, check=True).stdout
+    return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, check=True, encoding="utf-8", errors="replace").stdout
 
 
 def clone(url: str, dest: Path, depth: int) -> None:
@@ -43,13 +43,13 @@ def run_commit(repo: Path, sha: str, use_llm: bool, out_dir: Path) -> dict:
             "--label", f"{repo.name}@{sha[:8]}"]
     if not use_llm:
         args.append("--no-llm")
-    with open(os.devnull, "w") as devnull:
+    with open(os.devnull, "w", encoding="utf-8") as devnull:
         stdout, sys.stdout = sys.stdout, devnull
         try:
             code = run_gate.main(args)
         finally:
             sys.stdout = stdout
-    data = json.loads(out.read_text())
+    data = json.loads(out.read_text(encoding="utf-8"))
     return {
         "sha": sha[:8], "subject": git(repo, "log", "-1", "--format=%s", sha).strip()[:80],
         "files": len(git(repo, "diff", "--name-only", "--diff-filter=ACMR", f"{sha}^...{sha}").split()),
@@ -90,7 +90,7 @@ def main() -> int:
             report.append({"repo": name, "url": url, "kind": kind,
                            "head": git(repo, "rev-parse", "HEAD").strip(), "prs": runs})
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(json.dumps(report, indent=2))
+    args.out.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(f"saved {args.out}")
     return 0
 

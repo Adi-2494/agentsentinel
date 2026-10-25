@@ -45,14 +45,14 @@ def decide(tool: str, inp: dict, root: Path) -> str:
 
 
 def main() -> int:
-    event = json.load(sys.stdin)
+    event = json.loads(sys.stdin.buffer.read().decode("utf-8", errors="replace"))  # not the locale code page
     root = Path(os.environ.get("AS_BENCH_ROOT", event.get("cwd", ".")))
     tool, inp = event.get("tool_name", ""), event.get("tool_input") or {}
     try:
         decision = decide(tool, inp, root)
     except ValueError:  # unparseable shell quoting
         decision = "deny"
-    with open(os.environ["AS_BENCH_LOG"], "a") as log:
+    with open(os.environ["AS_BENCH_LOG"], "a", encoding="utf-8") as log:
         log.write(json.dumps({"tool": tool, "input": inp, "sandbox": decision}) + "\n")
     if decision == "deny":
         print(json.dumps({"hookSpecificOutput": {

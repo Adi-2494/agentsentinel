@@ -41,7 +41,7 @@ def test_scan_text_decodes_hidden_text():
 def test_mcp_protocol_over_stdio():
     """Talk raw MCP JSON-RPC to the server process, like Claude Code does."""
     p = subprocess.Popen([sys.executable, str(SERVER)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                         stderr=subprocess.DEVNULL, text=True)
+                         stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace")
     try:
         def call(msg):
             p.stdin.write(json.dumps(msg) + "\n")

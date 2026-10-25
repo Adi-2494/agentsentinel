@@ -241,7 +241,7 @@ def _write(repo: Path, files: dict[str, str]) -> None:
     for rel, content in files.items():
         p = repo / rel
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(content)
+        p.write_text(content, encoding="utf-8")
 
 
 def build_all(root: Path) -> dict[str, Path]:

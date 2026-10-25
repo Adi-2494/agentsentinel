@@ -55,18 +55,13 @@ def display_path(path: PurePath, root: PurePath) -> str:
 
 
 def is_text_file(path: Path, sample: int = 8192) -> bool:
-    """Content-based: no NUL bytes and valid UTF-8 in the first 8 KB (extension does not matter)."""
+    """git's rule: text unless the first 8 KB contain a NUL byte. Legacy-encoded files (e.g. cp1252
+    on Windows) are still reviewed; they are read as UTF-8 with unreadable bytes replaced."""
     try:
-        head = path.read_bytes()[:sample]
+        with open(path, "rb") as fh:
+            return b"\x00" not in fh.read(sample)
     except OSError:
         return False
-    if b"\x00" in head:
-        return False
-    try:
-        head.decode("utf-8")
-    except UnicodeDecodeError as e:
-        return e.start >= len(head) - 4  # a multi-byte character cut at the sample boundary
-    return True
 
 
 def _line_of(text: str, offset: int) -> int:
@@ -75,7 +70,7 @@ def _line_of(text: str, offset: int) -> int:
 
 def _snippet(path: Path, line: int, context: int = 3) -> str:
     try:
-        text = path.read_text(errors="replace")
+        text = path.read_text(errors="replace", encoding="utf-8")
     except OSError:
         return ""
     # redact the whole file first (rules see real line starts), then cut + number
@@ -92,7 +87,7 @@ def run_semgrep(files: list[Path], root: Path) -> tuple[list[dict], list[str]]:
     proc = subprocess.run(
         ["semgrep", "scan", "--config", SEMGREP_CONFIG, "--config", str(LOCAL_RULES), "--json", "--metrics=off",
          "--quiet", *[str(f) for f in files]],
-        capture_output=True, text=True, cwd=root, timeout=600,
+        capture_output=True, text=True, cwd=root, timeout=600, encoding="utf-8", errors="replace"
     )
     try:
         data = json.loads(proc.stdout)
@@ -118,10 +113,10 @@ def run_gitleaks(files: list[Path]) -> tuple[list[dict], list[str]]:
             subprocess.run(
                 ["gitleaks", "dir", str(f), "--no-banner", "--redact",
                  "--report-format", "json", "--report-path", str(report), "--exit-code", "0"],
-                capture_output=True, text=True, timeout=120,
+                capture_output=True, text=True, timeout=120, encoding="utf-8", errors="replace"
             )
             if report.exists() and report.stat().st_size:
-                for r in json.loads(report.read_text()):
+                for r in json.loads(report.read_text(encoding="utf-8")):
                     r["_file"] = f
                     results.append(r)
     return results, []
@@ -168,7 +163,7 @@ def scan_files(files: list[Path], root: Path) -> tuple[list[ScanFinding], list[s
         if f.name in LOCK_FILES:
             continue
         try:
-            text = f.read_text(errors="replace")
+            text = f.read_text(errors="replace", encoding="utf-8")
         except OSError:
             continue
         for x in secrets.scan(text):

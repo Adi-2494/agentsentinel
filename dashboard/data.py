@@ -122,7 +122,7 @@ def pr_runs(df: pd.DataFrame) -> pd.DataFrame:
 
 def load_json(path: Path):
     try:
-        return json.loads(Path(path).read_text())
+        return json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
 

@@ -47,7 +47,7 @@ def test_1_protected_file_with_weird_bytes_is_still_denied_by_the_detector():
 ])
 def test_1_hook_process_decides_normally(payload, tmp_path):
     p = subprocess.run([sys.executable, str(HOOK)], input=json.dumps(payload), text=True, capture_output=True,
-                       env={**os.environ, "AGENTSENTINEL_DB": str(tmp_path / "r.db")}, timeout=30)
+                       env={**os.environ, "AGENTSENTINEL_DB": str(tmp_path / "r.db")}, timeout=30, encoding="utf-8", errors="replace")
     assert p.returncode == 0
     if p.stdout.strip():
         reason = json.loads(p.stdout)["hookSpecificOutput"]["permissionDecisionReason"]
@@ -166,11 +166,11 @@ def test_2_fast_tokenizer_matches_shlex(seg):
 def test_3_cursor_log_failure_does_not_turn_allow_into_deny(tmp_path):
     hook = Path(__file__).resolve().parent.parent / "guard" / "cursor_hook.py"
     bad_db = tmp_path / "nodir" / "x.db"
-    (tmp_path / "nodir").write_text("a file, not a directory")
+    (tmp_path / "nodir").write_text("a file, not a directory", encoding="utf-8")
     p = subprocess.run([sys.executable, str(hook)], text=True, capture_output=True, timeout=30,
                        input=json.dumps({"hook_event_name": "beforeShellExecution",
                                          "command": "curl https://docs.unlisted.io/a.json"}),
-                       env={**os.environ, "AGENTSENTINEL_DB": str(bad_db)})
+                       env={**os.environ, "AGENTSENTINEL_DB": str(bad_db)}, encoding="utf-8", errors="replace")
     assert json.loads(p.stdout)["permission"] == "ask"  # the real decision, not a log-error deny
 
 
@@ -196,7 +196,7 @@ def test_live_claude_tests_need_explicit_flag():
     """Regression: `-m "not integration"` once replaced the default `-m "not llm"` and ran real Claude calls."""
     p = subprocess.run([sys.executable, "-m", "pytest", "-q", "-m", "not integration",
                         "tests/integration/test_llm_live.py"], capture_output=True, text=True, timeout=120,
-                       cwd=Path(__file__).resolve().parent.parent)
+                       cwd=Path(__file__).resolve().parent.parent, encoding="utf-8", errors="replace")
     assert "4 skipped" in p.stdout and "passed" not in p.stdout
 
 
