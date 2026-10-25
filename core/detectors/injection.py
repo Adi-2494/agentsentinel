@@ -148,14 +148,39 @@ def _visible(text: str) -> str:
                    and not 0xE0000 <= ord(ch) <= 0xE007F)
 
 
+# Cyrillic / Greek letters that look like Latin ones (common homoglyph disguises)
+_CONFUSABLES = str.maketrans({
+    "а": "a", "в": "b", "е": "e", "к": "k", "м": "m", "н": "h", "о": "o", "р": "p", "с": "c", "т": "t",
+    "у": "y", "х": "x", "ѕ": "s", "і": "i", "ј": "j", "ԁ": "d", "ӏ": "l", "ɡ": "g",
+    "А": "A", "В": "B", "Е": "E", "К": "K", "М": "M", "Н": "H", "О": "O", "Р": "P", "С": "C", "Т": "T",
+    "У": "Y", "Х": "X", "Ѕ": "S", "І": "I", "Ј": "J",
+    "α": "a", "ε": "e", "ι": "i", "κ": "k", "ν": "v", "ο": "o", "ρ": "p", "τ": "t", "υ": "u", "χ": "x",
+    "Α": "A", "Β": "B", "Ε": "E", "Η": "H", "Ι": "I", "Κ": "K", "Μ": "M", "Ν": "N", "Ο": "O", "Ρ": "P",
+    "Τ": "T", "Υ": "Y", "Χ": "X", "Ζ": "Z",
+})
+_MIXED_WORD = re.compile(r"\b(?=\w*[A-Za-z])(?=\w*[\u0370-\u03ff\u0400-\u04ff])\w{3,}\b")
+
+
+def _deconfuse(text: str) -> str:
+    """NFKC (fullwidth etc.) + look-alike letters mapped to Latin. Same length as the input."""
+    return "".join(unicodedata.normalize("NFKC", ch)[:1] or ch for ch in text).translate(_CONFUSABLES)
+
+
 def scan(text: str, path: str = "") -> list[Finding]:
     findings = _hidden_unicode(text)
     visible = _visible(text)
+    mixed = _MIXED_WORD.search(visible)
+    if mixed:
+        findings.append(Finding(rule="homoglyph_mixed_script", category="injection", severity="MEDIUM",
+                                message="A word mixes Latin with Cyrillic/Greek look-alike letters (disguised text)",
+                                start=mixed.start(), end=mixed.end(), preview=mixed.group(0)[:40]))
+    plain = _deconfuse(visible)
     for rule, sev, message, pattern in PHRASE_RULES:
-        m = pattern.search(visible)
+        # original text (real Russian/Greek rules) and the de-confused copy (disguised Latin)
+        m = pattern.search(visible) or (pattern.search(plain) if plain != visible else None)
         if m:
             findings.append(Finding(rule=rule, category="injection", severity=sev, message=message,
-                                    start=m.start(), end=m.end(), preview=m.group(0)[:80]))
+                                    start=m.start(), end=m.end(), preview=visible[m.start():m.end()][:80]))
     if path and is_ai_config(path):
         hooks = bool(re.search(r'"hooks"\s*:', text)) and path.endswith(".json")
         findings.append(Finding(
