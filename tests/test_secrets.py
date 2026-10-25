@@ -86,3 +86,33 @@ def test_version_specs_are_not_secrets(text):
 
 def test_real_password_still_detected_next_to_versions():
     assert secrets.scan('"password": "' + "Adm1n!pass" + '"')
+
+
+@pytest.mark.parametrize("text", [
+    'sha = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"',  # hex hash
+    'id = "123e4567-e89b-12d3-a456-426614174000"',  # uuid
+    'msg = "hello" + " world"',
+    'path = "src/" + "app.py"',
+    'label = "Background_Color_Primary_Default_Value"',  # long but not random
+    'b = "aGVsbG8gd29ybGQgdGhpcyBpcyBqdXN0IHRleHQ="',  # base64 of harmless text
+])
+def test_obfuscation_checks_ignore_normal_strings(text):
+    assert secrets.scan(text) == []
+
+
+def test_obfuscated_secret_rules():
+    import base64 as b64
+    key = "".join(["AKIA", "Q" * 16])
+    assert {f.rule for f in secrets.scan(f'k = "{key[:6]}" + "{key[6:]}"')} == {"split_secret"}
+    enc = b64.b64encode(f"aws_key={key}".encode()).decode()
+    assert {f.rule for f in secrets.scan(f'x = "{enc}"')} == {"encoded_secret"}
+    assert "aws_access_key" in {f.rule for f in secrets.scan(f'API_KEY = "your_{key}"')}
+    assert secrets.scan('API_KEY = "your_api_key_here"') == []
+
+
+@pytest.mark.parametrize("text", [
+    'ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"',
+    'p = "/private/var/folders/5s/7j00w08n7mjc3wlpp8xpnsvm0000gn/T/as-x"',
+])
+def test_entropy_ignores_charsets_and_paths(text):
+    assert secrets.scan(text) == []

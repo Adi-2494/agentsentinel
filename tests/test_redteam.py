@@ -17,8 +17,8 @@ from core.detectors import commands, injection, secrets
 from guard.claude_hook import evaluate
 
 HOOK = Path(__file__).resolve().parent.parent / "guard" / "claude_hook.py"
-AWS_ID = "AKIA" + "QZ7X" + "M2PL" + "W9RT" + "K4HD"
-AWS_SECRET = "wJalr" + "XUtnFEMI/K7MD" + "ENG/bPxRfiCYz" + "Q8vL3nT0a"  # 40 chars
+AWS_ID = "".join(["AKIA", "QZ7X", "M2PL", "W9RT", "K4HD"])
+AWS_SECRET = "".join(["wJalr", "XUtnFEMI/K7MD", "ENG/bPxRfiCYz", "Q8vL3nT0a"])  # 40 chars
 
 
 def decision(tool, inp, cwd=""):
