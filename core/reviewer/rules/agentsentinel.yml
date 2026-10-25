@@ -1,0 +1,163 @@
+# AgentSentinel's own Semgrep rules: gaps measured in p/owasp-top-ten (red-team report B1).
+rules:
+  - id: agentsentinel-zip-slip
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Archive members are extracted without checking their paths. A crafted archive can write
+      files outside the target folder (zip-slip). Validate each member's resolved path, or use
+      tarfile's filter="data".
+    patterns:
+      - pattern-either:
+          - pattern: $A.extractall(...)
+          - pattern: $A.extract(...)
+      - pattern-not: $A.extractall(..., filter="data", ...)
+      - pattern-not: $A.extract(..., filter="data", ...)
+      - pattern-either:
+          - pattern-inside: |
+              with zipfile.ZipFile(...) as $A:
+                ...
+          - pattern-inside: |
+              with tarfile.open(...) as $A:
+                ...
+          - pattern-inside: |
+              $A = zipfile.ZipFile(...)
+              ...
+          - pattern-inside: |
+              $A = tarfile.open(...)
+              ...
+      - pattern-not-inside: |
+          if <... os.path.commonpath(...) ...>:
+            ...
+      - pattern-not-inside: |
+          if <... $P.startswith(...) ...>:
+            ...
+      - pattern-not-inside: |
+          if <... $P.is_relative_to(...) ...>:
+            ...
+
+  - id: agentsentinel-ssrf-python
+    languages: [python]
+    severity: ERROR
+    message: >-
+      A URL taken from the HTTP request is fetched by the server (SSRF). An attacker can make the
+      server call internal services. Allow-list hosts before fetching.
+    mode: taint
+    pattern-sources:
+      - pattern-either:
+          - pattern: flask.request.$ATTR
+          - pattern: flask.request.$ATTR[...]
+          - pattern: flask.request.$ATTR.get(...)
+          - pattern: flask.request.get_json(...)
+          - pattern: request.$ATTR
+          - pattern: request.$ATTR[...]
+          - pattern: request.$ATTR.get(...)
+          - pattern: request.get_json(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: requests.$M($URL, ...)
+              - pattern: httpx.$M($URL, ...)
+              - pattern: urllib.request.urlopen($URL, ...)
+              - pattern: urlopen($URL, ...)
+          - focus-metavariable: $URL
+    pattern-sanitizers:
+      - pattern: urllib.parse.urlparse(...).hostname
+
+  - id: agentsentinel-path-traversal-python
+    languages: [python]
+    severity: ERROR
+    message: >-
+      A file path built from HTTP request input is opened or served (path traversal). "../" in the
+      input can reach files outside the intended folder. Use werkzeug.utils.secure_filename,
+      flask.safe_join / send_from_directory, or check the resolved path.
+    mode: taint
+    pattern-sources:
+      - pattern-either:
+          - pattern: request.$ATTR
+          - pattern: request.$ATTR[...]
+          - pattern: request.$ATTR.get(...)
+          - pattern: flask.request.$ATTR
+          - pattern: flask.request.$ATTR[...]
+          - pattern: flask.request.$ATTR.get(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: open($P, ...)
+              - pattern: send_file($P, ...)
+              - pattern: flask.send_file($P, ...)
+              - pattern: pathlib.Path($P)
+              - pattern: Path($P)
+          - focus-metavariable: $P
+    pattern-sanitizers:
+      - pattern-either:
+          - pattern: os.path.basename(...)
+          - pattern: secure_filename(...)
+          - pattern: werkzeug.utils.secure_filename(...)
+          - pattern: safe_join(...)
+          - pattern: flask.safe_join(...)
+
+  - id: agentsentinel-path-traversal-node
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      A file path from the HTTP request (req.query / req.params / req.body) is read or served (path
+      traversal). Resolve the path and check it stays inside the intended folder.
+    mode: taint
+    pattern-sources:
+      - pattern-either:
+          - pattern: $REQ.query
+          - pattern: $REQ.params
+          - pattern: $REQ.body
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: fs.readFile($P, ...)
+              - pattern: fs.readFileSync($P, ...)
+              - pattern: fs.createReadStream($P, ...)
+              - pattern: $RES.sendFile($P, ...)
+              - pattern: $RES.download($P, ...)
+          - focus-metavariable: $P
+    pattern-sanitizers:
+      - pattern: path.basename(...)
+
+  - id: agentsentinel-ssrf-node
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: A URL from the HTTP request is fetched by the server (SSRF). Allow-list hosts first.
+    mode: taint
+    pattern-sources:
+      - pattern-either:
+          - pattern: $REQ.query
+          - pattern: $REQ.params
+          - pattern: $REQ.body
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: fetch($U, ...)
+              - pattern: axios.$M($U, ...)
+              - pattern: axios($U, ...)
+              - pattern: http.get($U, ...)
+              - pattern: https.get($U, ...)
+              - pattern: got($U, ...)
+          - focus-metavariable: $U
+
+  - id: agentsentinel-sqli-node
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      HTTP request input is concatenated into a SQL query (SQL injection). Use placeholders:
+      db.query("... WHERE id = ?", [value]).
+    mode: taint
+    pattern-sources:
+      - pattern-either:
+          - pattern: $REQ.query
+          - pattern: $REQ.params
+          - pattern: $REQ.body
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $DB.query($Q, ...)
+              - pattern: $DB.execute($Q, ...)
+              - pattern: $DB.raw($Q, ...)
+          - focus-metavariable: $Q

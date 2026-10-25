@@ -13,6 +13,7 @@ from core.detectors import injection, pii, secrets
 from core.detectors.base import mask
 
 SEMGREP_CONFIG = "p/owasp-top-ten"
+LOCAL_RULES = Path(__file__).resolve().parent / "rules" / "agentsentinel.yml"  # gaps in the public ruleset
 SEMGREP_SEVERITY = {"ERROR": "HIGH", "WARNING": "MEDIUM", "INFO": "LOW"}
 CODE_SUFFIXES = {
     ".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rb", ".php", ".cs",
@@ -66,7 +67,7 @@ def run_semgrep(files: list[Path], root: Path) -> tuple[list[dict], list[str]]:
     if not shutil.which("semgrep"):
         return [], ["semgrep not installed (brew install semgrep)"]
     proc = subprocess.run(
-        ["semgrep", "scan", "--config", SEMGREP_CONFIG, "--json", "--metrics=off",
+        ["semgrep", "scan", "--config", SEMGREP_CONFIG, "--config", str(LOCAL_RULES), "--json", "--metrics=off",
          "--quiet", *[str(f) for f in files]],
         capture_output=True, text=True, cwd=root, timeout=600,
     )
