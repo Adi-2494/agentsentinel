@@ -40,6 +40,19 @@ _REMOTE_TARGET = re.compile(r"(?:^|\s)(?:[\w.-]+@)?([\w.-]+):(?!//)")
 _NETCAT = re.compile(r"^\s*(?:sudo\s+)?(nc|ncat|netcat|socat|telnet)\b(.*)")
 
 
+_PATHLIKE = re.compile(r"[~$\w./@=-]+")
+# Commands that only mention a file name without reading its content
+_NAME_ONLY = {"ls", "test", "[", "echo", "printf", "touch", "stat", "file"}
+
+
+def _only_mentions_names(tokens: list[str], seg: str) -> bool:
+    if "$(" in seg or "`" in seg or "<(" in seg:
+        return False  # echo $(cat .env) reads it
+    if tokens[:2] in (["git", "check-ignore"], ["git", "rm"]):
+        return True
+    return bool(tokens) and tokens[0] in _NAME_ONLY and "<" not in seg
+
+
 def host_allowed(host: str) -> bool:
     host = host.lower().rstrip(".")
     return any(host == a or host.endswith("." + a) for a in config.ALLOWED_HOSTS)
@@ -71,12 +84,14 @@ def check(command: str) -> list[Finding]:
 
     for seg in _segments(command):
         tokens = _tokens(seg)
-        # A1 via the shell: any argument that is a secret file
-        for tok in tokens:
-            path = tok.lstrip("@<>").split("=", 1)[-1]
-            if is_protected_path(path):
-                add("reads_secret_file", "CRITICAL",
-                    f"Command touches a secret/credential file: {path}", path)
+        # A1 via the shell: any path-like text that is a secret file, including inside
+        # quoted interpreter code (python3 -c "open('.env')", ruby -e, node -e, ...)
+        if not _only_mentions_names(tokens, seg):
+            for cand in sorted(set(_PATHLIKE.findall(seg))):
+                path = cand.lstrip("@<>").split("=", 1)[-1].strip(".,;:)(")
+                if path and (is_protected_path(path) or is_protected_path(cand.lstrip("@<>"))):
+                    add("reads_secret_file", "CRITICAL",
+                        f"Command touches a secret/credential file: {path}", path)
 
         hosts = [h for h in _URL_HOST.findall(seg) if not host_allowed(h)]
         is_fetch = re.match(rf"^\s*(?:sudo\s+)?{_FETCH}\b", seg, re.I)

