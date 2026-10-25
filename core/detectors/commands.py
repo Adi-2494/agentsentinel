@@ -108,7 +108,7 @@ def check(command: str) -> list[Finding]:
         # quoted interpreter code (python3 -c "open('.env')", ruby -e, node -e, ...)
         if not _only_mentions_names(tokens, seg):
             for cand in sorted(set(_PATHLIKE.findall(seg))):
-                path = cand.lstrip("@<>").split("=", 1)[-1].strip(".,;:)(")
+                path = cand.lstrip("@<>").split("=", 1)[-1].strip(",;:)(").rstrip(".")  # keep a leading dot
                 if path and (is_protected_path(path) or is_protected_path(cand.lstrip("@<>"))):
                     add("reads_secret_file", "CRITICAL",
                         f"Command touches a secret/credential file: {path}", path)

@@ -91,3 +91,8 @@ def test_download_then_read_is_not_execute(cmd):
 ])
 def test_download_then_execute_variants(cmd):
     assert "download_then_execute" in rules(cmd)
+
+
+def test_secret_file_message_keeps_leading_dot():
+    f = [x for x in commands.check("python3 -c \"print(open('.env').read())\"") if x.rule == "reads_secret_file"]
+    assert f and f[0].preview == ".env"
