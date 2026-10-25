@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import tempfile
 from dataclasses import asdict, dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePath
 
 from core.detectors import injection, pii, secrets
 from core.detectors.base import mask
@@ -44,6 +44,14 @@ class ScanFinding:
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+def display_path(path: PurePath, root: PurePath) -> str:
+    """Repo-relative path with forward slashes on every OS (reports, PR comments, dashboard)."""
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
 def is_text_file(path: Path, sample: int = 8192) -> bool:
@@ -125,7 +133,7 @@ def scan_files(files: list[Path], root: Path) -> tuple[list[ScanFinding], list[s
     candidates = [f.resolve() for f in files if f.is_file()]
     binaries = [f for f in candidates if not is_text_file(f)]
     files = [f for f in candidates if f not in binaries]  # every text file, whatever its extension
-    rel = lambda p: str(Path(p).resolve().relative_to(root)) if Path(p).resolve().is_relative_to(root) else str(p)  # noqa: E731
+    rel = lambda p: display_path(Path(p).resolve(), root)  # noqa: E731
     findings: list[ScanFinding] = []
     seen: set[tuple] = set()
 

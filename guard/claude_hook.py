@@ -244,11 +244,26 @@ def _fail(reason: str, event_name: str = "PreToolUse") -> int:
     return 0
 
 
+def _utf8_stdio() -> None:
+    """Windows consoles default to a local code page (e.g. cp1252): Claude Code / Cursor send UTF-8,
+    and a non-encodable character in an error message must never crash the hook (crash = allow)."""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="backslashreplace")
+        except (AttributeError, ValueError):
+            pass
+
+
+def _read_event() -> object:
+    return json.loads(sys.stdin.buffer.read().decode("utf-8", errors="replace"))
+
+
 def main() -> int:
+    _utf8_stdio()
     if _IMPORT_ERROR is not None:
         return _fail(f"guard failed to load: {_IMPORT_ERROR}")
     try:
-        event = json.loads(sys.stdin.read())
+        event = _read_event()
         if not isinstance(event, dict):
             raise ValueError("hook input is not a JSON object")
     except Exception as e:

@@ -43,7 +43,7 @@ def collect_text(files: list[Path], root: Path, pr_body: str) -> str:
         parts.append(f"=== PR DESCRIPTION ===\n{pr_body[:5000]}")
     for f in files:
         try:
-            rel = str(f.resolve().relative_to(root.resolve()))
+            rel = f.resolve().relative_to(root.resolve()).as_posix()
             code = f.read_text(errors="replace")
         except (OSError, ValueError):
             continue

@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from core import store  # noqa: E402
 from core.detectors import files, injection, pii, secrets  # noqa: E402
 from core.detectors.base import Finding, max_severity  # noqa: E402
-from guard.claude_hook import DENY, MAX_READ_BYTES, _log, _reason, evaluate  # noqa: E402
+from guard.claude_hook import DENY, MAX_READ_BYTES, _log, _read_event, _reason, _utf8_stdio, evaluate  # noqa: E402
 
 SOURCE = "cursor"
 # events whose response schema accepts "ask"
@@ -87,8 +87,9 @@ def after_event(event: dict) -> list[Finding]:
 
 
 def main() -> int:
+    _utf8_stdio()
     try:
-        event = json.load(sys.stdin)
+        event = _read_event()
         name = event.get("hook_event_name", "")
         if name in AFTER_EVENTS:  # not a permission event: log only, print nothing
             _log([(SOURCE, "warned", f.rule, f.severity, {

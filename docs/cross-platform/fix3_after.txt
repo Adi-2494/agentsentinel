@@ -1,0 +1,7 @@
+PASSED test_3_hooks_read_utf8_even_with_a_windows_code_page[claude_hook.py-payload0-permissionDecision]
+PASSED test_3_hooks_read_utf8_even_with_a_windows_code_page[cursor_hook.py-payload1-permission]
+PASSED test_3_report_paths_use_forward_slashes
+PASSED test_3_installer_uses_the_right_venv_python[win32-Scripts/python.exe]
+PASSED test_3_installer_uses_the_right_venv_python[darwin-bin/python]
+PASSED test_3_installer_uses_the_right_venv_python[linux-bin/python]
+PASSED test_3_hook_command_has_no_backslashes

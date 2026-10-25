@@ -22,9 +22,17 @@ CURSOR_EVENTS = {  # event -> matcher ("" = everything)
 }
 
 
+def venv_python(root: Path = ROOT, platform: str = sys.platform) -> Path:
+    """The project venv's interpreter: Scripts/python.exe on Windows, bin/python elsewhere."""
+    return root / ".venv" / ("Scripts/python.exe" if platform.startswith("win") else "bin/python")
+
+
 def hook_command(script: str = "claude_hook.py") -> str:
-    python = ROOT / ".venv" / "bin" / "python"
-    return f'"{python if python.exists() else sys.executable}" "{ROOT / "guard" / script}"'
+    """Forward slashes only: Claude Code on Windows runs hooks through Git Bash, where backslashes
+    are escape characters. Python accepts C:/... paths on Windows."""
+    python = venv_python()
+    python = python if python.exists() else Path(sys.executable)
+    return f'"{python.as_posix()}" "{(ROOT / "guard" / script).as_posix()}"'
 
 
 def install_cursor(project: Path) -> Path:
