@@ -185,7 +185,7 @@ git clone https://github.com/Adi-2494/agentsentinel.git
 cd agentsentinel
 python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
 cp .env.example .env          # LLM_BACKEND=claude_code, MAIN_MODEL=sonnet, CHECK_MODEL=haiku
-.venv/bin/pytest -q           # 399 tests, no Claude calls
+.venv/bin/pytest -q           # 467 tests, no Claude calls
 ```
 
 ### A. Live Guard (Claude Code)
@@ -312,6 +312,18 @@ An external red-team test found **16 ways around AgentSentinel**. Every one was 
 
 Each fix was checked for false alarms: normal developer commands and text, the 8 safe benchmark PRs, 304 files of 4 real public repos, and the real held-out prompt-injection split (precision stayed at 100%).
 
+## Robustness and scale review
+
+A second review (fuzzing and scale testing) found 3 issues. Each was reproduced first: **13 of 56 robustness tests failed** before the fixes and **0 of 68 fail now** (`tests/test_robustness.py`; before/after in `docs/robustness/`).
+
+| Issue | Before | After |
+|---|---|---|
+| NUL bytes / lone surrogates in paths crashed the detectors, giving a fail-closed block with a confusing message | `ValueError` / `UnicodeEncodeError` | Normal decision; `.env\x00.txt` is still denied as `.env` (OS semantics); 6,000 fuzzed inputs never raise |
+| The command check grew with command size, superlinearly on huge words | 1.2 MB command: up to **28.8 s** | **≤ 1.8 s**; commands over 100 KB need confirmation |
+| One database connection per log write, never explicitly closed | 300 writes left **605** file handles open | **4** (unchanged); schema set up once per database; batched writes |
+
+The speed fixes were checked for equivalence: the new protected-file matcher gives identical results to the old one on 5,000 random paths, and the linear tokenizer matches `shlex` on normal commands.
+
 ## Security design
 
 - **The LLM can't act.** Claude runs with all tools and MCP servers disabled (`--tools "" --strict-mcp-config`), from an empty temp folder, so hostile PR code can't make it run commands or read files.
@@ -326,7 +338,7 @@ Each fix was checked for false alarms: normal developer commands and text, the 8
 
 | Suite | Tests | What it covers |
 |---|---|---|
-| Unit | 367 | The red-team attacks (`tests/test_redteam.py`, 31 tests incl. 1 integration), every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
+| Unit | 435 | The red-team attacks (`tests/test_redteam.py`, 31 tests incl. 1 integration), the robustness review (`tests/test_robustness.py`: fuzzing, scale, file handles), every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
 | Integration | 32 | 3 generated repos and 20 PR branches through the real gate (git diff + Semgrep + Gitleaks); a "fooled reviewer" stand-in proving the manipulation alarm fires; LLM outage fails closed; a 12-step agent session replayed through the real hook; raw MCP JSON-RPC to the server process |
 | Live (opt-in) | 4 | Real Claude calls: `pytest -m llm` |
 
@@ -349,8 +361,8 @@ dashboard/   app.py (Streamlit), data.py, seed_demo.py
 deploy/      build_hf_space.sh (self-hosting package)
 benchmark/   cases/ (38), run_benchmark.py, recorder_hook.py, real_repos.py, external.py, ghsa.py, results/
 examples/    vulnerable_pr, trick_pr, safe_pr
-tests/       unit tests, integration/, test_redteam.py (31 red-team attacks)
-docs/        screenshots, redteam/ (before / after evidence)
+tests/       unit tests, integration/, test_redteam.py (31 red-team attacks), test_robustness.py (68)
+docs/        screenshots, redteam/ and robustness/ (before / after evidence)
 ```
 
 ## Limitations

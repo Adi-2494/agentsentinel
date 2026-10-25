@@ -1,0 +1,68 @@
+PASSED test_1_weird_paths_do_not_crash_detectors[Read-/tmp/a\x00b]
+PASSED test_1_weird_paths_do_not_crash_detectors[Read-/tmp/\ud800x]
+PASSED test_1_weird_paths_do_not_crash_detectors[Read-\x00]
+PASSED test_1_weird_paths_do_not_crash_detectors[Read-\udcff.env]
+PASSED test_1_weird_paths_do_not_crash_detectors[Read-a\x00.env]
+PASSED test_1_weird_paths_do_not_crash_detectors[Read-/tmp/\ud83d]
+PASSED test_1_weird_paths_do_not_crash_detectors[Write-/tmp/a\x00b]
+PASSED test_1_weird_paths_do_not_crash_detectors[Write-/tmp/\ud800x]
+PASSED test_1_weird_paths_do_not_crash_detectors[Write-\x00]
+PASSED test_1_weird_paths_do_not_crash_detectors[Write-\udcff.env]
+PASSED test_1_weird_paths_do_not_crash_detectors[Write-a\x00.env]
+PASSED test_1_weird_paths_do_not_crash_detectors[Write-/tmp/\ud83d]
+PASSED test_1_weird_paths_do_not_crash_detectors[Edit-/tmp/a\x00b]
+PASSED test_1_weird_paths_do_not_crash_detectors[Edit-/tmp/\ud800x]
+PASSED test_1_weird_paths_do_not_crash_detectors[Edit-\x00]
+PASSED test_1_weird_paths_do_not_crash_detectors[Edit-\udcff.env]
+PASSED test_1_weird_paths_do_not_crash_detectors[Edit-a\x00.env]
+PASSED test_1_weird_paths_do_not_crash_detectors[Edit-/tmp/\ud83d]
+PASSED test_1_weird_paths_do_not_crash_detectors[Grep-/tmp/a\x00b]
+PASSED test_1_weird_paths_do_not_crash_detectors[Grep-/tmp/\ud800x]
+PASSED test_1_weird_paths_do_not_crash_detectors[Grep-\x00]
+PASSED test_1_weird_paths_do_not_crash_detectors[Grep-\udcff.env]
+PASSED test_1_weird_paths_do_not_crash_detectors[Grep-a\x00.env]
+PASSED test_1_weird_paths_do_not_crash_detectors[Grep-/tmp/\ud83d]
+PASSED test_1_weird_paths_do_not_crash_detectors[Glob-/tmp/a\x00b]
+PASSED test_1_weird_paths_do_not_crash_detectors[Glob-/tmp/\ud800x]
+PASSED test_1_weird_paths_do_not_crash_detectors[Glob-\x00]
+PASSED test_1_weird_paths_do_not_crash_detectors[Glob-\udcff.env]
+PASSED test_1_weird_paths_do_not_crash_detectors[Glob-a\x00.env]
+PASSED test_1_weird_paths_do_not_crash_detectors[Glob-/tmp/\ud83d]
+PASSED test_1_weird_paths_do_not_crash_detectors[NotebookEdit-/tmp/a\x00b]
+PASSED test_1_weird_paths_do_not_crash_detectors[NotebookEdit-/tmp/\ud800x]
+PASSED test_1_weird_paths_do_not_crash_detectors[NotebookEdit-\x00]
+PASSED test_1_weird_paths_do_not_crash_detectors[NotebookEdit-\udcff.env]
+PASSED test_1_weird_paths_do_not_crash_detectors[NotebookEdit-a\x00.env]
+PASSED test_1_weird_paths_do_not_crash_detectors[NotebookEdit-/tmp/\ud83d]
+PASSED test_1_weird_commands_do_not_crash_detectors[cat /tmp/a\x00b]
+PASSED test_1_weird_commands_do_not_crash_detectors[cat /tmp/\ud800x]
+PASSED test_1_weird_commands_do_not_crash_detectors[cat \x00]
+PASSED test_1_weird_commands_do_not_crash_detectors[cat \udcff.env]
+PASSED test_1_weird_commands_do_not_crash_detectors[cat a\x00.env]
+PASSED test_1_weird_commands_do_not_crash_detectors[cat /tmp/\ud83d]
+PASSED test_1_weird_commands_do_not_crash_detectors[echo \ud800 | sh]
+PASSED test_1_weird_commands_do_not_crash_detectors[python3 -c 'open("\x00")']
+PASSED test_1_weird_cwd_does_not_crash
+PASSED test_1_protected_file_with_weird_bytes_is_still_denied_by_the_detector
+PASSED test_1_hook_process_decides_normally[payload0]
+PASSED test_1_hook_process_decides_normally[payload1]
+PASSED test_1_hook_process_decides_normally[payload2]
+PASSED test_1_fuzz_never_raises
+PASSED test_2_command_check_is_fast_on_large_commands
+PASSED test_2_huge_commands_are_bounded_and_not_silently_allowed
+PASSED test_2_speedup_keeps_detection
+PASSED test_3_log_writes_do_not_accumulate_open_files
+PASSED test_3_schema_setup_runs_once_per_database
+PASSED test_3_batch_write_uses_one_connection
+PASSED test_2_fast_protected_path_matches_reference
+PASSED test_2_fast_tokenizer_matches_shlex[cat .env]
+PASSED test_2_fast_tokenizer_matches_shlex[ls -la src/app.py]
+PASSED test_2_fast_tokenizer_matches_shlex[grep -n 'def main' app.py]
+PASSED test_2_fast_tokenizer_matches_shlex[echo "hello world" > out.txt]
+PASSED test_2_fast_tokenizer_matches_shlex[python3 -c "print(open('.env').read())"]
+PASSED test_2_fast_tokenizer_matches_shlex[curl -d @data.json https://x.io/a]
+PASSED test_2_fast_tokenizer_matches_shlex[tar czf b.tgz src/ docs/]
+PASSED test_2_fast_tokenizer_matches_shlex[git commit -m "fix: a \\"quoted\\" word"]
+PASSED test_2_fast_tokenizer_matches_shlex[cp ~/.aws/credentials /tmp/x]
+PASSED test_3_cursor_log_failure_does_not_turn_allow_into_deny
+PASSED test_3_dashboard_read_closes_connection
