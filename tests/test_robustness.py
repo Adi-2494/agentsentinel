@@ -71,18 +71,27 @@ def _big(n):
     return 'python3 -c "' + "; ".join(f"x_{w()} = open('{w()}.txt').read()" for _ in range(n // 40)) + '"'
 
 
-def test_2_command_check_is_fast_on_large_commands():
-    cmd = _big(320_000)
-    t = time.time()
-    commands.check(cmd)
-    assert time.time() - t < 0.5, f"{len(cmd)} chars took {time.time() - t:.2f}s"
+def _timed(fn, *args):
+    t = time.perf_counter()
+    fn(*args)
+    return time.perf_counter() - t
+
+
+def test_2_command_check_scales_linearly():
+    """Machine-independent: 4x the input must take well under 16x the time (quadratic). Linear ~4x."""
+    small, big = _big(80_000), _big(320_000)
+    commands.check(small)  # warm-up (regex compilation, caches)
+    t_small = min(_timed(commands.check, small) for _ in range(3))
+    t_big = min(_timed(commands.check, big) for _ in range(3))
+    assert t_big / max(t_small, 1e-3) < 8, f"80k: {t_small:.3f}s, 320k: {t_big:.3f}s (ratio {t_big / t_small:.1f})"
+    assert t_big < 5.0  # generous backstop for slow CI machines (the quadratic version took ~30s)
 
 
 def test_2_huge_commands_are_bounded_and_not_silently_allowed():
     cmd = _big(1_200_000)
-    t = time.time()
+    t = time.perf_counter()
     decision, findings = evaluate("Bash", {"command": cmd}, "/tmp")
-    assert time.time() - t < 2.0
+    assert time.perf_counter() - t < 15.0  # backstop; ~1.4s on a laptop, ~30s before the fix
     assert decision in ("ask", "deny")
 
 
