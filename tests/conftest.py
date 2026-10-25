@@ -15,3 +15,32 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if "llm" in item.keywords:
             item.add_marker(skip)
+
+
+@pytest.fixture(autouse=True)
+def _no_real_llm_calls(request, monkeypatch):
+    """Safety net: unless --run-llm is given, starting the real `claude` CLI or calling Ollama fails
+    the test loudly. Tests that substitute a fake subprocess / LLM function are unaffected."""
+    if request.config.getoption("--run-llm"):
+        return
+    import os
+    import subprocess
+    import urllib.request
+
+    from core import config
+
+    real_run, real_urlopen = subprocess.run, urllib.request.urlopen
+
+    def guarded_run(cmd, *args, **kwargs):
+        exe = cmd[0] if isinstance(cmd, (list, tuple)) and cmd else ""
+        if os.path.basename(str(exe)).lower().startswith("claude"):
+            raise AssertionError("real `claude` call attempted in a test (stub the LLM, or run with --run-llm)")
+        return real_run(cmd, *args, **kwargs)
+
+    def guarded_urlopen(req, *args, **kwargs):
+        url = getattr(req, "full_url", str(req))
+        if url.startswith(config.OLLAMA_URL):
+            raise AssertionError("real Ollama call attempted in a test (stub the LLM, or run with --run-llm)")
+        return real_urlopen(req, *args, **kwargs)
+    monkeypatch.setattr(subprocess, "run", guarded_run)
+    monkeypatch.setattr(urllib.request, "urlopen", guarded_urlopen)

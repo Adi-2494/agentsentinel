@@ -100,11 +100,19 @@ def confirm_all(prompt, model=None):
                           "explanation": "stub", "fix": "stub fix"} for i in ids]}
 
 
+def no_traps(prompt, model=None):
+    return {"verdict": "SAFE", "confidence": 0.9, "evidence": []}
+
+
 @pytest.fixture
 def stub_llm(monkeypatch):
-    def use(reviewer):
+    """Stub EVERY LLM layer of the gate (two-view, triage and the AI-trap check)."""
+    from core.reviewer import injection_check
+
+    def use(reviewer, classifier=no_traps):
         monkeypatch.setattr(two_view, "ask_json", reviewer)
         monkeypatch.setattr(triage, "ask_json", confirm_all)
+        monkeypatch.setattr(injection_check, "ask_json", classifier)
     return use
 
 
@@ -148,8 +156,10 @@ def test_llm_outage_fails_closed(repos, tmp_path, monkeypatch):
 
     def limit(*a, **k):
         raise LLMLimitReached("Pro limit reached, try again later or switch LLM_BACKEND=ollama")
+    from core.reviewer import injection_check
     monkeypatch.setattr(two_view, "ask_json", limit)
     monkeypatch.setattr(triage, "ask_json", limit)
+    monkeypatch.setattr(injection_check, "ask_json", limit)
     code, result, md = gate(repos["py-flask-service"], "pr-sqli", tmp_path, llm=True)
     assert code == 1  # static finding still blocks
     assert any("Pro limit" in e for e in result["errors"]) and "Tool warnings" in md

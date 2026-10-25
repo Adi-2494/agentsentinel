@@ -1,0 +1,4 @@
+FAILED tests/integration/test_gate_multi_repo.py::test_llm_outage_fails_closed
+FAILED tests/integration/test_gate_multi_repo.py::test_safe_pr_not_flagged_even_with_fooled_reviewer
+FAILED tests/integration/test_gate_multi_repo.py::test_trick_pr_caught_by_two_view_when_reviewer_is_fooled
+FAILED tests/integration/test_gate_multi_repo.py::test_xss_blocks_once_triage_confirms_high

@@ -198,3 +198,9 @@ def test_live_claude_tests_need_explicit_flag():
                         "tests/integration/test_llm_live.py"], capture_output=True, text=True, timeout=120,
                        cwd=Path(__file__).resolve().parent.parent)
     assert "4 skipped" in p.stdout and "passed" not in p.stdout
+
+
+def test_safety_net_blocks_real_claude_in_tests():
+    from core.llm import ask_llm
+    with pytest.raises(AssertionError, match="real `claude` call attempted"):
+        ask_llm("hi", backend="claude_code")
