@@ -100,3 +100,23 @@ def test_benchmark_frames_and_page(tmp_path, monkeypatch):
     leak = long[long["metric"] == "Leak attempts that got through"].set_index("Condition")["value"]
     assert leak["Plain review"] == 60.0 and leak["AgentSentinel"] == 10.0
     assert set(per_case["outcome"]) == {"approved", "prevented"}
+
+
+
+def test_real_world_rows():
+    gh = {"static": {"n": 2, "caught_vulnerable_pct": 50.0, "still_flagged_after_fix_pct": 50.0, "fix_aware_pct": 0.0},
+          "advisories": [{"ghsa": "GHSA-x", "repo": "o/r", "ecosystem": "pip", "severity": "critical", "cwes": ["CWE-78"],
+                          "static": {"before": {"blocked": True}, "after": {"blocked": False}}}]}
+    assert data.ghsa_summary_rows(gh)[0]["Caught bug AND passed fix"] == "0.0%"
+    row = data.ghsa_case_rows(gh)[0]
+    assert row["static (before → after fix)"] == "blocked → passed" and row["Haiku (before → after fix)"] == "–"
+    m = {"tp": 1, "fp": 0, "fn": 1, "tn": 2, "recall_pct": 50.0, "precision_pct": 100.0}
+    assert data.injection_rows({"rules_test_heldout": m})[0]["False alarms"] == "0 / 2"
+
+
+def test_public_mode_hides_path_input(monkeypatch, tmp_path):
+    from streamlit.testing.v1 import AppTest
+    monkeypatch.setattr("core.config.DB_PATH", tmp_path / "none.db")
+    monkeypatch.setenv("AGENTSENTINEL_PUBLIC", "1")
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    assert not at.exception and len(at.sidebar.text_input) == 0

@@ -113,14 +113,17 @@ Real public data only. Datasets are **downloaded at runtime and never redistribu
 
 **50 reviewed HIGH/CRITICAL advisories** (25 Python, 25 npm) from 42 real projects (e.g. `vm2`, `multer`, `fast-jwt`, `virtualenv`, Microsoft MSAL). For each advisory, the files changed by the real fix commit are scanned **before** the fix (vulnerable) and **after** it (fixed):
 
-| | Static only (all 50) | Static only (same sample) | **AgentSentinel + Claude Haiku** (random sample of 15) |
-|---|---|---|---|
-| Vulnerable version blocked | 10.0% | 6.7% | **53.3%** |
-| Fixed version still blocked | 10.0% | 6.7% | 33.3% |
-| **Blocked the vulnerable version and passed the fix** | **0.0%** | 0.0% | **20.0%** |
+| | Static only (all 50) | Static only (same 15) | **AgentSentinel + Claude Haiku** | **AgentSentinel + Claude Sonnet** |
+|---|---|---|---|---|
+| Vulnerable version blocked | 10.0% | 6.7% | **53.3%** | **53.3%** |
+| Fixed version still blocked | 10.0% | 6.7% | 33.3% | 33.3% |
+| **Blocked the vulnerable version and passed the fix** | **0.0%** | 0.0% | **20.0%** | **20.0%** |
+
+Both Claude columns use the same random sample of 15 advisories.
 
 - **Static tools found none of the real bugs.** Every static hit was unrelated code that was still there after the fix.
 - **The Claude review blocked 8× more real vulnerable code** than static tools on the same sample.
+- **Haiku and Sonnet caught different bugs**, e.g. only Sonnet caught the `vm2` sandbox escape. Each caught 8 of 15; together they caught 9 of 15 (60%).
 - "Fixed version still blocked" is not automatically a false alarm: whole real files are reviewed, and other issues may remain after a single fix. It was not verified case by case.
 
 ### Real prompt injections: [deepset/prompt-injections](https://huggingface.co/datasets/deepset/prompt-injections) (Apache-2.0)
@@ -173,7 +176,7 @@ git clone https://github.com/Adi-2494/agentsentinel.git
 cd agentsentinel
 python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
 cp .env.example .env          # LLM_BACKEND=claude_code, MAIN_MODEL=sonnet, CHECK_MODEL=haiku
-.venv/bin/pytest -q           # 311 tests, no Claude calls
+.venv/bin/pytest -q           # 313 tests, no Claude calls
 ```
 
 ### A. Live Guard (Claude Code)
@@ -253,6 +256,22 @@ docker compose up --build                     # http://localhost:8501
 
 The container only reads `./data/agentsentinel.db`. On a fresh clone with no log, it shows clearly labelled **demo data**.
 
+### Public demo (Hugging Face Spaces)
+
+```bash
+./deploy/build_hf_space.sh            # builds dist/hf-space: dashboard + demo log + redacted results only
+hf repos create <you>/agentsentinel --type space --sdk docker --public
+hf upload <you>/agentsentinel dist/hf-space . --type space
+```
+
+The Space runs in **public mode**:
+
+- no file-path input
+- event views use the labelled synthetic demo log
+- Benchmark and Real-world data show the measured results
+
+It contains no guard or gate code, no LLM calls and no credentials.
+
 ### LLM backend
 
 The LLM layer is pluggable via `.env`:
@@ -274,7 +293,7 @@ The LLM layer is pluggable via `.env`:
 
 | Suite | Tests | What it covers |
 |---|---|---|
-| Unit | 281 | Every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
+| Unit | 283 | Every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
 | Integration | 30 | 3 generated repos and 20 PR branches through the real gate (git diff + Semgrep + Gitleaks); a "fooled reviewer" stand-in proving the manipulation alarm fires; LLM outage fails closed; a 12-step agent session replayed through the real hook; raw MCP JSON-RPC to the server process |
 | Live (opt-in) | 4 | Real Claude calls: `pytest -m llm` |
 

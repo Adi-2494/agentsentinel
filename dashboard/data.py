@@ -170,3 +170,40 @@ def benchmark_frames(results: dict) -> tuple[pd.DataFrame, pd.DataFrame, pd.Data
         per_case.append({"case": cid, "type": cid.split("-")[0], "condition": CONDITION_LABELS.get(cond, cond),
                          "model": MODEL_LABELS.get(model, model), "outcome": outcome})
     return pd.DataFrame(long), table, pd.DataFrame(per_case)
+
+
+
+# ---------------------------------------------------------------- real-world data
+def ghsa_summary_rows(gh: dict) -> list[dict]:
+    rows = [("Static only (all advisories)", gh.get("static"))]
+    for key, label in (("haiku", "Haiku"), ("sonnet", "Sonnet")):
+        if gh.get(f"llm_{key}"):
+            rows.append((f"Static only (same {gh[f'llm_{key}']['n']} as {label})", gh.get(f"llm_{key}_static_same_sample")))
+            rows.append((f"AgentSentinel + Claude {label}", gh[f"llm_{key}"]))
+    return [{"Condition": name, "Advisories": m["n"],
+             "Vulnerable version blocked": f"{m['caught_vulnerable_pct']}%",
+             "Fixed version still blocked": f"{m['still_flagged_after_fix_pct']}%",
+             "Caught bug AND passed fix": f"{m['fix_aware_pct']}%"} for name, m in rows if m]
+
+
+def ghsa_case_rows(gh: dict) -> list[dict]:
+    fmt = lambda r: "–" if not r else f"{'blocked' if r['before']['blocked'] else 'passed'} → " \
+        f"{'blocked' if r['after']['blocked'] else 'passed'}"  # noqa: E731
+    return [{"advisory": f"https://github.com/advisories/{a['ghsa']}", "project": a["repo"],
+             "ecosystem": a["ecosystem"], "severity": a["severity"], "CWE": ", ".join(a["cwes"]),
+             "static (before → after fix)": fmt(a.get("static")),
+             "Haiku (before → after fix)": fmt(a.get("llm_haiku")),
+             "Sonnet (before → after fix)": fmt(a.get("llm_sonnet"))} for a in gh.get("advisories", [])]
+
+
+def injection_rows(pi: dict) -> list[dict]:
+    rows = []
+    for key, label in (("rules_test_heldout", "Rules: held-out test split"),
+                       ("rules_train_used_for_tuning", "Rules: train split (used for tuning)"),
+                       ("llm_sample", "Gate's Claude AI-trap check (sample)")):
+        m = pi.get(key)
+        if m:
+            rows.append({"Layer": label, "Prompts": m["tp"] + m["fp"] + m["fn"] + m["tn"],
+                         "Recall": f"{m['recall_pct']}%", "Precision": f"{m['precision_pct']}%",
+                         "False alarms": f"{m['fp']} / {m['fp'] + m['tn']}"})
+    return rows

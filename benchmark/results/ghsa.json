@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-25T10:08:25Z",
+  "generated": "2026-10-25T10:27:01Z",
   "source": "GitHub Advisory Database (reviewed, HIGH/CRITICAL), fix commits; code not redistributed",
   "static": {
     "n": 50,
@@ -215,6 +215,20 @@
             "hardcoded_credential"
           ]
         }
+      },
+      "llm_sonnet": {
+        "before": {
+          "blocked": true,
+          "rules": [
+            "hardcoded_credential"
+          ]
+        },
+        "after": {
+          "blocked": true,
+          "rules": [
+            "hardcoded_credential"
+          ]
+        }
       }
     },
     {
@@ -350,6 +364,16 @@
           "blocked": true,
           "rules": []
         }
+      },
+      "llm_sonnet": {
+        "before": {
+          "blocked": true,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
       }
     },
     {
@@ -375,6 +399,16 @@
         }
       },
       "llm_haiku": {
+        "before": {
+          "blocked": true,
+          "rules": []
+        },
+        "after": {
+          "blocked": true,
+          "rules": []
+        }
+      },
+      "llm_sonnet": {
         "before": {
           "blocked": true,
           "rules": []
@@ -559,6 +593,16 @@
         },
         "after": {
           "blocked": true,
+          "rules": []
+        }
+      },
+      "llm_sonnet": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
           "rules": []
         }
       }
@@ -793,6 +837,16 @@
           "blocked": false,
           "rules": []
         }
+      },
+      "llm_sonnet": {
+        "before": {
+          "blocked": true,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
       }
     },
     {
@@ -829,6 +883,16 @@
           "blocked": false,
           "rules": []
         }
+      },
+      "llm_sonnet": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
       }
     },
     {
@@ -856,6 +920,16 @@
         }
       },
       "llm_haiku": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      },
+      "llm_sonnet": {
         "before": {
           "blocked": false,
           "rules": []
@@ -914,6 +988,16 @@
         }
       },
       "llm_haiku": {
+        "before": {
+          "blocked": true,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      },
+      "llm_sonnet": {
         "before": {
           "blocked": true,
           "rules": []
@@ -1006,6 +1090,16 @@
           "blocked": false,
           "rules": []
         }
+      },
+      "llm_sonnet": {
+        "before": {
+          "blocked": true,
+          "rules": []
+        },
+        "after": {
+          "blocked": true,
+          "rules": []
+        }
       }
     },
     {
@@ -1064,6 +1158,16 @@
           "blocked": false,
           "rules": []
         }
+      },
+      "llm_sonnet": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
       }
     },
     {
@@ -1114,6 +1218,16 @@
         }
       },
       "llm_haiku": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      },
+      "llm_sonnet": {
         "before": {
           "blocked": false,
           "rules": []
@@ -1201,6 +1315,16 @@
         },
         "after": {
           "blocked": false,
+          "rules": []
+        }
+      },
+      "llm_sonnet": {
+        "before": {
+          "blocked": true,
+          "rules": []
+        },
+        "after": {
+          "blocked": true,
           "rules": []
         }
       }
@@ -1296,6 +1420,16 @@
           "blocked": true,
           "rules": []
         }
+      },
+      "llm_sonnet": {
+        "before": {
+          "blocked": true,
+          "rules": []
+        },
+        "after": {
+          "blocked": true,
+          "rules": []
+        }
       }
     },
     {
@@ -1322,6 +1456,16 @@
         }
       },
       "llm_haiku": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      },
+      "llm_sonnet": {
         "before": {
           "blocked": false,
           "rules": []
@@ -1411,6 +1555,16 @@
           "blocked": false,
           "rules": []
         }
+      },
+      "llm_sonnet": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
       }
     }
   ],
@@ -1421,6 +1575,18 @@
     "fix_aware_pct": 20.0
   },
   "llm_haiku_static_same_sample": {
+    "n": 15,
+    "caught_vulnerable_pct": 6.7,
+    "still_flagged_after_fix_pct": 6.7,
+    "fix_aware_pct": 0.0
+  },
+  "llm_sonnet": {
+    "n": 15,
+    "caught_vulnerable_pct": 53.3,
+    "still_flagged_after_fix_pct": 33.3,
+    "fix_aware_pct": 20.0
+  },
+  "llm_sonnet_static_same_sample": {
     "n": 15,
     "caught_vulnerable_pct": 6.7,
     "still_flagged_after_fix_pct": 6.7,

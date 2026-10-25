@@ -84,12 +84,17 @@ def events_table(df: pd.DataFrame):
 
 
 # ---------------------------------------------------------------- layout
+PUBLIC = os.environ.get("AGENTSENTINEL_PUBLIC") == "1"  # hosted demo: no file-path input
 st.title("🛡️ AgentSentinel")
-st.caption("Live Guard for AI coding tools · Merge Gate for pull requests · everything below is read from the local log")
-
-db_path = st.sidebar.text_input("Event log (SQLite)", str(config.DB_PATH))
-if st.sidebar.button("Refresh"):
-    load.clear()
+st.caption("Live Guard for AI coding tools · Merge Gate for pull requests · " + (
+    "public demo: event views use synthetic data; Benchmark and Real-world data show measured results"
+    if PUBLIC else "everything below is read from the local log"))
+if PUBLIC:
+    db_path = str(config.DB_PATH)
+else:
+    db_path = st.sidebar.text_input("Event log (SQLite)", str(config.DB_PATH))
+    if st.sidebar.button("Refresh"):
+        load.clear()
 demo_db = os.environ.get("AGENTSENTINEL_DEMO_DB", "")
 if not Path(db_path).exists() and demo_db and Path(demo_db).exists():
     db_path = demo_db  # fresh clone / public Space: fall back to the labelled demo log
@@ -114,7 +119,7 @@ if span != "All" and not df.empty:
     df = df[df["time"] >= cutoff]
 
 tab_over, tab_guard, tab_gate, tab_real, tab_bench = st.tabs(
-    ["Overview", "Live Guard", "Merge Gate", "Real-world repos", "Benchmark"])
+    ["Overview", "Live Guard", "Merge Gate", "Real-world data", "Benchmark"])
 
 with tab_over:
     m = data.metrics(df)
@@ -164,8 +169,42 @@ with tab_gate:
                      column_config={"time": st.column_config.DatetimeColumn("Time (UTC)", format="D MMM, HH:mm")})
 
 with tab_real:
-    real = data.load_json(ROOT / "benchmark" / "results" / "real_repos.json")
-    st.caption("The Merge Gate run on real commits of public repos (static mode). See benchmark/real_repos.py.")
+    results_dir = ROOT / "benchmark" / "results"
+    st.caption("Real public data only, downloaded at runtime and never redistributed. No personal information "
+               "is used; personal data in tests is generated in real formats.")
+
+    gh = data.load_json(results_dir / "ghsa.json")
+    st.subheader("Real vulnerabilities: GitHub Security Advisories")
+    if not gh:
+        st.info("Run `python benchmark/ghsa.py collect` then `python benchmark/ghsa.py eval`.")
+    else:
+        st.markdown(f"**{gh['static']['n']} reviewed HIGH/CRITICAL advisories** from "
+                    f"{len({a['repo'] for a in gh['advisories']})} real projects. Each is scanned **before** its real "
+                    f"fix commit (vulnerable) and **after** it (fixed).")
+        st.dataframe(pd.DataFrame(data.ghsa_summary_rows(gh)), hide_index=True, use_container_width=True)
+        st.dataframe(pd.DataFrame(data.ghsa_case_rows(gh)), hide_index=True, use_container_width=True,
+                     column_config={"advisory": st.column_config.LinkColumn(
+                         "Advisory", display_text=r"https://github\.com/advisories/(.*)")})
+
+    ext = data.load_json(results_dir / "external.json") or {}
+    pi, se = ext.get("prompt_injections"), ext.get("securityeval")
+    if pi:
+        st.subheader("Real prompt injections: deepset/prompt-injections (Apache-2.0)")
+        st.markdown(f"{pi['n']} real prompts, {pi['positives']} labelled injections (about 36% German). Rules were "
+                    "tuned on the train split only; the held-out test split is the honest score.")
+        st.dataframe(pd.DataFrame(data.injection_rows(pi)), hide_index=True, use_container_width=True)
+    if se:
+        st.subheader("Real insecure code: SecurityEval (s2e-lab)")
+        llm = se.get("llm_sample") or {}
+        st.dataframe(pd.DataFrame([
+            {"Layer": "Static rules (Semgrep + Gitleaks + AgentSentinel)", "Caught": f"{se['static_blocking_recall_pct']}%",
+             "Sample": se["n"]},
+            *([{"Layer": f"Claude review ({llm['model']})", "Caught": f"{llm['llm_recall_pct']}%", "Sample": llm["n"]},
+               {"Layer": "Combined", "Caught": f"{llm['combined_recall_pct']}%", "Sample": llm["n"]}] if llm else []),
+        ]), hide_index=True, use_container_width=True)
+
+    real = data.load_json(results_dir / "real_repos.json")
+    st.subheader("Real commits of public repos (static mode)")
     if not real:
         st.info("No results yet. Run `python benchmark/real_repos.py --workdir <folder>`.")
     else:

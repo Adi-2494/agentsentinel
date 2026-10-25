@@ -3,11 +3,13 @@
 # login, which must never be baked into a container.
 FROM python:3.11-slim
 
+ARG PUBLIC=0
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     AGENTSENTINEL_DB=/app/data/agentsentinel.db \
-    AGENTSENTINEL_DEMO_DB=/app/demo/demo.db
+    AGENTSENTINEL_DEMO_DB=/app/demo/demo.db \
+    AGENTSENTINEL_PUBLIC=$PUBLIC
 
 WORKDIR /app
 COPY requirements-dashboard.txt .

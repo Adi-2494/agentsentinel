@@ -26,3 +26,4 @@ __pycache__/
 
 # Real public datasets: downloaded at runtime, never committed
 benchmark/external_data/
+dist/

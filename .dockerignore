@@ -17,3 +17,6 @@ gate
 **/__pycache__
 .pytest_cache
 .DS_Store
+benchmark/results/progress*
+benchmark/results/*.tmp
+benchmark/external_data
