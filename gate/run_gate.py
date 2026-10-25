@@ -59,18 +59,21 @@ def _renumber(findings) -> None:
         f.id = f"F{i}"
 
 
-def run(files: list[Path], root: Path, pr_body: str = "", use_llm: bool = True) -> GateResult:
+def run(files: list[Path], root: Path, pr_body: str = "", use_llm: bool = True,
+        allow_llm_outage: bool = False) -> GateResult:
     findings, errors = static_scan.scan_files(files, root)
+    incomplete: list[str] = []
     findings += static_scan.scan_pr_text(pr_body)
     _renumber(findings)
     tv = None
     if use_llm:
         err = triage.triage(findings)
         if err:
-            errors.append(f"triage: {err}")
+            errors.append(f"triage: {err}")  # findings stay "real" (fail closed already)
         llm_findings, err = injection_check.check(files, root, pr_body)
         if err:
             errors.append(f"AI-trap check: {err}")
+            incomplete.append("AI-trap check")
         findings += llm_findings
         _renumber(findings)
         code_files = {}
@@ -84,11 +87,13 @@ def run(files: list[Path], root: Path, pr_body: str = "", use_llm: bool = True) 
             tv = two_view.two_view_check(code_files, pr_body)
             if "incomplete" in tv.reason:
                 errors.append(tv.reason)
+                incomplete.append("two-view code review")
     else:
         for f in findings:
             f.triage = {"verdict": "real", "severity": f.severity, "by": "no-llm"}
         errors.append("LLM disabled (--no-llm): static scan only, no triage / two-view / AI-trap LLM check")
-    return GateResult(findings=findings, two_view=tv, errors=errors, files_scanned=len(files))
+    return GateResult(findings=findings, two_view=tv, errors=errors, files_scanned=len(files),
+                      llm_incomplete=incomplete, allow_llm_outage=allow_llm_outage)
 
 
 def log_result(result: GateResult, label: str) -> None:
@@ -118,6 +123,8 @@ def main(argv=None) -> int:
     ap.add_argument("--pr-body-file", type=Path)
     ap.add_argument("--pr-body-env", help="name of an env var holding the PR description")
     ap.add_argument("--no-llm", action="store_true", help="static scan only (fallback)")
+    ap.add_argument("--allow-llm-outage", action="store_true",
+                    help="do not fail when an AI check could not run (default: fail closed)")
     ap.add_argument("--comment-out", type=Path, help="write the Markdown report here")
     ap.add_argument("--json-out", type=Path, help="write machine-readable results here")
     ap.add_argument("--label", default="", help="name for this run in the dashboard (e.g. PR #3)")
@@ -131,11 +138,13 @@ def main(argv=None) -> int:
 
     if args.path:
         root = args.path if args.path.is_dir() else args.path.parent
-        result = run(files_from_path(args.path), root, pr_body, use_llm=not args.no_llm)
+        result = run(files_from_path(args.path), root, pr_body, use_llm=not args.no_llm,
+                     allow_llm_outage=args.allow_llm_outage)
     else:
         with tempfile.TemporaryDirectory(prefix="agentsentinel-pr-") as tmp:
             files, read_errors = files_from_git(args.base, args.head, args.repo, Path(tmp))
-            result = run(files, Path(tmp), pr_body, use_llm=not args.no_llm)
+            result = run(files, Path(tmp), pr_body, use_llm=not args.no_llm,
+                         allow_llm_outage=args.allow_llm_outage)
             result.errors = read_errors + result.errors
     md = build_markdown(result)
     print(md)

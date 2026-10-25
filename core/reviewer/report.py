@@ -16,6 +16,8 @@ class GateResult:
     two_view: TwoViewResult | None = None
     errors: list[str] = field(default_factory=list)
     files_scanned: int = 0
+    llm_incomplete: list[str] = field(default_factory=list)  # AI layers that should have run but did not
+    allow_llm_outage: bool = False
 
     @property
     def real(self) -> list[ScanFinding]:
@@ -45,7 +47,12 @@ class GateResult:
 
     @property
     def failed(self) -> bool:
-        return bool(self.blocking or self.manipulation or self.reviewer_blocking)
+        return bool(self.blocking or self.manipulation or self.reviewer_blocking or self.outage_blocks)
+
+    @property
+    def outage_blocks(self) -> bool:
+        """Fail closed: an AI review that did not complete is not a pass."""
+        return bool(self.llm_incomplete) and not self.allow_llm_outage
 
     @property
     def exit_code(self) -> int:
@@ -60,6 +67,10 @@ def _cell(text: str, limit: int = 220) -> str:
 def build_markdown(r: GateResult) -> str:
     status = "❌ **FAILED**: merge blocked" if r.failed else "✅ **PASSED**"
     md = [MARKER, f"## 🛡️ AgentSentinel Merge Gate: {status}", ""]
+    if r.outage_blocks:
+        md += ["### ⛔ AI review did not complete", "",
+               "The merge is blocked because these AI checks could not run (fail closed): "
+               + ", ".join(r.llm_incomplete) + ". Re-run the check when the AI is available.", ""]
     md.append(f"Scanned **{r.files_scanned}** changed file(s) · "
               f"**{len(r.real)}** real finding(s) · **{len(r.blocking)}** blocking · "
               f"**{len(r.false_alarms)}** false alarm(s) filtered")

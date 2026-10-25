@@ -145,3 +145,10 @@ def test_lockfiles_skip_regex_rules(tmp_path):
 ])
 def test_compare_uses_severity_not_verdict_word(v1, v2, suspected):
     assert compare(v1, v2)[0] is suspected
+
+
+def test_llm_outage_blocks_unless_explicitly_allowed():
+    r = GateResult([], llm_incomplete=["two-view code review"])
+    assert r.failed and "AI review did not complete" in build_markdown(r)
+    assert not GateResult([], llm_incomplete=["two-view code review"], allow_llm_outage=True).failed
+    assert not GateResult([]).failed  # nothing to review is not an outage
