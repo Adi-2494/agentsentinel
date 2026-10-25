@@ -1,0 +1,10 @@
+Copyright (c) 2026 Adi-2494 (https://github.com/Adi-2494). All rights reserved.
+
+This repository is published for viewing and evaluation only. No licence is granted to
+use, copy, modify, merge, publish, distribute, sublicense or sell the software or any
+part of it, in source or binary form, without prior written permission from the
+copyright holder.
+
+Third-party tools and datasets referenced by this project (for example Semgrep, Gitleaks,
+deepset/prompt-injections, SecurityEval, and code from GitHub Security Advisories) are
+not part of this licence and remain under their own terms. They are not redistributed here.

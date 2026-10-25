@@ -343,3 +343,7 @@ tests/       unit tests + integration/
 ## Ethics
 
 All attacks were run only against my own repositories and generated test repos, with **fake** secrets and personal data built at runtime. The public repos and advisory code above were cloned and **scanned read-only**; nothing from them was executed. Public datasets are credited, downloaded at runtime and never redistributed, and no real person's personal information is used anywhere in the project.
+
+## Licence
+
+**Copyright (c) 2026 Adi-2494. All rights reserved.** The code is published for viewing and evaluation only. Using, copying or selling it requires written permission. See [LICENSE](LICENSE). Third-party tools and datasets keep their own licences.
