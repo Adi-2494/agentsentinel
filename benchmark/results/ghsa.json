@@ -1,0 +1,1603 @@
+{
+  "generated": "2026-10-25T10:08:25Z",
+  "source": "GitHub Advisory Database (reviewed, HIGH/CRITICAL), fix commits; code not redistributed",
+  "static": {
+    "n": 50,
+    "caught_vulnerable_pct": 10.0,
+    "still_flagged_after_fix_pct": 10.0,
+    "fix_aware_pct": 0.0
+  },
+  "static_by_ecosystem": {
+    "pip": {
+      "n": 25,
+      "caught_vulnerable_pct": 12.0,
+      "still_flagged_after_fix_pct": 12.0,
+      "fix_aware_pct": 0.0
+    },
+    "npm": {
+      "n": 25,
+      "caught_vulnerable_pct": 8.0,
+      "still_flagged_after_fix_pct": 8.0,
+      "fix_aware_pct": 0.0
+    }
+  },
+  "advisories": [
+    {
+      "ghsa": "GHSA-7587-9684-52r6",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-89"
+      ],
+      "repo": "mem0ai/mem0",
+      "fix_commit": "a2ffca32660537b7b304305f36774ae2a13452cb",
+      "files": [
+        "mem0/vector_stores/databricks.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-w889-685w-c8fh",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-78",
+        "CWE-88"
+      ],
+      "repo": "python-pillow/Pillow",
+      "fix_commit": "a2c363141da31a265dd536c945677db4b64f3ec9",
+      "files": [
+        "src/PIL/EpsImagePlugin.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-f8c7-rwf9-fmgm",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-185",
+        "CWE-284"
+      ],
+      "repo": "mljar/mercury",
+      "fix_commit": "8c467129037ee9df269d543ac217ffd33b97bf3f",
+      "files": [
+        "mercury/__init__.py",
+        "mercury_app/block_handler.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-rv4m-xm3f-3ccq",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-862"
+      ],
+      "repo": "mljar/mercury",
+      "fix_commit": "73a40ceb0becf057f495a5738ad7f5a5222a53e1",
+      "files": [
+        "mercury_app/__main__.py",
+        "mercury_app/app.py",
+        "mercury_app/block_handler.py",
+        "mercury_app/notebook_sanitize.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": true,
+          "rules": [
+            "hardcoded_credential"
+          ]
+        },
+        "after": {
+          "blocked": true,
+          "rules": [
+            "hardcoded_credential"
+          ]
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-h4mw-j7qp-8mwm",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-20",
+        "CWE-78",
+        "CWE-88"
+      ],
+      "repo": "anthropics/claude-agent-sdk-python",
+      "fix_commit": "347a1cb88d7652199399db1b7f914e0a459a6662",
+      "files": [
+        "src/claude_agent_sdk/_internal/transport/subprocess_cli.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-8qpj-27x8-pwpq",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-94",
+        "CWE-95",
+        "CWE-266"
+      ],
+      "repo": "langflow-ai/langflow",
+      "fix_commit": "2754c84aad1306f463db1c3bbb3e8ffbe85da77d",
+      "files": [
+        "src/lfx/src/lfx/components/tools/python_repl.py",
+        "src/lfx/src/lfx/components/utilities/python_repl_core.py",
+        "src/lfx/src/lfx/utils/python_repl_security.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-jxw3-mjmx-3pqm",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-228"
+      ],
+      "repo": "langflow-ai/langflow",
+      "fix_commit": "094694d3f20c1da499f4d8dbac15c510609e3026",
+      "files": [
+        "src/backend/base/langflow/services/auth/utils.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": true,
+          "rules": [
+            "hardcoded_credential"
+          ]
+        },
+        "after": {
+          "blocked": true,
+          "rules": [
+            "hardcoded_credential"
+          ]
+        }
+      },
+      "llm_haiku": {
+        "before": {
+          "blocked": true,
+          "rules": [
+            "hardcoded_credential"
+          ]
+        },
+        "after": {
+          "blocked": true,
+          "rules": [
+            "hardcoded_credential"
+          ]
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-ffc3-869f-jxw9",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-347"
+      ],
+      "repo": "jpadilla/pyjwt",
+      "fix_commit": "8b4e233a22206b34ec1186e912e75c0b2396ac07",
+      "files": [
+        "jwt/utils.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-g5f9-3xfg-p9mf",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-74"
+      ],
+      "repo": "BitterSecurity/Decepticon",
+      "fix_commit": "79ee2aaf22f4c36a5b1968f6ca3f8086b6e35b67",
+      "files": [
+        "packages/decepticon/decepticon/middleware/_injection_detector.py",
+        "packages/decepticon/decepticon/middleware/prompt_injection_shield.py",
+        "packages/decepticon/decepticon/middleware/untrusted_output.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": true,
+          "rules": [
+            "injection_forget_instructions",
+            "injection_ignore_instructions"
+          ]
+        },
+        "after": {
+          "blocked": true,
+          "rules": [
+            "injection_forget_instructions",
+            "injection_ignore_instructions"
+          ]
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-xcw4-53cc-hv32",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-347"
+      ],
+      "repo": "mnemosyne-oss/mnemosyne",
+      "fix_commit": "a0b6b8711a1a485304971710dc3571e29ff9dbeb",
+      "files": [
+        "mnemosyne/core/sync_server.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-82r6-8w77-94w6",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-295",
+        "CWE-297"
+      ],
+      "repo": "agronholm/anyio",
+      "fix_commit": "68f58915f82d9be8109ebbbd8f5d70577d43f2ce",
+      "files": [
+        "src/anyio/_core/_sockets.py",
+        "src/anyio/streams/tls.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-2vh9-42vm-xmv2",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-502"
+      ],
+      "repo": "InternLM/lmdeploy",
+      "fix_commit": "f05b4ad8bf2e2d84101a1d63b3c44fadd99223b2",
+      "files": [
+        "lmdeploy/pytorch/disagg/conn/engine_conn.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      },
+      "llm_haiku": {
+        "before": {
+          "blocked": true,
+          "rules": []
+        },
+        "after": {
+          "blocked": true,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-5h8j-6crg-7rmw",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-502"
+      ],
+      "repo": "InternLM/lmdeploy",
+      "fix_commit": "d86046a0e6b02ecaaf7cdb74346d0477130221c2",
+      "files": [
+        "lmdeploy/pytorch/engine/mp_engine/zmq_rpc.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      },
+      "llm_haiku": {
+        "before": {
+          "blocked": true,
+          "rules": []
+        },
+        "after": {
+          "blocked": true,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-rrxg-g2pf-6hh4",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-306"
+      ],
+      "repo": "esphome/device-builder",
+      "fix_commit": "9e294f729c3eb7334bb57b9fc49b75b728052f52",
+      "files": [
+        "esphome_device_builder/__main__.py",
+        "esphome_device_builder/controllers/config/settings.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-4mvj-m6j5-pmf7",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-601",
+        "CWE-918"
+      ],
+      "repo": "Unstructured-IO/unstructured",
+      "fix_commit": "445c95735c4045057f51f399bc04c657751923bd",
+      "files": [
+        "unstructured/__version__.py",
+        "unstructured/partition/auto.py",
+        "unstructured/partition/html/partition.py",
+        "unstructured/partition/md.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-mw6r-2hvm-4rp2",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-94"
+      ],
+      "repo": "QWED-AI/qwed-mcp",
+      "fix_commit": "362e61892052e250c56cb1ee852024d6f98c467b",
+      "files": [
+        "src/qwed_mcp/engines/math_engine.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-xm98-3vcf-fph7",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-94",
+        "CWE-693"
+      ],
+      "repo": "IBM/mcp-context-forge",
+      "fix_commit": "63a2900e6301b9c8a483a38d3737a1beb3a7ce89",
+      "files": [
+        "mcp-servers/python/python_sandbox_server/src/python_sandbox_server/server_fastmcp.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-7gwp-5pfp-969j",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-918"
+      ],
+      "repo": "mlflow/mlflow",
+      "fix_commit": "ba949522477cbd5915aa55d29b0cfad7d5ddf939",
+      "files": [
+        "mlflow/webhooks/delivery.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-f4vv-55c2-5789",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-287",
+        "CWE-798"
+      ],
+      "repo": "HKUDS/LightRAG",
+      "fix_commit": "f7819aa3a49a9d8d92eed8251d82d6ebcafa8cba",
+      "files": [
+        "lightrag/api/utils_api.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-5cc2-282f-jjq2",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-297"
+      ],
+      "repo": "snowflakedb/snowflake-connector-python",
+      "fix_commit": "8969d6dc027092ee868965db022478b6c0fa40a1",
+      "files": [
+        "src/snowflake/connector/ssl_wrap_socket.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      },
+      "llm_haiku": {
+        "before": {
+          "blocked": true,
+          "rules": []
+        },
+        "after": {
+          "blocked": true,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-73cv-556c-w3g6",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-306"
+      ],
+      "repo": "startreedata/mcp-pinot",
+      "fix_commit": "1c7d3f9cd384854bf72c127d230bdb32299475ad",
+      "files": [
+        "mcp_pinot/config.py",
+        "mcp_pinot/pinot_client.py",
+        "mcp_pinot/prompts.py",
+        "mcp_pinot/server.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-c39v-8hrw-h448",
+      "ecosystem": "pip",
+      "severity": "critical",
+      "cwes": [
+        "CWE-862"
+      ],
+      "repo": "Chainlit/chainlit",
+      "fix_commit": "5effb664f1e0af4a4f0a42fe63ea979676039a7f",
+      "files": [
+        "backend/chainlit/socket.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-394h-qwmc-48pf",
+      "ecosystem": "pip",
+      "severity": "high",
+      "cwes": [
+        "CWE-94"
+      ],
+      "repo": "pypa/virtualenv",
+      "fix_commit": "e5fc2e6e189a877ff559af288919e3525d13e5e0",
+      "files": [
+        "src/virtualenv/activation/xonsh/__init__.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-h7ww-273w-6cm8",
+      "ecosystem": "pip",
+      "severity": "high",
+      "cwes": [
+        "CWE-22"
+      ],
+      "repo": "lepture/mistune",
+      "fix_commit": "1bef343ade163fc3bb95572b15be720084cdb993",
+      "files": [
+        "src/mistune/directives/include.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-3476-c5c2-fr73",
+      "ecosystem": "pip",
+      "severity": "high",
+      "cwes": [
+        "CWE-400",
+        "CWE-770"
+      ],
+      "repo": "twisted/twisted",
+      "fix_commit": "8873814bec8288e2466fad4d2c4d64039beb88b0",
+      "files": [
+        "src/twisted/words/xish/domish.py"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-pqh8-4pj7-32xx",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-346",
+        "CWE-1385"
+      ],
+      "repo": "The-40-Thieves/obsidian-tc",
+      "fix_commit": "6428bfe6fdfd43aa7b4b369be3aecd6a268fb928",
+      "files": [
+        "packages/server/src/cli.ts",
+        "packages/server/src/transports/http.ts",
+        "packages/shared/src/config.schema.ts"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-84c9-qqpq-2pq5",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-639",
+        "CWE-863"
+      ],
+      "repo": "The-40-Thieves/obsidian-tc",
+      "fix_commit": "38b4992e87dc2715564236e1a42d005ab05a0194",
+      "files": [
+        "packages/server/src/auth/jwt.ts",
+        "packages/server/src/mcp/registry.ts",
+        "packages/server/src/transports/http.ts"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-x34j-47hf-4xg7",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-346",
+        "CWE-441",
+        "CWE-601"
+      ],
+      "repo": "tinacms/tinacms",
+      "fix_commit": "b57dbf4b56201aef15cd92caa49fd12ab96bbecf",
+      "files": [
+        "packages/@tinacms/app/src/lib/graphql-reducer.ts",
+        "packages/@tinacms/app/src/lib/preview-origin.test.ts",
+        "packages/@tinacms/app/src/lib/preview-origin.ts",
+        "packages/tinacms/src/toolkit/hooks/use-field-reference.ts"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-ww5h-9m49-7xx4",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-347"
+      ],
+      "repo": "nearform/fast-jwt",
+      "fix_commit": "d96bbc6c5336055a6dbfa318fdbab01197264cfa",
+      "files": [
+        "src/crypto.js"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      },
+      "llm_haiku": {
+        "before": {
+          "blocked": true,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-p8wg-vrv2-v86f",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-184",
+        "CWE-1289"
+      ],
+      "repo": "handlebars-lang/handlebars.js",
+      "fix_commit": "ceec388abe1d1aac8f6369860d5f390fa71ef4fa",
+      "files": [
+        "lib/handlebars/internal/proto-access.js",
+        "lib/handlebars/runtime.js",
+        "lib/handlebars/utils.js"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      },
+      "llm_haiku": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-r488-j9vj-wx3q",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-94",
+        "CWE-1321"
+      ],
+      "repo": "payloadcms/payload",
+      "fix_commit": "333b82b9f3e685fed6826c2e3270da79df8336c6",
+      "files": [
+        "packages/plugin-form-builder/src/collections/FormSubmissions/index.ts",
+        "packages/plugin-form-builder/src/collections/Forms/index.ts"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      },
+      "llm_haiku": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-f7hx-52q9-hcrf",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-639",
+        "CWE-862"
+      ],
+      "repo": "payloadcms/payload",
+      "fix_commit": "36fa9af73dd04fa59f4b4a06d11454538c4c1409",
+      "files": [
+        "packages/payload/src/config/orderable/index.ts"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-pq96-jpmf-w254",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-79",
+        "CWE-116"
+      ],
+      "repo": "quasarframework/quasar",
+      "fix_commit": "11505afe5b5218f2c468f130181815b898fd1e40",
+      "files": [
+        "ui/src/plugins/meta/Meta.js"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      },
+      "llm_haiku": {
+        "before": {
+          "blocked": true,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-pqg4-j6r4-53mv",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-78"
+      ],
+      "repo": "ljharb/shell-quote",
+      "fix_commit": "6002b2ed90c6b83095eb272b6b0adaf3a172b0bc",
+      "files": [
+        "quote.d.ts",
+        "quote.js"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-v5rq-49vh-5v5c",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-78",
+        "CWE-184"
+      ],
+      "repo": "steveukx/git-js",
+      "fix_commit": "68874c239f0c7a87f4a68c3d2c4a0d7c75bb27f4",
+      "files": [
+        "packages/argv-parser/src/env/parse-env.ts"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-x6jw-m9v5-85vh",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-78",
+        "CWE-184"
+      ],
+      "repo": "steveukx/git-js",
+      "fix_commit": "d762810c13b331ff1e5eb24c0b434646d2a8d1b3",
+      "files": [
+        "packages/argv-parser/src/tokens/flag-specs.ts",
+        "packages/argv-parser/src/vulnerabilities/detect-vulnerable-config-writes.ts",
+        "packages/argv-parser/src/vulnerabilities/detect-vulnerable-flags.ts"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      },
+      "llm_haiku": {
+        "before": {
+          "blocked": true,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-p6vx-979v-rg4c",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-843"
+      ],
+      "repo": "lxsmnsyc/seroval",
+      "fix_commit": "f1ffcc96d259f9b5b3d71feb262b58240c90e7b7",
+      "files": [
+        "packages/seroval/src/core/context/deserializer.ts"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-jqcg-44mw-7w3h",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-290",
+        "CWE-348",
+        "CWE-697"
+      ],
+      "repo": "jshttp/proxy-addr",
+      "fix_commit": "780911d84d18e2c5fa008ed0c0d387631ec11965",
+      "files": [
+        "index.js"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      },
+      "llm_haiku": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-5gmw-xhrv-c9v3",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-1321"
+      ],
+      "repo": "tinylibs/tinypool",
+      "fix_commit": "24df4e730e7d0857a6d226c9b58f8924227404fd",
+      "files": [
+        "src/index.ts"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-85c8-ppgw-ccpr",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-94",
+        "CWE-1321"
+      ],
+      "repo": "tinylibs/tinypool",
+      "fix_commit": "f41411a3e23324c674f35a19a3240f7a7c40ffbf",
+      "files": [
+        "src/common.ts",
+        "src/index.ts"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      },
+      "llm_haiku": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-j3hm-6rg5-mchv",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-913"
+      ],
+      "repo": "patriksimek/vm2",
+      "fix_commit": "903017c8a1eae9aba947ec854468b48155e79f86",
+      "files": [
+        "lib/cli.js",
+        "lib/resolver-compat.js"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-72qq-p3r5-f7wq",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-79"
+      ],
+      "repo": "a2ui-project/a2ui",
+      "fix_commit": "71573078c4168b2dc166bb847c3a85715dadc675",
+      "files": [
+        "renderers/web_core/src/v0_9/basic_catalog/functions/basic_functions.test.ts",
+        "renderers/web_core/src/v0_9/basic_catalog/functions/basic_functions.ts"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-qhwx-74w5-xhxq",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-693"
+      ],
+      "repo": "patriksimek/vm2",
+      "fix_commit": "415339f698f0d52d3c5ad358b12b79c8072d5b4b",
+      "files": [
+        "lib/builtin.js"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      },
+      "llm_haiku": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-fm8p-53ww-hf6w",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-306",
+        "CWE-346"
+      ],
+      "repo": "bytebase/dbhub",
+      "fix_commit": "5bf5c3242a22e94871dfdf53913c84a5025b7381",
+      "files": [
+        "src/config/env.ts",
+        "src/server.ts",
+        "src/utils/cross-origin.ts"
+      ],
+      "static": {
+        "before": {
+          "blocked": true,
+          "rules": [
+            "credentials_in_url"
+          ]
+        },
+        "after": {
+          "blocked": true,
+          "rules": [
+            "credentials_in_url"
+          ]
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-6j36-r6pr-59x4",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-287"
+      ],
+      "repo": "vendurehq/vendure",
+      "fix_commit": "3bb04718ea4f9395fda731bd2a4bcfc3afb0a485",
+      "files": [
+        "packages/core/e2e/authentication-strategy.e2e-spec.ts",
+        "packages/core/src/common/error/errors.ts",
+        "packages/core/src/service/helpers/external-authentication/external-authentication.service.ts"
+      ],
+      "static": {
+        "before": {
+          "blocked": true,
+          "rules": [
+            "hardcoded_credential"
+          ]
+        },
+        "after": {
+          "blocked": true,
+          "rules": [
+            "hardcoded_credential"
+          ]
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-jrc7-96c5-q579",
+      "ecosystem": "npm",
+      "severity": "critical",
+      "cwes": [
+        "CWE-79"
+      ],
+      "repo": "maplibre/maplibre-gl-js",
+      "fix_commit": "1da69f3cd913a39fa948708e01478663bf48bc27",
+      "files": [
+        "src/util/dom.test.ts",
+        "src/util/dom.ts"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      },
+      "llm_haiku": {
+        "before": {
+          "blocked": true,
+          "rules": []
+        },
+        "after": {
+          "blocked": true,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-xcx6-jx8p-x3h5",
+      "ecosystem": "npm",
+      "severity": "high",
+      "cwes": [
+        "CWE-346"
+      ],
+      "repo": "AzureAD/microsoft-authentication-library-for-js",
+      "fix_commit": "f550958586475dbfeb1cd44be14a2d653728850e",
+      "files": [
+        "lib/msal-node/src/client/ConfidentialClientApplication.ts",
+        "lib/msal-node/src/error/NodeAuthError.ts"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      },
+      "llm_haiku": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-q7qp-rjg7-q26m",
+      "ecosystem": "npm",
+      "severity": "high",
+      "cwes": [
+        "CWE-248",
+        "CWE-404"
+      ],
+      "repo": "expressjs/multer",
+      "fix_commit": "80a2d9df1dfd63b5fab631b8b9966164ed647adf",
+      "files": [
+        "lib/make-middleware.js"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-f2hq-32vh-53cc",
+      "ecosystem": "npm",
+      "severity": "high",
+      "cwes": [
+        "CWE-400",
+        "CWE-407"
+      ],
+      "repo": "postalsys/postal-mime",
+      "fix_commit": "9eb25a66bb3cc8b631421be651b9648796f19136",
+      "files": [
+        "src/decode-strings.ts"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    },
+    {
+      "ghsa": "GHSA-h895-cgqg-jf52",
+      "ecosystem": "npm",
+      "severity": "high",
+      "cwes": [
+        "CWE-1321"
+      ],
+      "repo": "BinaryMuse/toml-node",
+      "fix_commit": "609c873fffea0a27ebe5b4dd098eed2b3daf3606",
+      "files": [
+        "lib/compiler.js"
+      ],
+      "static": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      },
+      "llm_haiku": {
+        "before": {
+          "blocked": false,
+          "rules": []
+        },
+        "after": {
+          "blocked": false,
+          "rules": []
+        }
+      }
+    }
+  ],
+  "llm_haiku": {
+    "n": 15,
+    "caught_vulnerable_pct": 53.3,
+    "still_flagged_after_fix_pct": 33.3,
+    "fix_aware_pct": 20.0
+  },
+  "llm_haiku_static_same_sample": {
+    "n": 15,
+    "caught_vulnerable_pct": 6.7,
+    "still_flagged_after_fix_pct": 6.7,
+    "fix_aware_pct": 0.0
+  },
+  "static_by_cwe": {
+    "CWE-94": {
+      "caught": 0,
+      "total": 6
+    },
+    "CWE-78": {
+      "caught": 0,
+      "total": 5
+    },
+    "CWE-346": {
+      "caught": 1,
+      "total": 4
+    },
+    "CWE-1321": {
+      "caught": 0,
+      "total": 4
+    },
+    "CWE-862": {
+      "caught": 1,
+      "total": 3
+    },
+    "CWE-347": {
+      "caught": 0,
+      "total": 3
+    },
+    "CWE-306": {
+      "caught": 1,
+      "total": 3
+    },
+    "CWE-184": {
+      "caught": 0,
+      "total": 3
+    },
+    "CWE-79": {
+      "caught": 0,
+      "total": 3
+    },
+    "CWE-88": {
+      "caught": 0,
+      "total": 2
+    },
+    "CWE-297": {
+      "caught": 0,
+      "total": 2
+    },
+    "CWE-502": {
+      "caught": 0,
+      "total": 2
+    },
+    "CWE-601": {
+      "caught": 0,
+      "total": 2
+    },
+    "CWE-918": {
+      "caught": 0,
+      "total": 2
+    },
+    "CWE-693": {
+      "caught": 0,
+      "total": 2
+    },
+    "CWE-287": {
+      "caught": 1,
+      "total": 2
+    },
+    "CWE-400": {
+      "caught": 0,
+      "total": 2
+    },
+    "CWE-639": {
+      "caught": 0,
+      "total": 2
+    },
+    "CWE-89": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-185": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-284": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-20": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-95": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-266": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-228": {
+      "caught": 1,
+      "total": 1
+    },
+    "CWE-74": {
+      "caught": 1,
+      "total": 1
+    },
+    "CWE-295": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-798": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-22": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-770": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-1385": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-863": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-441": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-1289": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-116": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-843": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-290": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-348": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-697": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-913": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-248": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-404": {
+      "caught": 0,
+      "total": 1
+    },
+    "CWE-407": {
+      "caught": 0,
+      "total": 1
+    }
+  }
+}

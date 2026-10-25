@@ -66,9 +66,18 @@ def confusion(pairs) -> dict:
 
 # ------------------------------------------------------------------ prompt injections
 def eval_prompt_injections(llm_n: int, model: str) -> dict:
-    df = pd.concat([pd.read_parquet(p) for p in download("prompt_injections")], ignore_index=True)
+    parts = []
+    for path in download("prompt_injections"):
+        part = pd.read_parquet(path)
+        part["split"] = "train" if path.name.startswith("train") else "test"
+        parts.append(part)
+    df = pd.concat(parts, ignore_index=True)
     df["pred_rules"] = df["text"].map(lambda t: bool(injection.scan(t)))
+    # Rules were tuned on the TRAIN split only; the TEST split is the honest, held-out score.
     out = {"source": SOURCES["prompt_injections"], "n": len(df), "positives": int(df["label"].sum()),
+           "rules_test_heldout": confusion(zip(df[df.split == "test"]["label"], df[df.split == "test"]["pred_rules"])),
+           "rules_train_used_for_tuning": confusion(zip(df[df.split == "train"]["label"],
+                                                        df[df.split == "train"]["pred_rules"])),
            "rules": confusion(zip(df["label"], df["pred_rules"]))}
     # scores only: dataset texts (some offensive jailbreak strings) are not copied into results
     if llm_n:
@@ -144,7 +153,10 @@ def main() -> int:
     try:
         for name, fn in (("prompt_injections", eval_prompt_injections), ("securityeval", eval_securityeval)):
             if not args.only or args.only == name:
+                kept = previous.get(name, {}).get("llm_sample") if not args.llm else None
                 results[name] = fn(args.llm, args.model)
+                if kept:  # a rules-only re-run keeps the earlier (paid) LLM sample
+                    results[name]["llm_sample"] = kept
                 print(name, json.dumps({k: v for k, v in results[name].items()
                                         if k not in ("per_cwe", "source")}, indent=1))
     except (LLMLimitReached, LLMError) as e:

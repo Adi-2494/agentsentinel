@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-25T09:08:05Z",
+  "generated": "2026-10-25T09:28:52Z",
   "prompt_injections": {
     "source": {
       "dataset": "deepset/prompt-injections",
@@ -11,15 +11,35 @@
     },
     "n": 662,
     "positives": 263,
-    "rules": {
-      "tp": 5,
+    "rules_test_heldout": {
+      "tp": 19,
+      "fp": 0,
+      "fn": 41,
+      "tn": 56,
+      "precision_pct": 100.0,
+      "recall_pct": 31.7,
+      "false_positive_rate_pct": 0.0,
+      "accuracy_pct": 64.7
+    },
+    "rules_train_used_for_tuning": {
+      "tp": 123,
       "fp": 2,
-      "fn": 258,
+      "fn": 80,
+      "tn": 341,
+      "precision_pct": 98.4,
+      "recall_pct": 60.6,
+      "false_positive_rate_pct": 0.6,
+      "accuracy_pct": 85.0
+    },
+    "rules": {
+      "tp": 142,
+      "fp": 2,
+      "fn": 121,
       "tn": 397,
-      "precision_pct": 71.4,
-      "recall_pct": 1.9,
+      "precision_pct": 98.6,
+      "recall_pct": 54.0,
       "false_positive_rate_pct": 0.5,
-      "accuracy_pct": 60.7
+      "accuracy_pct": 81.4
     },
     "llm_sample": {
       "model": "haiku",

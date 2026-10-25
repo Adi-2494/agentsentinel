@@ -105,16 +105,42 @@ Developer's laptop                          GitHub
 
 Reproduce: `python benchmark/run_benchmark.py` (resumable, batched; uses your Claude Code login). Raw per-case results are in `benchmark/results/results.json`.
 
-## Real-world datasets
+## Real-world data
 
-Public datasets, **downloaded at runtime and never redistributed**, credited to their authors (`benchmark/external.py`):
+Real public data only. Datasets are **downloaded at runtime and never redistributed**, credited to their authors, and **no personal information** is used. Personal data in the tests is generated in real formats (Aadhaar with Verhoeff checksum, PAN, Luhn-valid cards).
 
-| Dataset | What it is | Rules only (no LLM) | With the Claude Haiku layer (40-item sample) |
+### Real vulnerabilities: GitHub Security Advisories (`benchmark/ghsa.py`)
+
+**50 reviewed HIGH/CRITICAL advisories** (25 Python, 25 npm) from 42 real projects (e.g. `vm2`, `multer`, `fast-jwt`, `virtualenv`, Microsoft MSAL). For each advisory, the files changed by the real fix commit are scanned **before** the fix (vulnerable) and **after** it (fixed):
+
+| | Static only (all 50) | Static only (same sample) | **AgentSentinel + Claude Haiku** (random sample of 15) |
 |---|---|---|---|
-| [deepset/prompt-injections](https://huggingface.co/datasets/deepset/prompt-injections) (Apache-2.0) | 662 real prompts, 263 labelled injections; 36% German, mostly chatbot jailbreaks | recall 1.9%, precision 71.4% | **recall 80.0%, precision 100.0%** (the gate's own AI-trap prompt) |
-| [SecurityEval](https://github.com/s2e-lab/SecurityEval) (s2e-lab) | 121 real insecure Python samples across 69 CWEs | 8.3% blocked by Semgrep + Gitleaks + rules | **67.5%** caught by the Claude review, 70.0% combined |
+| Vulnerable version blocked | 10.0% | 6.7% | **53.3%** |
+| Fixed version still blocked | 10.0% | 6.7% | 33.3% |
+| **Blocked the vulnerable version and passed the fix** | **0.0%** | 0.0% | **20.0%** |
 
-What this shows: the rule layers are **precise but narrow**. They are built for instructions hidden in code and for injection-shaped web code, so they miss most chat-style jailbreaks (including non-English ones) and taint-free insecure functions. The Claude layers are what reach real-world coverage, which is why AgentSentinel runs both. Personal data in all tests is generated in the real formats (Aadhaar with Verhoeff checksum, PAN, Luhn-valid cards); no real person's data is used.
+- **Static tools found none of the real bugs.** Every static hit was unrelated code that was still there after the fix.
+- **The Claude review blocked 8× more real vulnerable code** than static tools on the same sample.
+- "Fixed version still blocked" is not automatically a false alarm: whole real files are reviewed, and other issues may remain after a single fix. It was not verified case by case.
+
+### Real prompt injections: [deepset/prompt-injections](https://huggingface.co/datasets/deepset/prompt-injections) (Apache-2.0)
+
+662 real prompts (263 injections; ~36% German, plus Spanish, French, Croatian and Russian; mostly chatbot jailbreaks). The AI-trap rules were extended using the **train split only** and scored on the **held-out test split**:
+
+| | Recall | Precision | False alarms |
+|---|---|---|---|
+| Original rules (built for code-borne traps) | 1.9% | 71.4% | 2 / 399 |
+| **Extended rules, held-out test split** | **31.7%** | **100.0%** | **0 / 56** |
+| Extended rules, train split (used for tuning) | 60.6% | 98.4% | 2 / 343 |
+| **Gate's Claude Haiku AI-trap check** (40-prompt sample) | **80.0%** | **100.0%** | 0 / 20 |
+
+The 2 train "false alarms" are benign prompts that really do contain hidden zero-width characters. Before tuning, 14 random prompts from the full dataset were viewed (a small test-split exposure).
+
+### Real insecure code: [SecurityEval](https://github.com/s2e-lab/SecurityEval) (s2e-lab)
+
+121 real insecure Python samples across 69 CWEs: **8.3%** blocked by static rules, and **67.5%** caught by the Claude review (70.0% combined, 40-sample).
+
+**Overall:** the rule layers are fast, free and precise but narrow. The Claude layers are what reach real-world coverage, which is why AgentSentinel runs both.
 
 ## Other results
 
@@ -147,7 +173,7 @@ git clone https://github.com/Adi-2494/agentsentinel.git
 cd agentsentinel
 python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
 cp .env.example .env          # LLM_BACKEND=claude_code, MAIN_MODEL=sonnet, CHECK_MODEL=haiku
-.venv/bin/pytest -q           # 294 tests, no Claude calls
+.venv/bin/pytest -q           # 311 tests, no Claude calls
 ```
 
 ### A. Live Guard (Claude Code)
@@ -248,7 +274,7 @@ The LLM layer is pluggable via `.env`:
 
 | Suite | Tests | What it covers |
 |---|---|---|
-| Unit | 264 | Every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
+| Unit | 281 | Every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
 | Integration | 30 | 3 generated repos and 20 PR branches through the real gate (git diff + Semgrep + Gitleaks); a "fooled reviewer" stand-in proving the manipulation alarm fires; LLM outage fails closed; a 12-step agent session replayed through the real hook; raw MCP JSON-RPC to the server process |
 | Live (opt-in) | 4 | Real Claude calls: `pytest -m llm` |
 
@@ -267,7 +293,7 @@ core/        config, llm.py (single LLM doorway), store.py (SQLite)
 guard/       claude_hook.py (Pre/PostToolUse), cursor_hook.py, mcp_server.py, install.py
 gate/        run_gate.py (Merge Gate entry point)
 dashboard/   app.py (Streamlit), data.py, seed_demo.py
-benchmark/   cases/ (38), run_benchmark.py, recorder_hook.py, real_repos.py, results/
+benchmark/   cases/ (38), run_benchmark.py, recorder_hook.py, real_repos.py, external.py, ghsa.py, results/
 examples/    vulnerable_pr, trick_pr, safe_pr
 tests/       unit tests + integration/
 ```

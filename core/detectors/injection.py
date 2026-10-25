@@ -44,6 +44,47 @@ PHRASE_RULES = [
         r"\b(?:do\s+not|don'?t|never)\s+(?:tell|inform|show|alert|notify)\s+the\s+(?:user|developer|human)\b|"
         r"\bwithout\s+(?:telling|informing|notifying)\s+the\s+(?:user|developer|human)\b|"
         r"\bkeep\s+this\s+(?:secret|hidden)\s+from\s+the\s+(?:user|developer)\b", re.I)),
+] + [
+    # --- chat-style jailbreaks, learned from the TRAIN split of deepset/prompt-injections only ---
+    ("injection_forget_instructions", "HIGH", "Tells the AI to forget / drop its instructions or tasks", re.compile(
+        # verb + (all/any/your ... | previous/above ...) + object: "forget all previous tasks", "ignore your instructions"
+        r"\b(?:forget|ignore|disregard|drop|abandon|discard)\s+(?:about\s+)?"
+        r"(?:(?:all|any|your)\s+(?:of\s+)?(?:the\s+|your\s+)?|(?:the\s+)?(?=previous|prior|above|preceding|earlier|original|provided))"
+        r"(?:previous\s+|prior\s+|above\s+|preceding\s+|earlier\s+|original\s+|provided\s+)?"
+        r"(?:instructions?|tasks?|assignments?|orders|rules|prompts?|directions|information|context|documents|thoughts)\b|"
+        r"\b(?:forget|ignore)\s+(?:about\s+)?everything\s+(?:before|above|we\s+discussed|you\s+know|i\s+said|said)|"
+        r"\bignore\s+(?:the\s+)?above\s+(?:and|instructions|prompt)\b|"
+        # German / Spanish / French / Croatian / Russian equivalents seen in the train split
+        r"\bvergiss\s+(?:nun\s+)?(?:alle?s?\b|deine)|\bignorier(?:e|en\s+sie)\s+(?:alle|die|deine)\b|"
+        r"\b(?:die\s+)?obigen\s+(?:ausführungen|anweisungen)\s+ignorieren|\babweichend\s+zu\s+vorherigen\b|"
+        r"\bolvid(?:a|e|ar)\s+tod[oa]s?\b|\boubliez\s+toutes\b|\bzaboravi\s+sve\b|забудьте\s+все", re.I)),
+    ("injection_new_task", "HIGH", "Announces new instructions that replace the AI's task", re.compile(
+        r"\b(?:focus|concentrate)\s+on\s+your\s+new\s+task\b|\bnew\s+(?:tasks?|instructions)\s+(?:follow|are)\b|"
+        r"\bstart\s+(?:over|afresh)\s+with\s+a\s+new\s+task\b|\byour\s+(?:new\s+)?instructions\s+are\s+now\b|"
+        r"\bchange\s+your\s+instructions\b|\bleave\s+all\s+(?:the\s+)?previous\s+information\s+behind\b|"
+        r"\bremove\s+all\s+previous\s+tasks\b|\bkonzentriere\s+dich\s+(?:jetzt\s+)?auf\s+deine\s+neue\s+aufgabe\b|"
+        r"\bnun\s+folgen\s+(?:neue|weitere)\s+(?:aufgaben|anweisungen)\b|"
+        r"\balle\s+(?:vorherigen|bisherigen|vorangegangenen)\s+(?:informationen|aufgaben)\b", re.I)),
+    ("injection_prompt_leak", "HIGH", "Asks the AI to reveal its prompt / instructions", re.compile(
+        r"\b(?:show|print|output|display|reveal|repeat|spell\s+check\s+and\s+display)\s+(?:me\s+)?(?:all\s+)?"
+        r"(?:of\s+)?(?:your|the|this)\s+(?:full\s+|entire\s+|system\s+|initial\s+|original\s+)?"
+        r"(?:prompts?|instructions)(?:\s+texts?)?\b|\bcopy\s+of\s+the\s+full\s+prompt\b|"
+        r"\bwhat\s+(?:are|were)\s+your\s+(?:instructions|rules)\b|\bwhat\s+is\s+written\s+above\b|"
+        r"\bzeige?\s+(?:mir\s+)?(?:deinen|deine|alle\s+deine)\s+[\w-]*prompt", re.I)),
+    ("injection_context_override", "HIGH", "Tells the AI to ignore the documents / context it was given", re.compile(
+        r"\b(?:answer|respond)\s+by\s+your\s+own\s+knowledge\s+and\s+not\s+by\s+the\b|"
+        r"\bdisregard(?:ing)?\s+the\s+(?:articles|documents|context)\b|"
+        r"\bdo\s+not\s+(?:look\s+in|use)\s+the\s+(?:documents|articles|context)\b|"
+        r"\bnot\s+according\s+to\s+the\s+provided\s+documents\b|"
+        r"\bdo\s+not\s+answer\s+(?:this|the)\s+question\s+but\b", re.I)),
+    ("injection_role_play", "MEDIUM", "Asks the AI to take on a persona or act as a tool", re.compile(
+        r"\bi\s+want\s+you\s+to\s+act\s+as\b|\bact\s+as\s+(?:a|an)\s+(?:[\w-]+\s+){0,2}"
+        r"(?:interpreter|terminal|console|shell)\b|\bpretend\s+(?:you\s+are|to\s+be|you\s+can)\b|"
+        r"\b(?:now|from\s+now\s+on,?)\s+you\s+are\s+(?:a\s+|an\s+)?(?-i:[A-Z])\w+|\bdan\s+mode\b|"
+        r"\bimagine\s+you\s+are\b|\brole-?playing\s+as\b|\b(?:jetzt|nun)\s+bist\s+du\b|"
+        r"\bstell\s+dir\s+vor,?\s+du\s+bist\b|\bich\s+möchte,\s+dass\s+sie\s+als\b", re.I)),
+    ("injection_obfuscated_text", "MEDIUM", "Letter-spaced text, a common filter-evasion trick", re.compile(
+        r"(?<!\S)(?:[A-Za-z] ){10,}[A-Za-z](?!\S)")),
 ]
 
 ZERO_WIDTH = {"​", "‌", "‍", "⁠", "᠎", "﻿"}

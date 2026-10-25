@@ -126,3 +126,18 @@ def test_external_confusion_metrics():
     assert (m["tp"], m["fn"], m["tn"], m["fp"]) == (2, 1, 1, 1)
     assert m["precision_pct"] == pytest.approx(66.7) and m["recall_pct"] == pytest.approx(66.7)
     assert metrics(0, 0, 0, 0)["precision_pct"] is None
+
+
+def test_ghsa_summary_fix_awareness():
+    from benchmark.ghsa import _candidate_files, _summary
+    items = [{"s": {"before": {"blocked": True}, "after": {"blocked": False}}},   # fix-aware
+             {"s": {"before": {"blocked": True}, "after": {"blocked": True}}},    # flags unrelated code
+             {"s": {"before": {"blocked": False}, "after": {"blocked": False}}},  # missed
+             {"s": {"before": {"blocked": False}, "after": {"blocked": True}}}]   # flags the fix only
+    assert _summary(items, "s") == {"n": 4, "caught_vulnerable_pct": 50.0,
+                                    "still_flagged_after_fix_pct": 50.0, "fix_aware_pct": 25.0}
+    files = [{"filename": "src/app.py", "status": "modified"}, {"filename": "tests/test_app.py", "status": "modified"},
+             {"filename": "docs/x.py", "status": "modified"}, {"filename": "lib/new.py", "status": "added"},
+             {"filename": "web/a.js", "status": "modified"}]
+    assert _candidate_files(files, "pip") == ["src/app.py"]
+    assert _candidate_files(files, "npm") == ["web/a.js"]
