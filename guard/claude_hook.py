@@ -47,13 +47,25 @@ def _written_text(tool: str, inp: dict) -> str:
     return ""
 
 
+# A path with a NUL byte or a lone surrogate cannot exist on disk: os.stat raises ValueError /
+# UnicodeError, not OSError. Treat it as "not a readable file" instead of crashing.
+_BAD_PATH = (OSError, ValueError, UnicodeError)
+
+
+def _is_file(p: Path) -> bool:
+    try:
+        return p.is_file()
+    except _BAD_PATH:
+        return False
+
+
 def _read_text(path: str) -> str:
     try:
         p = Path(path)
-        if not p.is_file() or p.stat().st_size > MAX_READ_BYTES:
+        if not _is_file(p) or p.stat().st_size > MAX_READ_BYTES:
             return ""
         return p.read_bytes().decode("utf-8", errors="ignore")
-    except OSError:
+    except _BAD_PATH:
         return ""
 
 
@@ -70,7 +82,7 @@ def _content_findings(tool: str, inp: dict, path: str) -> list[Finding]:
 def _too_large(path: str) -> list[Finding]:
     try:
         size = Path(path).stat().st_size
-    except OSError:
+    except _BAD_PATH:
         return []
     if size > MAX_READ_BYTES:
         return [Finding(rule="file_too_large_to_scan", category="injection", severity="MEDIUM",
@@ -112,9 +124,12 @@ def _bash_read_targets(command: str, cwd: str) -> list[str]:
         for tok in tokens[1:]:
             if tok.startswith("-"):
                 continue
-            p = Path(os.path.expanduser(tok))
-            p = p if p.is_absolute() else Path(cwd or ".") / p
-            if p.is_file():
+            try:
+                p = Path(os.path.expanduser(tok))
+                p = p if p.is_absolute() else Path(cwd or ".") / p
+            except _BAD_PATH:
+                continue
+            if _is_file(p):
                 targets.append(str(p))
     return targets[:20]
 

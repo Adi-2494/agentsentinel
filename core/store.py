@@ -38,6 +38,8 @@ def log_event(source: str, action: str, rule: str, severity: str,
               detail: dict | str | None = None, db_path=None) -> None:
     if isinstance(detail, dict):
         detail = json.dumps(detail, ensure_ascii=False)
+    if detail is not None:  # lone surrogates cannot be stored as UTF-8: keep them as escapes
+        detail = str(detail).encode("utf-8", "backslashreplace").decode("utf-8")
     with connect(db_path) as conn:
         conn.execute(
             "INSERT INTO events (time, source, action, rule, severity, detail) VALUES (?,?,?,?,?,?)",

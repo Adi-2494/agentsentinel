@@ -9,6 +9,11 @@ from core.detectors.base import Finding
 def is_protected_path(path: str) -> bool:
     if not path:
         return False
+    # The OS sees a path only up to a NUL byte (".env\x00.txt" opens ".env"); lone surrogates
+    # cannot be encoded, so they are replaced before matching.
+    path = path.split("\x00", 1)[0].encode("utf-8", "replace").decode("utf-8")
+    if not path:
+        return False
     norm = os.path.expanduser(path.strip().strip("'\"")).replace("\\", "/")
     name = norm.rsplit("/", 1)[-1]
     if name in config.PROTECTED_FILE_EXCEPTIONS:
