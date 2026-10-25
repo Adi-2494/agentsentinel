@@ -6,8 +6,9 @@ from core import config
 from core.detectors.base import Finding
 from core.detectors.files import is_protected_path
 
-_SHELLS = r"(?:sudo\s+)?(?:ba|z|da|k|fi)?sh|python[0-9.]*|perl|ruby|node"
-_FETCH = r"(?:curl|wget|fetch|iwr|Invoke-WebRequest)"
+_SHELLS = (r"(?:sudo\s+)?(?:ba|z|da|k|fi)?sh|python[0-9.]*|perl|ruby|node|"
+           r"iex|Invoke-Expression|(?:powershell|pwsh)(?:\.exe)?")  # PowerShell runs piped scripts too
+_FETCH = r"(?:curl|wget|fetch|iwr|irm|Invoke-WebRequest|Invoke-RestMethod)"
 
 WHOLE_COMMAND_RULES = [
     ("pipe_to_shell", re.compile(rf"\b{_FETCH}\b[^|;&]*\|\s*(?:{_SHELLS})\b", re.I),
@@ -27,20 +28,41 @@ WHOLE_COMMAND_RULES = [
      "CRITICAL", "Fork bomb"),
     ("chmod_world_root", re.compile(r"\bchmod\s+(?:-R\s+)?0?777\s+/(?:\s|$)"),
      "HIGH", "Makes the whole filesystem world-writable"),
+    # --- Windows: PowerShell / cmd --------------------------------------------------------
+    ("ps_download_execute", re.compile(
+        r"\b(?:iex|Invoke-Expression)\b[^;\n]{0,40}?(?:New-Object\s+(?:System\.)?Net\.WebClient\)?\s*\.Download"
+        r"(?:String|Data)|\b(?:iwr|irm|Invoke-WebRequest|Invoke-RestMethod)\b)|"
+        r"\.Download(?:String|Data)\s*\([^)]*\)\s*\|\s*(?:iex|Invoke-Expression)\b", re.I),
+     "CRITICAL", "PowerShell downloads code and runs it (iex ... DownloadString / iwr)"),
+    ("ps_encoded_command", re.compile(
+        r"\b(?:powershell|pwsh)(?:\.exe)?\b[^;\n|&]*\s-(?:e|ec|en|enc|enco|encod|encode|encoded|encodedc\w*)\s+"
+        r"['\"]?[A-Za-z0-9+/=]{8,}", re.I),
+     "CRITICAL", "Runs a hidden (base64-encoded) PowerShell script"),
+    ("lolbin_download", re.compile(
+        r"\bcertutil(?:\.exe)?\b[^;\n]*-urlcache\b|\bbitsadmin(?:\.exe)?\b[^;\n]*/transfer\b|\bStart-BitsTransfer\b",
+        re.I),
+     "HIGH", "Uses a built-in Windows tool to download files (certutil / bitsadmin)"),
+    ("windows_destructive", re.compile(
+        r"\bRemove-Item\b(?=[^;\n]*-Recurse)[^;\n]*?\s(?:[A-Za-z]:\\?\*?|\$env:(?:USERPROFILE|HOMEDRIVE|SystemRoot|windir)"
+        r"\\?|~)\s*(?:$|[;\n])|"
+        r"\b(?:rd|rmdir)\s+(?:/[sq]\s+)+[A-Za-z]:\\?\*?\s*(?:$|[;&\n])|"
+        r"\bdel\s+(?:/[a-z]\s+)+[A-Za-z]:\\\*?\s*(?:$|[;&\n])|"
+        r"\bformat\s+[A-Za-z]:", re.I),
+     "CRITICAL", "Deletes or formats a whole Windows drive or user profile"),
 ]
 
 _URL_HOST = re.compile(r"\b(?:https?|ftp)://(?:[^/\s@'\"]+@)?([^/\s:'\"?#]+)", re.I)
 _UPLOAD_FLAG = re.compile(
     r"(?:^|\s)(?:-d|--data(?:-binary|-raw|-urlencode)?|-F|--form|-T|--upload-file|"
-    r"--post-data|--post-file|--body-file|-X\s*(?:POST|PUT|PATCH))(?:\s|=|$)", re.I)
+    r"--post-data|--post-file|--body-file|-X\s*(?:POST|PUT|PATCH)|-Method\s+(?:Post|Put|Patch)|-Body)(?:\s|=|$)", re.I)
 _FILE_UPLOAD = re.compile(r"(?:-d|--data(?:-binary)?|-F|--form)\s*['\"]?[\w-]*=?@(?!-)(\S+)|"
-                          r"(?:-T|--upload-file|--post-file|--body-file)[\s=]+(\S+)", re.I)
+                          r"(?:-T|--upload-file|--post-file|--body-file|-InFile)[\s=]+(\S+)", re.I)
 _REMOTE_COPY = re.compile(r"^\s*(?:sudo\s+)?(scp|rsync|sftp)\b")
 _REMOTE_TARGET = re.compile(r"(?:^|\s)(?:[\w.-]+@)?([\w.-]+):(?!//)")
 _NETCAT = re.compile(r"^\s*(?:sudo\s+)?(nc|ncat|netcat|socat|telnet)\b(.*)")
 
 
-_PATHLIKE = re.compile(r"[~$\w./@=-]+")
+_PATHLIKE = re.compile(r"[~$%\w./\\@=:-]+")  # also C:\Users\a\.aws\credentials, %USERPROFILE%\.ssh
 # Commands that only mention a file name without reading its content
 _NAME_ONLY = {"ls", "test", "[", "echo", "printf", "touch", "stat", "file"}
 
@@ -53,7 +75,7 @@ def _only_mentions_names(tokens: list[str], seg: str) -> bool:
     return bool(tokens) and tokens[0] in _NAME_ONLY and "<" not in seg
 
 
-_DL_TARGET = re.compile(rf"\b{_FETCH}\b[^;&|]*?(?:\s(?:-o|-O|--output|--output-document)[\s=]+|\s>\s*)([^\s;&|]+)", re.I)
+_DL_TARGET = re.compile(rf"\b{_FETCH}\b[^;&|]*?(?:\s(?:-o|-O|--output|--output-document|-OutFile)[\s=]+|\s>\s*)([^\s;&|]+)", re.I)
 _RUNNERS = r"(?:sudo\s+)?(?:(?:ba|z|da|k)?sh|source|\.|python[0-9.]*|node|perl|ruby)"
 
 

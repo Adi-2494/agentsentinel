@@ -49,6 +49,10 @@ PROTECTED_FILE_PATTERNS = [
     "*/.kube/config", "*/.docker/config.json",
     ".netrc", "*/.netrc", ".npmrc", "*/.npmrc", ".pypirc", "*/.pypirc",
     "credentials.json", "service-account*.json",
+    # also common on Windows (and elsewhere)
+    "*.ppk", ".git-credentials", "*/.git-credentials", ".pgpass", "*/.pgpass", "*.kdbx",
+    "*/gcloud/credentials.db", "*/gcloud/access_tokens.db", "*/gcloud/application_default_credentials.json",
+    "*/gcloud/legacy_credentials/*",
 ]
 # Template files that look protected but are safe to read.
 PROTECTED_FILE_EXCEPTIONS = [".env.example", ".env.sample", ".env.template"]
