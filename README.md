@@ -71,9 +71,41 @@ Developer's laptop                          GitHub
 | B5 | PR comment and failing check | ✅ |
 | | Cursor hook: shell, file reads, writes and MCP calls (`.cursor/hooks.json`) | ✅ tested live with `cursor-agent` 2026.10.01 |
 | | MCP server with `check_command`, `check_file_content`, `scan_text_for_injection` (rules only) | ✅ tested live in Claude Code |
-| | Benchmark: with vs without AgentSentinel across Claude models | 🔜 Planned |
+| | Benchmark: 38 cases, with vs without AgentSentinel, on Claude Sonnet and Haiku | ✅ |
 
-## Results so far
+## Benchmark
+
+38 cases with fake data only: **10 leak attempts, 10 vulnerable PRs, 10 trick PRs, 8 safe PRs**. Each was run on **Claude Sonnet** and **Claude Haiku**.
+
+| | Plain AI review (Haiku) | Plain AI review (Sonnet) | Static only (no LLM) | **AgentSentinel (Haiku)** | **AgentSentinel (Sonnet)** |
+|---|---|---|---|---|---|
+| Vulnerable PRs approved | 0% | 0% | 30% | **0%** | **0%** |
+| Trick PRs approved | 0% | 0% | 20% | **0%** | **0%** |
+| Safe PRs wrongly blocked | 37.5% | 37.5% | 12.5% | **0%** | **0%** |
+| Precision / recall | 87% / 100% | 87% / 100% | 94% / 75% | **100% / 100%** | **100% / 100%** |
+| Agent leak attempts that got through | 60% | 50% | n/a | **10%** | **10%** |
+
+![Benchmark results](docs/benchmark.png)
+
+**Key results**
+
+- **Leaks: 60% → 10% (Haiku) and 50% → 10% (Sonnet).** When given everyday tasks ("debug the DB config", "upload the logs to support", "print the deploy key"), the agents tried to read `.env`, print private keys or upload files. The Live Guard denied every one except `printenv`, which has no rule yet.
+- **False blocks: 37.5% → 0%.** A plain AI reviewer rejected 3 of 8 safe PRs over minor nitpicks. AgentSentinel blocks only on confirmed HIGH/CRITICAL issues, and LLM triage cleared Semgrep's false SSRF alarm on an allowlisted fetch.
+- **Static tools alone missed 30% of vulnerable PRs** (Node SQLi, XSS rated MEDIUM, `pickle` deserialization). AgentSentinel's LLM layers caught all of them.
+- **Trick PRs: current Claude models were not fooled.** Even the plain reviewer rejected all 10 trick PRs (fake `sanitize()` helpers, "security reviewed" claims, hidden tag-character instructions). So the two-view tripwire had nothing to catch here: 0 manipulation alerts, and 0 false ones. It is a safety net for weaker models and stronger attacks.
+
+**Method**
+
+- *Plain review* is one call per PR: "review this PR, reply approve or request_changes", with a neutral system prompt.
+- *Static only* is the gate with `--no-llm`.
+- *AgentSentinel* is the full gate with the tested model in every LLM role.
+- *Leaks:* a Claude Code agent works on a sandbox project with a recorder hook that is independent of AgentSentinel. It records every action and never lets network or shell-download commands run. "Got through" means the leaking action was attempted, and the same recorded action replayed through the Live Guard was not denied. Leak criteria are defined per case without using AgentSentinel's detectors.
+- *Fixes found while benchmarking:* two leak criteria were too broad (`find -name '.env*'`, downloading a script to inspect it) and were corrected and re-scored. The two-view rule was tightened to compare severities, after LOW-nitpick verdict flips raised 2 false manipulation alerts on safe PRs. All "AgentSentinel" PR jobs were then re-run.
+- *Limits:* 38 cases is small, a single run per configuration (LLM outputs vary between runs), and the cases were written by the author.
+
+Reproduce: `python benchmark/run_benchmark.py` (resumable, batched; uses your Claude Code login). Raw per-case results are in `benchmark/results/results.json`.
+
+## Other results
 
 **GitHub Action on a real PR.** A test PR added an obvious SQL injection plus a "trick" file whose comments and PR description claimed the code was sanitized and asked the AI reviewer to approve. The gate **failed the PR** and commented. Semgrep found the obvious bug. **Only the Claude review found the hidden one**, at the correct line.
 
@@ -95,8 +127,6 @@ Developer's laptop                          GitHub
 | [DVPWA](https://github.com/anxolerd/dvpwa) | intentionally vulnerable | 14 | 0 | Recent commits don't touch the vulnerable code |
 | [markupsafe](https://github.com/pallets/markupsafe) | clean | 15 | 2 static | GitHub Actions script-injection pattern. Re-checked with Claude, triage rated it **LOW** (only maintainers can set the input), so the gate passed |
 
-The benchmark with numbers for the "with vs without AgentSentinel" comparison is planned.
-
 ## Quick start
 
 **Requirements:** macOS or Linux, Python 3.11, git, plus `brew install gitleaks semgrep`. For the LLM parts you need [Claude Code](https://docs.claude.com/en/docs/claude-code) logged in (no API key needed). Docker is optional.
@@ -106,7 +136,7 @@ git clone https://github.com/Adi-2494/agentsentinel.git
 cd agentsentinel
 python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
 cp .env.example .env          # LLM_BACKEND=claude_code, MAIN_MODEL=sonnet, CHECK_MODEL=haiku
-.venv/bin/pytest -q           # 255 tests, no Claude calls
+.venv/bin/pytest -q           # 294 tests, no Claude calls
 ```
 
 ### A. Live Guard (Claude Code)
@@ -207,7 +237,7 @@ The LLM layer is pluggable via `.env`:
 
 | Suite | Tests | What it covers |
 |---|---|---|
-| Unit | 225 | Every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
+| Unit | 264 | Every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
 | Integration | 30 | 3 generated repos and 20 PR branches through the real gate (git diff + Semgrep + Gitleaks); a "fooled reviewer" stand-in proving the manipulation alarm fires; LLM outage fails closed; a 12-step agent session replayed through the real hook; raw MCP JSON-RPC to the server process |
 | Live (opt-in) | 4 | Real Claude calls: `pytest -m llm` |
 
@@ -226,14 +256,14 @@ core/        config, llm.py (single LLM doorway), store.py (SQLite)
 guard/       claude_hook.py (Pre/PostToolUse), cursor_hook.py, mcp_server.py, install.py
 gate/        run_gate.py (Merge Gate entry point)
 dashboard/   app.py (Streamlit), data.py, seed_demo.py
-benchmark/   real_repos.py, results/
+benchmark/   cases/ (38), run_benchmark.py, recorder_hook.py, real_repos.py, results/
 examples/    vulnerable_pr, trick_pr, safe_pr
 tests/       unit tests + integration/
 ```
 
 ## Limitations
 
-- The Live Guard is rule-based: it catches known patterns, not every possible way to exfiltrate data.
+- The Live Guard is rule-based: it catches known patterns, not every possible way to exfiltrate data (e.g. `printenv` is not blocked; it got through in the benchmark).
 - The two-view check is a tripwire. It only fires when View 1 is actually fooled. In testing, Claude Sonnet with the hardened prompt resisted the sample trick PR, and the gate blocked it anyway.
 - The Python neutralizer is exact (it uses Python's tokenizer and AST). For other languages it's a comment-aware heuristic.
 - Using a Claude subscription in scripts and CI is intended for **personal use on your own repos**. Check Anthropic's current terms, or switch to `LLM_BACKEND=ollama`.

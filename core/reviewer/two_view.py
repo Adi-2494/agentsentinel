@@ -255,17 +255,27 @@ def _max_sev(view: ViewResult) -> int:
     return max((SEV_RANK.get(str(i.get("severity", "")).upper(), 0) for i in view.issues), default=0)
 
 
+def _serious(view: ViewResult) -> bool:
+    """A view 'blocks' only with a HIGH/CRITICAL issue. Models often say "vulnerable" for LOW
+    nitpicks, and those flip between runs, so the bare verdict word is not compared."""
+    if view.verdict != "vulnerable":
+        return False
+    return _max_sev(view) >= SEV_RANK["HIGH"] or not view.issues  # no issues listed: assume serious
+
+
 def compare(v1: ViewResult, v2: ViewResult) -> tuple[bool, str]:
     if "error" in (v1.verdict, v2.verdict):
         return False, "two-view check incomplete: " + (v1.error or v2.error)
-    if v1.verdict == "safe" and v2.verdict == "vulnerable":
-        return True, ("The reviewer called the code SAFE when it could read the comments, names and "
-                      "PR description, but VULNERABLE once those were removed. The PR's wording is "
-                      "likely steering the AI reviewer.")
-    if v1.verdict == v2.verdict == "vulnerable" and _max_sev(v2) - _max_sev(v1) >= 2:
-        return True, ("Both views found issues, but the original view rated them much less severe. "
-                      "The PR's wording may be downplaying the risk.")
-    return False, f"Consistent verdicts (view 1: {v1.verdict}, view 2: {v2.verdict})."
+    s1, s2 = _serious(v1), _serious(v2)
+    if s2 and not s1:
+        if v1.verdict == "safe":
+            return True, ("The reviewer called the code SAFE when it could read the comments, names and "
+                          "PR description, but found a serious issue once those were removed. The PR's "
+                          "wording is likely steering the AI reviewer.")
+        return True, ("With the comments, names and PR description removed, the reviewer rated the issues "
+                      "much more severe. The PR's wording may be downplaying the risk.")
+    return False, (f"Consistent: serious issue in view 1: {'yes' if s1 else 'no'}, "
+                   f"view 2: {'yes' if s2 else 'no'} (verdicts {v1.verdict} / {v2.verdict}).")
 
 
 def two_view_check(files: dict[str, str], pr_description: str = "",

@@ -85,3 +85,18 @@ def test_demo_log_is_labelled_and_safe(tmp_path, monkeypatch):
     monkeypatch.setenv("AGENTSENTINEL_DEMO_DB", str(demo))
     at = AppTest.from_file(APP, default_timeout=30).run()
     assert not at.exception and any("Demo data" in w.value for w in at.warning)
+
+
+def test_benchmark_frames_and_page(tmp_path, monkeypatch):
+    results = {"generated": "now", "table": [
+        {"condition": "baseline", "model": "haiku", "manipulated_approval_pct": 20.0, "false_block_pct": 0.0,
+         "leak_attempt_pct": 60.0},
+        {"condition": "static", "model": "-", "manipulated_approval_pct": 30.0, "false_block_pct": 12.5},
+        {"condition": "agentsentinel", "model": "haiku", "manipulated_approval_pct": 0.0, "false_block_pct": 0.0,
+         "leak_attempt_pct": 60.0, "leak_with_agentsentinel_pct": 10.0}],
+        "per_case": {"trick-01|baseline|haiku": {"blocked": False},
+                     "leak-01|agentsentinel|haiku": {"attempted": True, "prevented": True}}}
+    long, table, per_case = data.benchmark_frames(results)
+    leak = long[long["metric"] == "Leak attempts that got through"].set_index("Condition")["value"]
+    assert leak["Plain review"] == 60.0 and leak["AgentSentinel"] == 10.0
+    assert set(per_case["outcome"]) == {"approved", "prevented"}

@@ -122,3 +122,51 @@ def load_json(path: Path):
         return json.loads(Path(path).read_text())
     except (OSError, json.JSONDecodeError):
         return None
+
+
+# ---------------------------------------------------------------- benchmark
+CONDITION_LABELS = {"baseline": "Plain review", "static": "Static only", "agentsentinel": "AgentSentinel"}
+MODEL_LABELS = {"haiku": "Haiku", "sonnet": "Sonnet", "-": "No LLM"}
+BENCH_METRICS = [  # (key, title) - all "lower is better"
+    ("vulnerable_approved_pct", "Vulnerable PRs approved"),
+    ("manipulated_approval_pct", "Trick PRs approved"),
+    ("false_block_pct", "Safe PRs blocked"),
+    ("leak_rate_pct", "Leak attempts that got through"),
+]
+
+
+def benchmark_frames(results: dict) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """(long metrics for charts, summary table, per-case outcomes) from results.json."""
+    rows = []
+    for r in results.get("table", []):
+        row = dict(r)
+        # leaks: "without" = attempts; "with AgentSentinel" = attempts not denied by the guard
+        row["leak_rate_pct"] = (r.get("leak_with_agentsentinel_pct") if r["condition"] == "agentsentinel"
+                                else r.get("leak_attempt_pct"))
+        rows.append(row)
+    table = pd.DataFrame(rows)
+    if table.empty:
+        return pd.DataFrame(), table, pd.DataFrame()
+    table["Condition"] = table["condition"].map(CONDITION_LABELS).fillna(table["condition"])
+    table["Model"] = table["model"].map(MODEL_LABELS).fillna(table["model"])
+    long = []
+    for key, title in BENCH_METRICS:
+        if key not in table:
+            continue
+        for _, r in table.iterrows():
+            if pd.notna(r[key]):
+                long.append({"metric": title, "Condition": r["Condition"], "Model": r["Model"], "value": r[key]})
+    per_case = []
+    for key, r in results.get("per_case", {}).items():
+        cid, cond, model = key.split("|")
+        if "error" in r:
+            outcome = "error"
+        elif "attempted" in r:
+            outcome = ("prevented" if r.get("prevented") else "held for confirmation" if r.get("held_for_confirmation")
+                       else "leaked" if r.get("attempted") else "no attempt") if cond == "agentsentinel" else \
+                      ("attempted leak" if r.get("attempted") else "no attempt")
+        else:
+            outcome = ("blocked" if r.get("blocked") else "approved") + (" · manipulation alert" if r.get("manipulation") else "")
+        per_case.append({"case": cid, "type": cid.split("-")[0], "condition": CONDITION_LABELS.get(cond, cond),
+                         "model": MODEL_LABELS.get(model, model), "outcome": outcome})
+    return pd.DataFrame(long), table, pd.DataFrame(per_case)

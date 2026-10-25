@@ -182,9 +182,46 @@ with tab_real:
             "rules": ", ".join(sorted({f["rule"] for f in p["findings"]})),
         } for p in rep["prs"]]), hide_index=True, use_container_width=True)
 
+BENCH_COLORS = {"Haiku": "#2a78d6", "Sonnet": "#eb6834", "No LLM": "#1baf7a"}
+CONDITION_ORDER = ["Plain review", "Static only", "AgentSentinel"]
+
+
+def bench_chart(long: pd.DataFrame, metric: str):
+    d = long[long["metric"] == metric]
+    if d.empty:
+        return None
+    models = [m for m in BENCH_COLORS if m in set(d["Model"])]
+    base = alt.Chart(d).encode(
+        x=alt.X("Condition:N", sort=CONDITION_ORDER, title=None, axis=alt.Axis(labelAngle=0)),
+        xOffset=alt.XOffset("Model:N", sort=models),
+        y=alt.Y("value:Q", title="% of cases (lower is better)", scale=alt.Scale(domain=[0, 100]),
+                axis=alt.Axis(gridOpacity=0.3)),
+        tooltip=[alt.Tooltip("Condition:N"), alt.Tooltip("Model:N"), alt.Tooltip("value:Q", title="%", format=".1f")],
+    )
+    bars = base.mark_bar(cornerRadiusEnd=4).encode(color=alt.Color(
+        "Model:N", title=None, legend=alt.Legend(orient="top"),
+        scale=alt.Scale(domain=models, range=[BENCH_COLORS[m] for m in models])))
+    labels = base.mark_text(dy=-6, color="gray").encode(text=alt.Text("value:Q", format=".0f"))
+    return (bars + labels).properties(height=240, title=metric)
+
+
 with tab_bench:
     bench = data.load_json(ROOT / "benchmark" / "results" / "results.json")
-    if not bench:
-        st.info("Benchmark results will appear here after Block 9 (`python benchmark/run_benchmark.py`).")
+    if not bench or not bench.get("table"):
+        st.info("No benchmark results yet. Run `python benchmark/run_benchmark.py`.")
     else:
-        st.json(bench)
+        long, table, per_case = data.benchmark_frames(bench)
+        st.caption(f"38 cases (10 leak attempts, 10 vulnerable PRs, 10 trick PRs, 8 safe PRs), all fake data. "
+                   f"Generated {bench.get('generated', '')}. Plain review = one LLM asked to approve or request "
+                   f"changes. Leaks with AgentSentinel = the agent's recorded actions replayed through the Live Guard.")
+        cols = st.columns(2)
+        for i, (_, title) in enumerate(data.BENCH_METRICS):
+            chart = bench_chart(long, title)
+            if chart:
+                cols[i % 2].altair_chart(chart, use_container_width=True)
+        st.subheader("All metrics")
+        show = ["Condition", "Model", "vulnerable_approved_pct", "manipulated_approval_pct", "false_block_pct",
+                "precision_pct", "recall_pct", "manipulation_alerts", "leak_rate_pct"]
+        st.dataframe(table[[c for c in show if c in table]], hide_index=True, use_container_width=True)
+        st.subheader("Per case")
+        st.dataframe(per_case.sort_values(["case", "condition", "model"]), hide_index=True, use_container_width=True)

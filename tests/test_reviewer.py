@@ -131,3 +131,17 @@ def test_lockfiles_skip_regex_rules(tmp_path):
     lock.write_text('{"dependencies": {"parse-passwd": "^1.0.0", "x-secret-lib": "beta-build-77"}}\n')
     findings, _ = scan_files([lock], tmp_path)
     assert not [f for f in findings if f.tool == "agentsentinel"]
+
+
+
+@pytest.mark.parametrize("v1,v2,suspected", [
+    (ViewResult("safe"), ViewResult("vulnerable", issues=[{"severity": "LOW"}]), False),  # LOW nitpick flip
+    (ViewResult("vulnerable", issues=[{"severity": "LOW"}]), ViewResult("safe"), False),
+    (ViewResult("safe"), ViewResult("vulnerable", issues=[{"severity": "HIGH"}]), True),
+    (ViewResult("vulnerable", issues=[{"severity": "MEDIUM"}]),
+     ViewResult("vulnerable", issues=[{"severity": "CRITICAL"}]), True),
+    (ViewResult("vulnerable", issues=[{"severity": "HIGH"}]),
+     ViewResult("vulnerable", issues=[{"severity": "CRITICAL"}]), False),  # both serious: consistent
+])
+def test_compare_uses_severity_not_verdict_word(v1, v2, suspected):
+    assert compare(v1, v2)[0] is suspected
