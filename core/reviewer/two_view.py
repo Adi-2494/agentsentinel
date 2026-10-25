@@ -329,6 +329,9 @@ def two_view_check(files: dict[str, str], pr_description: str = "",
     v1s, v2s, flagged = [], [], []
     for view1_text, view2_text, fmap in batches:
         v1, v2 = _review(view1_text, model), _review(view2_text, model)
+        second = config.CHECK_MODEL
+        if config.REVIEW_ENSEMBLE and second and second != model:  # second opinion on the neutral view
+            v2 = _combine([v2, _review(view2_text, second)])
         for issue in v2.issues:  # map neutral file names back for the report
             if isinstance(issue, dict) and issue.get("file") in fmap:
                 issue["file"] = fmap[issue["file"]]

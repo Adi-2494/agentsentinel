@@ -218,3 +218,20 @@ def test_ai_trap_check_too_much_text_fails_closed(tmp_path, monkeypatch):
     doc = tmp_path / "BIG.md"
     doc.write_text("line\n" * 20000)
     assert "too much text" in injection_check.check([doc], tmp_path)[1]
+
+
+def test_ensemble_off_by_default_and_fails_closed_on_second_model_error(monkeypatch):
+    from core import config
+    from core.llm import LLMError
+    assert config.REVIEW_ENSEMBLE is False
+    monkeypatch.setattr(config, "REVIEW_ENSEMBLE", True)
+    monkeypatch.setattr(config, "MAIN_MODEL", "sonnet")
+    monkeypatch.setattr(config, "CHECK_MODEL", "haiku")
+
+    def reviewer(prompt, model=None):
+        if model == "haiku":
+            raise LLMError("second model unavailable")
+        return {"verdict": "safe", "issues": []}
+    monkeypatch.setattr(two_view, "ask_json", reviewer)
+    tv = two_view.two_view_check({"a.py": "x = 1\n"})
+    assert "incomplete" in tv.reason

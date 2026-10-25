@@ -30,6 +30,9 @@ CHECK_MODEL = os.getenv("CHECK_MODEL", "haiku")  # quick triage / classification
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 LLM_TIMEOUT_SECONDS = int(os.getenv("LLM_TIMEOUT_SECONDS", "180"))
+# Second opinion: View 2 is also reviewed by CHECK_MODEL; either model's serious issue blocks.
+# On 15 real advisories Haiku and Sonnet each caught 8, together 9. Costs 1 extra call per batch.
+REVIEW_ENSEMBLE = os.getenv("REVIEW_ENSEMBLE", "0") == "1"
 
 # --- Storage -------------------------------------------------------------
 DB_PATH = Path(os.getenv("AGENTSENTINEL_DB", ROOT / "data" / "agentsentinel.db"))
