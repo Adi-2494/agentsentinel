@@ -222,3 +222,18 @@ def extract_comments(code: str, filename: str) -> str:
             pass
     hits = re.finditer(r"//[^\n]*|/\*[\s\S]*?\*/|<!--[\s\S]*?-->|^\s*#[^\n]*", code, re.M)
     return "\n".join(f"L{code.count(chr(10), 0, m.start()) + 1}: {m.group(0).strip()[:500]}" for m in hits)
+
+
+_STR_GENERIC = re.compile(r'"(?:[^"\\\n]|\\.){12,}"|\'(?:[^\'\\\n]|\\.){12,}\'|`[^`]{12,}`')
+
+
+def extract_strings(code: str, filename: str, min_len: int = 12) -> str:
+    """String literals (>= min_len chars): text aimed at reviewers can hide there, not only in comments."""
+    if filename.endswith(".py"):
+        try:
+            out = [f"L{t.start[0]}: {t.string[:500]}" for t in tokenize.generate_tokens(io.StringIO(code).readline)
+                   if t.type == tokenize.STRING and len(t.string) >= min_len + 2]
+            return "\n".join(out)
+        except (tokenize.TokenError, SyntaxError, IndentationError):
+            pass
+    return "\n".join(f"L{code.count(chr(10), 0, m.start()) + 1}: {m.group(0)[:500]}" for m in _STR_GENERIC.finditer(code))

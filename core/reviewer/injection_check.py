@@ -1,8 +1,8 @@
 """AI-trap check, LLM layer (B4, Merge Gate only): ONE call to CHECK_MODEL that
 classifies the PR's human-facing text as SAFE / SUSPICIOUS.
 
-It sees only where manipulation hides (the PR description, comments and
-docstrings of changed code, AI config files and Markdown), redacted, and
+It sees only where manipulation hides (the PR description, comments, docstrings
+and string literals of changed code, AI config files and Markdown), redacted, and
 wrapped as untrusted data.
 """
 from pathlib import Path
@@ -49,7 +49,8 @@ def collect_text(files: list[Path], root: Path, pr_body: str) -> str:
         if injection.is_ai_config(rel) or f.suffix.lower() in TEXT_SUFFIXES:
             body = code[:8000]
         else:
-            body = injection.extract_comments(code, f.name)
+            body = "\n".join(filter(None, (injection.extract_comments(code, f.name),
+                                             injection.extract_strings(code, f.name))))
         if body.strip():
             parts.append(f"=== {rel} ===\n{body}")
     text = "\n\n".join(parts)[:MAX_CHARS]
