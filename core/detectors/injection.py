@@ -58,6 +58,21 @@ PHRASE_RULES = [
         r"\bvergiss\s+(?:nun\s+)?(?:alle?s?\b|deine)|\bignorier(?:e|en\s+sie)\s+(?:alle|die|deine)\b|"
         r"\b(?:die\s+)?obigen\s+(?:ausführungen|anweisungen)\s+ignorieren|\babweichend\s+zu\s+vorherigen\b|"
         r"\bolvid(?:a|e|ar)\s+tod[oa]s?\b|\boubliez\s+toutes\b|\bzaboravi\s+sve\b|забудьте\s+все", re.I)),
+    ("injection_dismiss_prior", "HIGH", "Tells the AI to set aside what it was told before (paraphrased)",
+     re.compile(
+        r"\b(?:set|put|leave|cast|push)\s+aside\s+(?:all\s+|everything\s+|the\s+|any\s+|your\s+)*"
+        r"(?:(?:stated|said|written|mentioned|given|told)\s+)?(?:(?:previous|prior|earlier|above|original)\s+)?"
+        r"(?:earlier|before|above|previously|so\s+far|"
+        r"guidance|instructions?|directions|rules|context)|"
+        r"\bpay\s+no\s+(?:attention|heed|mind)\s+to\s+(?:all\s+|any\s+|the\s+|your\s+)*"
+        r"(?:previous|prior|earlier|above|preceding|original|existing)?\s*"
+        r"(?:guidance|instructions?|directions|rules|context|prompts?|messages?|text)|"
+        r"\b(?:everything|anything|all)\s+(?:that\s+was\s+|you\s+were\s+|i\s+)?"
+        r"(?:stated|said|written|mentioned|told|given)\s+(?:to\s+you\s+)?(?:earlier|before|above|previously)"
+        r"[^.\n]{0,40}\b(?:no\s+longer\s+appl|does\s+not\s+(?:apply|matter)|is\s+(?:void|irrelevant|cancel+ed))|"
+        r"\b(?:the\s+)?(?:guidance|instructions?|directions|rules)\s+(?:you\s+were\s+given|above|before)\s+"
+        r"(?:no\s+longer\s+appl|(?:are|is)\s+(?:void|cancel+ed|outdated|obsolete))|"
+        r"\byour\s+(?:real|actual|true)\s+(?:job|task|instructions?|purpose|goal)\s+(?:is|are|follows)\b", re.I)),
     ("injection_new_task", "HIGH", "Announces new instructions that replace the AI's task", re.compile(
         r"\b(?:focus|concentrate)\s+on\s+your\s+new\s+task\b|\bnew\s+(?:tasks?|instructions)\s+(?:follow|are)\b|"
         r"\bstart\s+(?:over|afresh)\s+with\s+a\s+new\s+task\b|\byour\s+(?:new\s+)?instructions\s+are\s+now\b|"
