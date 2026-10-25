@@ -113,11 +113,19 @@ def check(command: str) -> list[Finding]:
                     add("reads_secret_file", "CRITICAL",
                         f"Command touches a secret/credential file: {path}", path)
 
-        hosts = [h for h in _URL_HOST.findall(seg) if not host_allowed(h)]
+        all_hosts = _URL_HOST.findall(seg)
+        hosts = [h for h in all_hosts if not host_allowed(h)]
         # a download anywhere in the segment, also inside $(...) / <(...) (not only as the first word)
         is_fetch = re.search(rf"(?:^|[\s(`$])(?:sudo\s+)?{_FETCH}\b", seg, re.I)
+        upload = _FILE_UPLOAD.search(seg) if is_fetch else None
+        if upload and all_hosts and not hosts:
+            # the allowlist is for downloads; uploading a local file is never automatically fine
+            if re.search(r"(?:api\.github\.com/gists|gist\.github\.com)", seg, re.I):
+                add("file_upload_to_gist", "HIGH", "Uploads a local file to a GitHub gist (public paste)", seg)
+            else:
+                add("file_upload_allowed_host", "MEDIUM",
+                    f"Uploads a local file to {all_hosts[0]}; confirm this is intended", seg)
         if is_fetch and hosts:
-            upload = _FILE_UPLOAD.search(seg)
             if upload:
                 add("file_upload_unknown_host", "CRITICAL",
                     f"Uploads a local file to an unknown host ({hosts[0]})", seg)
@@ -126,6 +134,9 @@ def check(command: str) -> list[Finding]:
                     f"Sends data to an unknown host ({hosts[0]})", seg)
             else:
                 add("unknown_url", "MEDIUM", f"Fetches from an unlisted host ({hosts[0]})", seg)
+
+        if re.match(r"^\s*gh\s+gist\s+(?:create|edit)\b", seg):
+            add("gist_upload", "MEDIUM", "Publishes local files as a GitHub gist; confirm this is intended", seg)
 
         if _REMOTE_COPY.match(seg):
             remote = [h for h in _REMOTE_TARGET.findall(seg) if not host_allowed(h)]
