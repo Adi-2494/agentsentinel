@@ -53,6 +53,24 @@ def _only_mentions_names(tokens: list[str], seg: str) -> bool:
     return bool(tokens) and tokens[0] in _NAME_ONLY and "<" not in seg
 
 
+_DL_TARGET = re.compile(rf"\b{_FETCH}\b[^;&|]*?(?:\s(?:-o|-O|--output|--output-document)[\s=]+|\s>\s*)([^\s;&|]+)", re.I)
+_RUNNERS = r"(?:sudo\s+)?(?:(?:ba|z|da|k)?sh|source|\.|python[0-9.]*|node|perl|ruby)"
+
+
+def _download_then_execute(command: str, add) -> None:
+    """curl URL -o FILE && FILE / sh FILE / chmod +x FILE && ./FILE ..."""
+    for m in _DL_TARGET.finditer(command):
+        target = m.group(1).strip("'\"")
+        name = re.escape(target.rsplit("/", 1)[-1])
+        rest = command[m.end():]
+        ran = re.search(rf"(?:^|[;&|])\s*{_RUNNERS}\s+\S*{name}(?:\s|$|[;&|])", rest) or \
+            re.search(rf"(?:^|[;&|])\s*(?:\./|/|~/)?\S*{name}(?:\s|$|[;&|])", rest)
+        if ran:
+            add("download_then_execute", "CRITICAL",
+                f"Downloads a file and then runs it ({target})", command[m.start():m.end() + ran.end()])
+            return
+
+
 def host_allowed(host: str) -> bool:
     host = host.lower().rstrip(".")
     return any(host == a or host.endswith("." + a) for a in config.ALLOWED_HOSTS)
@@ -81,6 +99,8 @@ def check(command: str) -> list[Finding]:
         m = pattern.search(command)
         if m:
             add(rule, severity, message, m.group(0))
+
+    _download_then_execute(command, add)
 
     for seg in _segments(command):
         tokens = _tokens(seg)
