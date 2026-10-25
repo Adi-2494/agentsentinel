@@ -91,6 +91,7 @@ def test_2_speedup_keeps_detection():
 
 
 # ---------------------------------------------------------------- 3. log connections
+@pytest.mark.skipif(sys.platform == "win32", reason="/dev/fd does not exist on Windows")
 def test_3_log_writes_do_not_accumulate_open_files(tmp_path):
     import gc
     db = tmp_path / "fd.db"
@@ -173,6 +174,7 @@ def test_3_cursor_log_failure_does_not_turn_allow_into_deny(tmp_path):
     assert json.loads(p.stdout)["permission"] == "ask"  # the real decision, not a log-error deny
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="/dev/fd does not exist on Windows")
 def test_3_dashboard_read_closes_connection(tmp_path):
     import gc
     from dashboard import data
