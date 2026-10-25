@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from core import store  # noqa: E402
 from core.detectors import files, injection, pii, secrets  # noqa: E402
 from core.detectors.base import Finding, max_severity  # noqa: E402
-from guard.claude_hook import DENY, _reason, evaluate  # noqa: E402
+from guard.claude_hook import DENY, MAX_READ_BYTES, _reason, evaluate  # noqa: E402
 
 SOURCE = "cursor"
 # events whose response schema accepts "ask"
@@ -49,6 +49,10 @@ def evaluate_cursor(event: dict) -> tuple[str | None, list[Finding]]:
         found = files.check_path(path)
         if not found:
             content = event.get("content") or ""
+            if len(content) > MAX_READ_BYTES:  # beforeReadFile cannot "ask": refuse instead of skipping
+                return "deny", [Finding(rule="file_too_large_to_scan", category="injection", severity="HIGH",
+                                        message=f"File larger than {MAX_READ_BYTES // 1_000_000} MB scan limit",
+                                        preview=Path(path).name)]
             found = injection.scan(content) + secrets.scan(content)
     elif name == "preToolUse":
         tool = str(event.get("tool_name", ""))

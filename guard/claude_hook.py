@@ -20,7 +20,7 @@ from core.detectors.base import Finding, max_severity, redact_spans  # noqa: E40
 SOURCE = "claude_code"
 DENY = {"HIGH", "CRITICAL"}
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
-MAX_READ_BYTES = 2_000_000
+MAX_READ_BYTES = 5_000_000  # scanned in full; larger files are never skipped silently (ask)
 TIPS = {
     "secret": "Use an environment variable or a placeholder instead of the real value.",
     "pii": "Use clearly fake sample data instead of real personal data.",
@@ -60,7 +60,23 @@ def _content_findings(tool: str, inp: dict, path: str) -> list[Finding]:
     return []
 
 
+def _too_large(path: str) -> list[Finding]:
+    try:
+        size = Path(path).stat().st_size
+    except OSError:
+        return []
+    if size > MAX_READ_BYTES:
+        return [Finding(rule="file_too_large_to_scan", category="injection", severity="MEDIUM",
+                        message=f"{Path(path).name} is {size // 1_000_000} MB, larger than the "
+                                f"{MAX_READ_BYTES // 1_000_000} MB scan limit; confirm before the AI reads it",
+                        preview=Path(path).name)]
+    return []
+
+
 def _scan_before_reading(path: str) -> list[Finding]:
+    big = _too_large(path)
+    if big:
+        return big
     text = _read_text(path)
     found = injection.scan(text)
     for f in found:

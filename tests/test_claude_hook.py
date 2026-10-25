@@ -134,3 +134,13 @@ def test_install_registers_pre_and_post(tmp_path):
     hooks = _json.loads(p.read_text())["hooks"]
     assert len(hooks["PreToolUse"]) == 1 and len(hooks["PostToolUse"]) == 1
     assert "mcp__.*" in hooks["PostToolUse"][0]["matcher"]
+
+
+def test_files_over_scan_limit_need_confirmation(tmp_path, monkeypatch):
+    import guard.claude_hook as hook
+    monkeypatch.setattr(hook, "MAX_READ_BYTES", 1000)
+    big = tmp_path / "big.log"
+    big.write_text("x" * 5000)
+    decision, findings = evaluate("Read", {"file_path": str(big)})
+    assert decision == "ask" and findings[0].rule == "file_too_large_to_scan"
+    assert evaluate("Bash", {"command": f"cat {big}"}, str(tmp_path))[0] == "ask"

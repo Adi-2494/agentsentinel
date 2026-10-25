@@ -121,20 +121,27 @@ def is_ai_config(path: str) -> bool:
         or "/.cursor/rules/" in "/" + p or p.startswith(".cursor/rules/")
 
 
+_TAG_RE = re.compile("[\U000E0000-\U000E007F]")
+_BIDI_RE = re.compile("[" + "".join(sorted(BIDI)) + "]")
+_ZW_RE = re.compile("[" + "".join(sorted(ZERO_WIDTH)) + "]")
+_INVISIBLE = {ord(c): None for c in ZERO_WIDTH | BIDI} | {c: None for c in range(0xE0000, 0xE0080)}
+
+
 def _hidden_unicode(text: str) -> list[Finding]:
+    """Regex-based (runs in C), so multi-MB files stay fast."""
     findings: list[Finding] = []
-    tags = [(i, ch) for i, ch in enumerate(text) if 0xE0000 <= ord(ch) <= 0xE007F]
+    tags = [m.start() for m in _TAG_RE.finditer(text)]
     if tags:
-        hidden = "".join(chr(ord(ch) - 0xE0000) for _, ch in tags if 0x20 <= ord(ch) - 0xE0000 < 0x7F)
+        hidden = "".join(chr(ord(text[i]) - 0xE0000) for i in tags if 0x20 <= ord(text[i]) - 0xE0000 < 0x7F)
         findings.append(Finding(
             rule="hidden_unicode_tags", category="injection", severity="CRITICAL",
             message=f"Invisible Unicode tag characters hide text: {hidden[:120]!r}",
-            start=tags[0][0], end=tags[-1][0] + 1, preview=hidden[:60]))
-    for chars, rule, sev, label in ((BIDI, "hidden_unicode_bidi", "HIGH", "text-direction override (Trojan Source)"),
-                                    (ZERO_WIDTH, "hidden_unicode_zero_width", "HIGH", "zero-width character")):
-        hits = [i for i, ch in enumerate(text) if ch in chars and not (ch == "﻿" and i == 0)]
+            start=tags[0], end=tags[-1] + 1, preview=hidden[:60]))
+    for regex, rule, sev, label in ((_BIDI_RE, "hidden_unicode_bidi", "HIGH", "text-direction override (Trojan Source)"),
+                                    (_ZW_RE, "hidden_unicode_zero_width", "HIGH", "zero-width character")):
+        hits = [m.start() for m in regex.finditer(text) if not (m.start() == 0 and text[0] == "\ufeff")]
         if hits:
-            names = sorted({unicodedata.name(text[i], hex(ord(text[i]))) for i in hits})
+            names = sorted({unicodedata.name(text[i], hex(ord(text[i]))) for i in hits[:50]})
             findings.append(Finding(
                 rule=rule, category="injection", severity=sev,
                 message=f"{len(hits)} invisible {label} character(s): {', '.join(names)[:120]}",
@@ -143,9 +150,8 @@ def _hidden_unicode(text: str) -> list[Finding]:
 
 
 def _visible(text: str) -> str:
-    """Drop invisible characters so 'ign​ore previous' still matches."""
-    return "".join(ch for ch in text if ch not in ZERO_WIDTH and ch not in BIDI
-                   and not 0xE0000 <= ord(ch) <= 0xE007F)
+    """Drop invisible characters so 'ign\u200bore previous' still matches (str.translate, in C)."""
+    return text.translate(_INVISIBLE)
 
 
 # Cyrillic / Greek letters that look like Latin ones (common homoglyph disguises)
@@ -162,14 +168,16 @@ _MIXED_WORD = re.compile(r"\b(?=\w*[A-Za-z])(?=\w*[\u0370-\u03ff\u0400-\u04ff])\
 
 
 def _deconfuse(text: str) -> str:
-    """NFKC (fullwidth etc.) + look-alike letters mapped to Latin. Same length as the input."""
-    return "".join(unicodedata.normalize("NFKC", ch)[:1] or ch for ch in text).translate(_CONFUSABLES)
+    """NFKC (fullwidth etc.) + look-alike letters mapped to Latin. Plain ASCII is returned as is."""
+    if text.isascii():
+        return text
+    return unicodedata.normalize("NFKC", text).translate(_CONFUSABLES)
 
 
 def scan(text: str, path: str = "") -> list[Finding]:
     findings = _hidden_unicode(text)
     visible = _visible(text)
-    mixed = _MIXED_WORD.search(visible)
+    mixed = _MIXED_WORD.search(visible) if not visible.isascii() else None
     if mixed:
         findings.append(Finding(rule="homoglyph_mixed_script", category="injection", severity="MEDIUM",
                                 message="A word mixes Latin with Cyrillic/Greek look-alike letters (disguised text)",
@@ -177,10 +185,13 @@ def scan(text: str, path: str = "") -> list[Finding]:
     plain = _deconfuse(visible)
     for rule, sev, message, pattern in PHRASE_RULES:
         # original text (real Russian/Greek rules) and the de-confused copy (disguised Latin)
-        m = pattern.search(visible) or (pattern.search(plain) if plain != visible else None)
+        m = pattern.search(visible)
+        src = visible
+        if not m and plain != visible:
+            m, src = pattern.search(plain), plain
         if m:
             findings.append(Finding(rule=rule, category="injection", severity=sev, message=message,
-                                    start=m.start(), end=m.end(), preview=visible[m.start():m.end()][:80]))
+                                    start=m.start(), end=m.end(), preview=src[m.start():m.end()][:80]))
     if path and is_ai_config(path):
         hooks = bool(re.search(r'"hooks"\s*:', text)) and path.endswith(".json")
         findings.append(Finding(
