@@ -138,6 +138,6 @@ def test_ghsa_summary_fix_awareness():
                                     "still_flagged_after_fix_pct": 50.0, "fix_aware_pct": 25.0}
     files = [{"filename": "src/app.py", "status": "modified"}, {"filename": "tests/test_app.py", "status": "modified"},
              {"filename": "docs/x.py", "status": "modified"}, {"filename": "lib/new.py", "status": "added"},
-             {"filename": "web/a.js", "status": "modified"}]
+             {"filename": "web/a.js", "status": "modified"}, {"filename": "web/a.test.ts", "status": "modified"}]
     assert _candidate_files(files, "pip") == ["src/app.py"]
     assert _candidate_files(files, "npm") == ["web/a.js"]

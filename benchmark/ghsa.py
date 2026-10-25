@@ -48,7 +48,8 @@ def _candidate_files(files: list[dict], eco: str) -> list[str]:
         path = f["filename"]
         parts = set(Path(path.lower()).parts)
         if (f["status"] == "modified" and Path(path).suffix in SUFFIXES[eco] and not parts & SKIP_PARTS
-                and not Path(path).name.lower().startswith("test")):
+                and not Path(path).name.lower().startswith("test")
+                and not any(t in Path(path).name.lower() for t in (".test.", ".spec.", "_test."))):
             out.append(path)
     return out
 
