@@ -11,6 +11,7 @@ from __future__ import annotations  # type hints must not need the imports below
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -109,7 +110,21 @@ def _scan_before_reading(path: str) -> list[Finding]:
 
 # Shell commands that print file contents back to the AI
 READ_COMMANDS = {"cat", "head", "tail", "less", "more", "bat", "nl", "sed", "awk", "grep", "egrep",
-                 "rg", "strings", "xxd", "od", "hexdump", "jq", "yq", "sort", "uniq", "cut", "tac"}
+                 "rg", "strings", "xxd", "od", "hexdump", "jq", "yq", "sort", "uniq", "cut", "tac",
+                 # Windows (cmd / PowerShell); compared case-insensitively
+                 "type", "get-content", "gc", "findstr", "select-string", "sls"}
+_RAW_WORD = re.compile(r'"([^"]*)"|\'([^\']*)\'|(\S+)')
+
+
+def _read_candidates(segment: str) -> list[str]:
+    """Words of a command, both as a POSIX shell parses them and as written: in bash a backslash is
+    an escape, but on Windows it is the path separator (C:\\Users\\a\\notes.md)."""
+    out = list(commands._tokens(segment))
+    for m in _RAW_WORD.finditer(segment):
+        word = next(g for g in m.groups() if g is not None)
+        if word not in out:
+            out.append(word)
+    return out
 
 
 def _bash_read_targets(command: str, cwd: str) -> list[str]:
@@ -119,9 +134,9 @@ def _bash_read_targets(command: str, cwd: str) -> list[str]:
         tokens = commands._tokens(seg)
         while tokens and (tokens[0] in ("sudo", "env", "command") or "=" in tokens[0]):
             tokens = tokens[1:]
-        if not tokens or Path(tokens[0]).name not in READ_COMMANDS:
+        if not tokens or Path(tokens[0]).name.lower().removesuffix(".exe") not in READ_COMMANDS:
             continue
-        for tok in tokens[1:]:
+        for tok in _read_candidates(seg)[1:]:
             if tok.startswith("-"):
                 continue
             try:

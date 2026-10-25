@@ -99,8 +99,9 @@ def test_4_windows_attacks_are_detected(cmd, rule):
     r"del build\*.obj", 'powershell -Command "Get-ChildItem"', "certutil -hashfile app.zip SHA256",
     "dir /s *.py", r"rd /s /q .\dist",
 ])
-def test_4_normal_windows_commands_are_allowed(cmd):
-    assert evaluate("Bash", {"command": cmd})[0] is None, [f.rule for f in commands.check(cmd)]
+def test_4_normal_windows_commands_are_allowed(cmd, tmp_path):
+    (tmp_path / "README.md").write_text("# App\n\nRun the tests.\n", encoding="utf-8")  # an ordinary README
+    assert evaluate("Bash", {"command": cmd}, str(tmp_path))[0] is None, [f.rule for f in commands.check(cmd)]
 
 
 @pytest.mark.parametrize("path", [
@@ -161,3 +162,20 @@ def test_B_legacy_encoded_files_are_still_reviewed(tmp_path):
     assert is_text_file(f)
     (tmp_path / "bin.dat").write_bytes(b"\x00\x01")
     assert not is_text_file(tmp_path / "bin.dat")
+
+
+# ---------------------------------------------------------------- C. Windows paths in Bash commands
+@pytest.mark.parametrize("cmd,expected", [
+    (r"cat C:\Users\a\notes.md", r"C:\Users\a\notes.md"),
+    (r'type "C:\Program Files\app\README.md"', r"C:\Program Files\app\README.md"),
+    (r"Get-Content .\docs\SETUP.md", r".\docs\SETUP.md"),
+])
+def test_C_read_targets_keep_windows_backslash_paths(cmd, expected):
+    from guard.claude_hook import _read_candidates
+    seg_tokens = _read_candidates(cmd)
+    assert expected in seg_tokens, seg_tokens
+
+
+def test_C_get_content_and_type_are_read_commands():
+    from guard.claude_hook import READ_COMMANDS
+    assert {"type", "get-content", "gc"} <= {c.lower() for c in READ_COMMANDS}

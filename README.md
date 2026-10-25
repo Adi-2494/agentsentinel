@@ -400,6 +400,7 @@ docs/        screenshots, redteam/ and robustness/ (before / after evidence)
 ## Limitations
 
 - The Live Guard is rule-based: it catches known patterns, not every possible way to exfiltrate data (e.g. `printenv` is not blocked; it got through in the benchmark). Rewordings, string-building tricks like `open('.e' + 'nv')`, or new encodings can still get past rules. The LLM layers and Claude's own judgment are the next line of defence.
+- The guard cannot tell a document that *quotes* an attack from one that *contains* one. For example, reading this README with `cat` or `Get-Content` is blocked, because it quotes AI-trap phrases.
 - The two-view check is a tripwire. It only fires when View 1 is actually fooled. In the benchmark, current Claude models were not fooled by any of the 10 trick PRs, so it raised 0 alerts. Its value against weaker models or stronger attacks is not yet measured.
 - Real-world coverage depends on the LLM layers. Rules alone caught 0% of the actual bugs in real advisories, and 31.7% of held-out real prompt injections.
 - Real-advisory results use samples of 15 for the Claude runs. "Fixed version still blocked" (33%) was not verified case by case.
