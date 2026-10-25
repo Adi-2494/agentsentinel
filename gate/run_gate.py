@@ -77,8 +77,8 @@ def run(files: list[Path], root: Path, pr_body: str = "", use_llm: bool = True,
         findings += llm_findings
         _renumber(findings)
         code_files = {}
-        for f in files:
-            if f.suffix.lower() in static_scan.CODE_SUFFIXES - {".md", ".txt", ".json"}:
+        for f in files:  # every text file except dependency lock files (package.json, Makefile, docs...)
+            if f.name not in static_scan.LOCK_FILES and static_scan.is_text_file(f):
                 try:
                     code_files[str(f.resolve().relative_to(root.resolve()))] = f.read_text(errors="replace")
                 except (OSError, ValueError):

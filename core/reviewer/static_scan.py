@@ -46,6 +46,21 @@ class ScanFinding:
         return asdict(self)
 
 
+def is_text_file(path: Path, sample: int = 8192) -> bool:
+    """Content-based: no NUL bytes and valid UTF-8 in the first 8 KB (extension does not matter)."""
+    try:
+        head = path.read_bytes()[:sample]
+    except OSError:
+        return False
+    if b"\x00" in head:
+        return False
+    try:
+        head.decode("utf-8")
+    except UnicodeDecodeError as e:
+        return e.start >= len(head) - 4  # a multi-byte character cut at the sample boundary
+    return True
+
+
 def _line_of(text: str, offset: int) -> int:
     return text.count("\n", 0, offset) + 1
 
@@ -107,9 +122,9 @@ def run_gitleaks(files: list[Path]) -> tuple[list[dict], list[str]]:
 def scan_files(files: list[Path], root: Path) -> tuple[list[ScanFinding], list[str]]:
     """Scan the given files. Returns (findings, tool errors)."""
     root = root.resolve()
-    files = [f.resolve() for f in files if f.is_file() and
-             (f.suffix.lower() in CODE_SUFFIXES or f.name.startswith(".env")
-              or injection.is_ai_config(str(f)))]
+    candidates = [f.resolve() for f in files if f.is_file()]
+    binaries = [f for f in candidates if not is_text_file(f)]
+    files = [f for f in candidates if f not in binaries]  # every text file, whatever its extension
     rel = lambda p: str(Path(p).resolve().relative_to(root)) if Path(p).resolve().is_relative_to(root) else str(p)  # noqa: E731
     findings: list[ScanFinding] = []
     seen: set[tuple] = set()
@@ -128,6 +143,8 @@ def scan_files(files: list[Path], root: Path) -> tuple[list[ScanFinding], list[s
         ))
 
     sg_results, errors = run_semgrep(files, root)
+    if binaries:
+        errors.append("binary files not reviewed: " + ", ".join(rel(b) for b in binaries[:10]))
     for r in sg_results:
         add("semgrep", r["check_id"].rsplit(".", 1)[-1], "vuln",
             SEMGREP_SEVERITY.get(r["extra"].get("severity", ""), "MEDIUM"),

