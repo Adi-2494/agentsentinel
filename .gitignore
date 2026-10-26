@@ -30,3 +30,7 @@ dist/
 
 # Streamlit secrets are never committed
 .streamlit/secrets.toml
+
+# coverage data
+.coverage
+.coverage.*

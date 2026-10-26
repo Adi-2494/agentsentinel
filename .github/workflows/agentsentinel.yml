@@ -61,7 +61,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt pytest-cov==7.0.0
       - name: Install Semgrep (isolated; installed together it downgrades the mcp library)
         run: pipx install semgrep || echo "::warning::Semgrep is not available on ${{ matrix.os }}; Semgrep tests are skipped"
       - name: Install Gitleaks
@@ -78,8 +78,9 @@ jobs:
           echo "$HOME/bin" >> "$GITHUB_PATH"
       - name: Versions
         run: python --version && gitleaks version && (semgrep --version || true)
-      - name: Unit + integration tests (no Claude calls)
-        run: python -m pytest -q -rs
+      - name: Unit + integration tests (no Claude calls), with coverage
+        # the floor stops coverage from silently dropping; hook subprocesses are counted too
+        run: python -m pytest -q -rs --cov --cov-report=term --cov-fail-under=90
 
   merge-gate:
     if: github.event_name == 'pull_request'

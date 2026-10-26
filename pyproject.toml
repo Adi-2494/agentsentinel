@@ -33,3 +33,12 @@ python_version = "3.11"
 strict = true
 ignore_missing_imports = true  # streamlit/altair/mcp ship partial or no stubs
 files = ["core", "guard", "gate", "dashboard"]
+
+[tool.coverage.run]
+source = ["core", "guard", "gate", "dashboard"]
+patch = ["subprocess"]  # the hooks are tested as real subprocesses; count those runs too
+parallel = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

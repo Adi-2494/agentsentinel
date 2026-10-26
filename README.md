@@ -374,8 +374,11 @@ The speed fixes were checked for equivalence: the new protected-file matcher giv
 
 **CI:** the full unit and integration suite runs on **Linux, macOS and Windows** on every push (GitHub Actions matrix). The Windows run found real Windows-only bugs (text read with the cp1252 code page, backslash paths treated as escapes) that are now fixed and covered by tests. On Windows, 2 file-handle tests are skipped, because `/dev/fd` doesn't exist there.
 
+**Code quality gates in CI:** `ruff` (lint and format), `mypy --strict` on all product code (`core`, `guard`, `gate`, `dashboard`), and a coverage floor of 90%. **Measured line coverage is 93%.** This includes the hooks, which the tests run as real subprocesses; coverage counts those runs too. Most of what isn't covered is LLM error-handling branches and the version fallback in the MCP server.
+
 ```bash
 .venv/bin/pytest -q            # unit + integration, no Claude calls
+.venv/bin/pytest -q --cov      # same, with the coverage report (pip install -r requirements-dev.txt)
 .venv/bin/pytest -m llm --run-llm   # live Claude tests (uses your plan's limit)
 .venv/bin/python benchmark/real_repos.py --workdir /tmp/as-repos   # real public repos
 ```
