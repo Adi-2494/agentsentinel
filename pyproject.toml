@@ -1,0 +1,29 @@
+[project]
+name = "agentsentinel"
+version = "0.2.0"
+description = "Security layer for AI coding tools: live guard for Claude Code / Cursor and an AI-manipulation-aware merge gate"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = [".venv", "dist", "benchmark/external_data"]
+
+[tool.ruff.lint]
+# pyflakes, pycodestyle, isort, bugbear, pyupgrade, bandit (security), ruff-specific, pylint errors
+select = ["F", "E", "W", "I", "B", "UP", "S", "RUF", "PLE", "BLE"]
+ignore = [
+    "S101",    # assert: used in tests and for internal invariants
+    "S603", "S607",  # subprocess with argument lists of trusted tools (git, semgrep, gitleaks, claude)
+    "S311",    # random: used for reproducible sampling, never for security
+    "RUF001", "RUF002", "RUF003",  # ambiguous unicode: the detectors and tests are ABOUT look-alike letters
+    "E501",    # line length is handled by the formatter
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106", "S108", "S110", "BLE001"]  # fake secrets, /tmp paths, broad excepts in fixtures
+"benchmark/**" = ["S108", "S310"]
+"examples/**" = ["S"]  # deliberately vulnerable demo PRs
+
+[tool.ruff.format]
+quote-style = "double"

@@ -1,4 +1,5 @@
 """Risky shell command detection (A4): rules only, no LLM."""
+
 import re
 import shlex
 
@@ -6,57 +7,112 @@ from core import config
 from core.detectors.base import Finding
 from core.detectors.files import is_protected_path
 
-_SHELLS = (r"(?:sudo\s+)?(?:ba|z|da|k|fi)?sh|python[0-9.]*|perl|ruby|node|"
-           r"iex|Invoke-Expression|(?:powershell|pwsh)(?:\.exe)?")  # PowerShell runs piped scripts too
+_SHELLS = (
+    r"(?:sudo\s+)?(?:ba|z|da|k|fi)?sh|python[0-9.]*|perl|ruby|node|"
+    r"iex|Invoke-Expression|(?:powershell|pwsh)(?:\.exe)?"
+)  # PowerShell runs piped scripts too
 _FETCH = r"(?:curl|wget|fetch|iwr|irm|Invoke-WebRequest|Invoke-RestMethod)"
 
 WHOLE_COMMAND_RULES = [
-    ("pipe_to_shell", re.compile(rf"\b{_FETCH}\b[^|;&]*\|\s*(?:{_SHELLS})\b", re.I),
-     "CRITICAL", "Downloads a script and runs it directly (curl | sh)"),
-    ("shell_from_download", re.compile(
-        rf"(?:\b(?:{_SHELLS}|source|eval)|(?:^|[\s;&|])\.)\s+(?:-c\s+)?[\"']?(?:<\(|\$\()\s*{_FETCH}\b", re.I),
-     "CRITICAL", "Runs a shell on downloaded content"),
-    ("encoded_exec", re.compile(rf"base64\s+(?:-d|--decode|-D)\b[^;&]*\|\s*(?:{_SHELLS})\b", re.I),
-     "CRITICAL", "Decodes hidden (base64) content and executes it"),
-    ("rm_rf_root", re.compile(
-        r"\brm\s+(?:-\S+\s+)*-\S*[rR]\S*\s+(?:-\S+\s+)*"
-        r"(?:/|/\*|~/?|\$HOME/?|\*|\.\.?/?)(?=\s|$|;|&|\|)"),
-     "CRITICAL", "Recursive delete of root, home or the whole directory"),
-    ("disk_wipe", re.compile(r"\bmkfs(?:\.\w+)?\b|\bdd\b[^;&|]*\bof=/dev/(?!null\b)"),
-     "CRITICAL", "Formats or overwrites a disk"),
-    ("fork_bomb", re.compile(r":\s*\(\s*\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:"),
-     "CRITICAL", "Fork bomb"),
-    ("chmod_world_root", re.compile(r"\bchmod\s+(?:-R\s+)?0?777\s+/(?:\s|$)"),
-     "HIGH", "Makes the whole filesystem world-writable"),
+    (
+        "pipe_to_shell",
+        re.compile(rf"\b{_FETCH}\b[^|;&]*\|\s*(?:{_SHELLS})\b", re.I),
+        "CRITICAL",
+        "Downloads a script and runs it directly (curl | sh)",
+    ),
+    (
+        "shell_from_download",
+        re.compile(
+            rf"(?:\b(?:{_SHELLS}|source|eval)|(?:^|[\s;&|])\.)\s+(?:-c\s+)?[\"']?(?:<\(|\$\()\s*{_FETCH}\b", re.I
+        ),
+        "CRITICAL",
+        "Runs a shell on downloaded content",
+    ),
+    (
+        "encoded_exec",
+        re.compile(rf"base64\s+(?:-d|--decode|-D)\b[^;&]*\|\s*(?:{_SHELLS})\b", re.I),
+        "CRITICAL",
+        "Decodes hidden (base64) content and executes it",
+    ),
+    (
+        "rm_rf_root",
+        re.compile(
+            r"\brm\s+(?:-\S+\s+)*-\S*[rR]\S*\s+(?:-\S+\s+)*"
+            r"(?:/|/\*|~/?|\$HOME/?|\*|\.\.?/?)(?=\s|$|;|&|\|)"
+        ),
+        "CRITICAL",
+        "Recursive delete of root, home or the whole directory",
+    ),
+    (
+        "disk_wipe",
+        re.compile(r"\bmkfs(?:\.\w+)?\b|\bdd\b[^;&|]*\bof=/dev/(?!null\b)"),
+        "CRITICAL",
+        "Formats or overwrites a disk",
+    ),
+    ("fork_bomb", re.compile(r":\s*\(\s*\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:"), "CRITICAL", "Fork bomb"),
+    (
+        "chmod_world_root",
+        re.compile(r"\bchmod\s+(?:-R\s+)?0?777\s+/(?:\s|$)"),
+        "HIGH",
+        "Makes the whole filesystem world-writable",
+    ),
     # --- Windows: PowerShell / cmd --------------------------------------------------------
-    ("ps_download_execute", re.compile(
-        r"\b(?:iex|Invoke-Expression)\b[^;\n]{0,40}?(?:New-Object\s+(?:System\.)?Net\.WebClient\)?\s*\.Download"
-        r"(?:String|Data)|\b(?:iwr|irm|Invoke-WebRequest|Invoke-RestMethod)\b)|"
-        r"\.Download(?:String|Data)\s*\([^)]*\)\s*\|\s*(?:iex|Invoke-Expression)\b", re.I),
-     "CRITICAL", "PowerShell downloads code and runs it (iex ... DownloadString / iwr)"),
-    ("ps_encoded_command", re.compile(
-        r"\b(?:powershell|pwsh)(?:\.exe)?\b[^;\n|&]*\s-(?:e|ec|en|enc|enco|encod|encode|encoded|encodedc\w*)\s+"
-        r"['\"]?[A-Za-z0-9+/=]{8,}", re.I),
-     "CRITICAL", "Runs a hidden (base64-encoded) PowerShell script"),
-    ("lolbin_download", re.compile(
-        r"\bcertutil(?:\.exe)?\b[^;\n]*-urlcache\b|\bbitsadmin(?:\.exe)?\b[^;\n]*/transfer\b|\bStart-BitsTransfer\b",
-        re.I),
-     "HIGH", "Uses a built-in Windows tool to download files (certutil / bitsadmin)"),
-    ("windows_destructive", re.compile(
-        r"\bRemove-Item\b(?=[^;\n]*-Recurse)[^;\n]*?\s(?:[A-Za-z]:\\?\*?|\$env:(?:USERPROFILE|HOMEDRIVE|SystemRoot|windir)"
-        r"\\?|~)\s*(?:$|[;\n])|"
-        r"\b(?:rd|rmdir)\s+(?:/[sq]\s+)+[A-Za-z]:\\?\*?\s*(?:$|[;&\n])|"
-        r"\bdel\s+(?:/[a-z]\s+)+[A-Za-z]:\\\*?\s*(?:$|[;&\n])|"
-        r"\bformat\s+[A-Za-z]:", re.I),
-     "CRITICAL", "Deletes or formats a whole Windows drive or user profile"),
+    (
+        "ps_download_execute",
+        re.compile(
+            r"\b(?:iex|Invoke-Expression)\b[^;\n]{0,40}?(?:New-Object\s+(?:System\.)?Net\.WebClient\)?\s*\.Download"
+            r"(?:String|Data)|\b(?:iwr|irm|Invoke-WebRequest|Invoke-RestMethod)\b)|"
+            r"\.Download(?:String|Data)\s*\([^)]*\)\s*\|\s*(?:iex|Invoke-Expression)\b",
+            re.I,
+        ),
+        "CRITICAL",
+        "PowerShell downloads code and runs it (iex ... DownloadString / iwr)",
+    ),
+    (
+        "ps_encoded_command",
+        re.compile(
+            r"\b(?:powershell|pwsh)(?:\.exe)?\b[^;\n|&]*\s-(?:e|ec|en|enc|enco|encod|encode|encoded|encodedc\w*)\s+"
+            r"['\"]?[A-Za-z0-9+/=]{8,}",
+            re.I,
+        ),
+        "CRITICAL",
+        "Runs a hidden (base64-encoded) PowerShell script",
+    ),
+    (
+        "lolbin_download",
+        re.compile(
+            r"\bcertutil(?:\.exe)?\b[^;\n]*-urlcache\b|\bbitsadmin(?:\.exe)?\b[^;\n]*/transfer\b|\bStart-BitsTransfer\b",
+            re.I,
+        ),
+        "HIGH",
+        "Uses a built-in Windows tool to download files (certutil / bitsadmin)",
+    ),
+    (
+        "windows_destructive",
+        re.compile(
+            r"\bRemove-Item\b(?=[^;\n]*-Recurse)[^;\n]*?\s(?:[A-Za-z]:\\?\*?|\$env:(?:USERPROFILE|HOMEDRIVE|SystemRoot|windir)"
+            r"\\?|~)\s*(?:$|[;\n])|"
+            r"\b(?:rd|rmdir)\s+(?:/[sq]\s+)+[A-Za-z]:\\?\*?\s*(?:$|[;&\n])|"
+            r"\bdel\s+(?:/[a-z]\s+)+[A-Za-z]:\\\*?\s*(?:$|[;&\n])|"
+            r"\bformat\s+[A-Za-z]:",
+            re.I,
+        ),
+        "CRITICAL",
+        "Deletes or formats a whole Windows drive or user profile",
+    ),
 ]
 
 _URL_HOST = re.compile(r"\b(?:https?|ftp)://(?:[^/\s@'\"]+@)?([^/\s:'\"?#]+)", re.I)
 _UPLOAD_FLAG = re.compile(
     r"(?:^|\s)(?:-d|--data(?:-binary|-raw|-urlencode)?|-F|--form|-T|--upload-file|"
-    r"--post-data|--post-file|--body-file|-X\s*(?:POST|PUT|PATCH)|-Method\s+(?:Post|Put|Patch)|-Body)(?:\s|=|$)", re.I)
-_FILE_UPLOAD = re.compile(r"(?:-d|--data(?:-binary)?|-F|--form)\s*['\"]?[\w-]*=?@(?!-)(\S+)|"
-                          r"(?:-T|--upload-file|--post-file|--body-file|-InFile)[\s=]+(\S+)", re.I)
+    r"--post-data|--post-file|--body-file|-X\s*(?:POST|PUT|PATCH)|-Method\s+(?:Post|Put|Patch)|-Body)(?:\s|=|$)",
+    re.I,
+)
+_FILE_UPLOAD = re.compile(
+    r"(?:-d|--data(?:-binary)?|-F|--form)\s*['\"]?[\w-]*=?@(?!-)(\S+)|"
+    r"(?:-T|--upload-file|--post-file|--body-file|-InFile)[\s=]+(\S+)",
+    re.I,
+)
 _REMOTE_COPY = re.compile(r"^\s*(?:sudo\s+)?(scp|rsync|sftp)\b")
 _REMOTE_TARGET = re.compile(r"(?:^|\s)(?:[\w.-]+@)?([\w.-]+):(?!//)")
 _NETCAT = re.compile(r"^\s*(?:sudo\s+)?(nc|ncat|netcat|socat|telnet)\b(.*)")
@@ -75,7 +131,9 @@ def _only_mentions_names(tokens: list[str], seg: str) -> bool:
     return bool(tokens) and tokens[0] in _NAME_ONLY and "<" not in seg
 
 
-_DL_TARGET = re.compile(rf"\b{_FETCH}\b[^;&|]*?(?:\s(?:-o|-O|--output|--output-document|-OutFile)[\s=]+|\s>\s*)([^\s;&|]+)", re.I)
+_DL_TARGET = re.compile(
+    rf"\b{_FETCH}\b[^;&|]*?(?:\s(?:-o|-O|--output|--output-document|-OutFile)[\s=]+|\s>\s*)([^\s;&|]+)", re.I
+)
 _RUNNERS = r"(?:sudo\s+)?(?:(?:ba|z|da|k)?sh|source|\.|python[0-9.]*|node|perl|ruby)"
 
 
@@ -84,12 +142,17 @@ def _download_then_execute(command: str, add) -> None:
     for m in _DL_TARGET.finditer(command):
         target = m.group(1).strip("'\"")
         name = re.escape(target.rsplit("/", 1)[-1])
-        rest = command[m.end():]
-        ran = re.search(rf"(?:^|[;&|])\s*{_RUNNERS}\s+\S*{name}(?:\s|$|[;&|])", rest) or \
-            re.search(rf"(?:^|[;&|])\s*(?:\./|/|~/)?\S*{name}(?:\s|$|[;&|])", rest)
+        rest = command[m.end() :]
+        ran = re.search(rf"(?:^|[;&|])\s*{_RUNNERS}\s+\S*{name}(?:\s|$|[;&|])", rest) or re.search(
+            rf"(?:^|[;&|])\s*(?:\./|/|~/)?\S*{name}(?:\s|$|[;&|])", rest
+        )
         if ran:
-            add("download_then_execute", "CRITICAL",
-                f"Downloads a file and then runs it ({target})", command[m.start():m.end() + ran.end()])
+            add(
+                "download_then_execute",
+                "CRITICAL",
+                f"Downloads a file and then runs it ({target})",
+                command[m.start() : m.end() + ran.end()],
+            )
             return
 
 
@@ -138,13 +201,17 @@ def check(command: str) -> list[Finding]:
 
     def add(rule, severity, message, preview=""):
         if not any(f.rule == rule and f.preview == preview for f in findings):
-            findings.append(Finding(rule=rule, category="command", severity=severity,
-                                    message=message, preview=preview[:120]))
+            findings.append(
+                Finding(rule=rule, category="command", severity=severity, message=message, preview=preview[:120])
+            )
 
     if len(command) > MAX_COMMAND_CHARS:
-        add("command_too_large", "MEDIUM",
+        add(
+            "command_too_large",
+            "MEDIUM",
             f"Command is {len(command) // 1000} KB (limit {MAX_COMMAND_CHARS // 1000} KB); confirm before it runs",
-            command[:80])
+            command[:80],
+        )
 
     for rule, pattern, severity, message in WHOLE_COMMAND_RULES:
         m = pattern.search(command)
@@ -161,8 +228,7 @@ def check(command: str) -> list[Finding]:
             for cand in sorted(set(_PATHLIKE.findall(seg))):
                 path = cand.lstrip("@<>").split("=", 1)[-1].strip(",;:)(").rstrip(".")  # keep a leading dot
                 if path and (is_protected_path(path) or is_protected_path(cand.lstrip("@<>"))):
-                    add("reads_secret_file", "CRITICAL",
-                        f"Command touches a secret/credential file: {path}", path)
+                    add("reads_secret_file", "CRITICAL", f"Command touches a secret/credential file: {path}", path)
 
         all_hosts = _URL_HOST.findall(seg)
         hosts = [h for h in all_hosts if not host_allowed(h)]
@@ -174,15 +240,19 @@ def check(command: str) -> list[Finding]:
             if re.search(r"(?:api\.github\.com/gists|gist\.github\.com)", seg, re.I):
                 add("file_upload_to_gist", "HIGH", "Uploads a local file to a GitHub gist (public paste)", seg)
             else:
-                add("file_upload_allowed_host", "MEDIUM",
-                    f"Uploads a local file to {all_hosts[0]}; confirm this is intended", seg)
+                add(
+                    "file_upload_allowed_host",
+                    "MEDIUM",
+                    f"Uploads a local file to {all_hosts[0]}; confirm this is intended",
+                    seg,
+                )
         if is_fetch and hosts:
             if upload:
-                add("file_upload_unknown_host", "CRITICAL",
-                    f"Uploads a local file to an unknown host ({hosts[0]})", seg)
+                add(
+                    "file_upload_unknown_host", "CRITICAL", f"Uploads a local file to an unknown host ({hosts[0]})", seg
+                )
             elif _UPLOAD_FLAG.search(seg):
-                add("data_to_unknown_host", "HIGH",
-                    f"Sends data to an unknown host ({hosts[0]})", seg)
+                add("data_to_unknown_host", "HIGH", f"Sends data to an unknown host ({hosts[0]})", seg)
             else:
                 add("unknown_url", "MEDIUM", f"Fetches from an unlisted host ({hosts[0]})", seg)
 
@@ -192,13 +262,11 @@ def check(command: str) -> list[Finding]:
         if _REMOTE_COPY.match(seg):
             remote = [h for h in _REMOTE_TARGET.findall(seg) if not host_allowed(h)]
             if remote:
-                add("remote_copy_unknown_host", "HIGH",
-                    f"Copies files to/from an unknown host ({remote[0]})", seg)
+                add("remote_copy_unknown_host", "HIGH", f"Copies files to/from an unknown host ({remote[0]})", seg)
 
         nc = _NETCAT.match(seg)
         if nc:
             args = [a for a in _tokens(nc.group(2)) if not a.startswith("-")]
             if args and not host_allowed(args[0]) and not args[0].isdigit():
-                add("raw_socket_unknown_host", "HIGH",
-                    f"Opens a raw network connection to {args[0]}", seg)
+                add("raw_socket_unknown_host", "HIGH", f"Opens a raw network connection to {args[0]}", seg)
     return findings

@@ -4,6 +4,7 @@ Cursor sends JSON on stdin (hook_event_name + event fields) and reads
 {"permission": "allow"|"deny"|"ask", "user_message", "agent_message"} back.
 Rules only, no LLM. Register with:  python guard/install.py --cursor <project>
 """
+
 import json
 import os
 import sys
@@ -11,10 +12,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from core import store  # noqa: E402
-from core.detectors import files, injection, pii, secrets  # noqa: E402
-from core.detectors.base import Finding, max_severity  # noqa: E402
-from guard.claude_hook import DENY, MAX_READ_BYTES, _log, _read_event, _reason, _utf8_stdio, evaluate  # noqa: E402
+from core.detectors import files, injection, pii, secrets
+from core.detectors.base import Finding, max_severity
+from guard.claude_hook import DENY, MAX_READ_BYTES, _log, _read_event, _reason, _utf8_stdio, evaluate
 
 SOURCE = "cursor"
 # events whose response schema accepts "ask"
@@ -51,9 +51,15 @@ def evaluate_cursor(event: dict) -> tuple[str | None, list[Finding]]:
         if not found:
             content = event.get("content") or ""
             if len(content) > MAX_READ_BYTES:  # beforeReadFile cannot "ask": refuse instead of skipping
-                return "deny", [Finding(rule="file_too_large_to_scan", category="injection", severity="HIGH",
-                                        message=f"File larger than {MAX_READ_BYTES // 1_000_000} MB scan limit",
-                                        preview=Path(path).name)]
+                return "deny", [
+                    Finding(
+                        rule="file_too_large_to_scan",
+                        category="injection",
+                        severity="HIGH",
+                        message=f"File larger than {MAX_READ_BYTES // 1_000_000} MB scan limit",
+                        preview=Path(path).name,
+                    )
+                ]
             found = injection.scan(content) + secrets.scan(content)
     elif name == "preToolUse":
         tool = str(event.get("tool_name", ""))
@@ -92,21 +98,50 @@ def main() -> int:
         event = _read_event()
         name = event.get("hook_event_name", "")
         if name in AFTER_EVENTS:  # not a permission event: log only, print nothing
-            _log([(SOURCE, "warned", f.rule, f.severity, {
-                "tool": name, "preview": f.preview, "message": f.message + " (in command output)",
-                "category": f.category}) for f in after_event(event)])
+            _log(
+                [
+                    (
+                        SOURCE,
+                        "warned",
+                        f.rule,
+                        f.severity,
+                        {
+                            "tool": name,
+                            "preview": f.preview,
+                            "message": f.message + " (in command output)",
+                            "category": f.category,
+                        },
+                    )
+                    for f in after_event(event)
+                ]
+            )
             return 0
         decision, findings = evaluate_cursor(event)
         if not decision:
             print(json.dumps({"permission": "allow"}))
             return 0
         action = {"deny": "blocked", "ask": "warned", "allow": "warned"}[decision]
-        _log([(SOURCE, action, f.rule, f.severity, {
-            "tool": name, "preview": f.preview, "message": f.message, "category": f.category,
-            "cwd": event.get("cwd", "") or ",".join(event.get("workspace_roots") or [])}) for f in findings])
+        _log(
+            [
+                (
+                    SOURCE,
+                    action,
+                    f.rule,
+                    f.severity,
+                    {
+                        "tool": name,
+                        "preview": f.preview,
+                        "message": f.message,
+                        "category": f.category,
+                        "cwd": event.get("cwd", "") or ",".join(event.get("workspace_roots") or []),
+                    },
+                )
+                for f in findings
+            ]
+        )
         reason = _reason(findings)
         print(json.dumps({"permission": decision, "user_message": reason, "agent_message": reason}))
-    except Exception as e:  # fail closed, like the Claude Code hook
+    except Exception as e:  # noqa: BLE001 - fail closed on ANY error, like the Claude Code hook
         print(f"AgentSentinel cursor hook error: {e}", file=sys.stderr)
         if os.environ.get("AGENTSENTINEL_FAIL_OPEN") == "1":
             print(json.dumps({"permission": "allow"}))

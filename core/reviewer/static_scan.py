@@ -2,6 +2,7 @@
 
 Only the given (changed) files are scanned. No LLM here.
 """
+
 import json
 import shutil
 import subprocess
@@ -16,16 +17,52 @@ SEMGREP_CONFIG = "p/owasp-top-ten"
 LOCAL_RULES = Path(__file__).resolve().parent / "rules" / "agentsentinel.yml"  # gaps in the public ruleset
 SEMGREP_SEVERITY = {"ERROR": "HIGH", "WARNING": "MEDIUM", "INFO": "LOW"}
 CODE_SUFFIXES = {
-    ".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rb", ".php", ".cs",
-    ".c", ".cpp", ".h", ".kt", ".scala", ".rs", ".swift", ".sh", ".sql",
-    ".yml", ".yaml", ".json", ".toml", ".ini", ".cfg", ".env", ".tf", ".html",
-    ".md", ".txt", ".mdc",
+    ".py",
+    ".js",
+    ".jsx",
+    ".ts",
+    ".tsx",
+    ".java",
+    ".go",
+    ".rb",
+    ".php",
+    ".cs",
+    ".c",
+    ".cpp",
+    ".h",
+    ".kt",
+    ".scala",
+    ".rs",
+    ".swift",
+    ".sh",
+    ".sql",
+    ".yml",
+    ".yaml",
+    ".json",
+    ".toml",
+    ".ini",
+    ".cfg",
+    ".env",
+    ".tf",
+    ".html",
+    ".md",
+    ".txt",
+    ".mdc",
 }
 # Machine-generated dependency locks: package names like "parse-passwd" look like
 # credentials to regex rules. Gitleaks (entropy + allowlists) still scans them.
 LOCK_FILES = {
-    "package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "pnpm-lock.yaml", "poetry.lock",
-    "Pipfile.lock", "uv.lock", "Cargo.lock", "go.sum", "composer.lock", "Gemfile.lock",
+    "package-lock.json",
+    "npm-shrinkwrap.json",
+    "yarn.lock",
+    "pnpm-lock.yaml",
+    "poetry.lock",
+    "Pipfile.lock",
+    "uv.lock",
+    "Cargo.lock",
+    "go.sum",
+    "composer.lock",
+    "Gemfile.lock",
 }
 
 
@@ -85,9 +122,24 @@ def run_semgrep(files: list[Path], root: Path) -> tuple[list[dict], list[str]]:
     if not shutil.which("semgrep"):
         return [], ["semgrep not installed (brew install semgrep)"]
     proc = subprocess.run(
-        ["semgrep", "scan", "--config", SEMGREP_CONFIG, "--config", str(LOCAL_RULES), "--json", "--metrics=off",
-         "--quiet", *[str(f) for f in files]],
-        capture_output=True, text=True, cwd=root, timeout=600, encoding="utf-8", errors="replace"
+        [
+            "semgrep",
+            "scan",
+            "--config",
+            SEMGREP_CONFIG,
+            "--config",
+            str(LOCAL_RULES),
+            "--json",
+            "--metrics=off",
+            "--quiet",
+            *[str(f) for f in files],
+        ],
+        capture_output=True,
+        text=True,
+        cwd=root,
+        timeout=600,
+        encoding="utf-8",
+        errors="replace",
     )
     try:
         data = json.loads(proc.stdout)
@@ -111,9 +163,24 @@ def run_gitleaks(files: list[Path]) -> tuple[list[dict], list[str]]:
         report = Path(tmp) / "r.json"
         for f in files:  # per file, so only changed files are scanned
             subprocess.run(
-                ["gitleaks", "dir", str(f), "--no-banner", "--redact",
-                 "--report-format", "json", "--report-path", str(report), "--exit-code", "0"],
-                capture_output=True, text=True, timeout=120, encoding="utf-8", errors="replace"
+                [
+                    "gitleaks",
+                    "dir",
+                    str(f),
+                    "--no-banner",
+                    "--redact",
+                    "--report-format",
+                    "json",
+                    "--report-path",
+                    str(report),
+                    "--exit-code",
+                    "0",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                encoding="utf-8",
+                errors="replace",
             )
             if report.exists() and report.stat().st_size:
                 for r in json.loads(report.read_text(encoding="utf-8")):
@@ -139,25 +206,46 @@ def scan_files(files: list[Path], root: Path) -> tuple[list[ScanFinding], list[s
         if key in seen:
             return
         seen.add(key)
-        findings.append(ScanFinding(
-            id=f"F{len(findings) + 1}", tool=tool, rule=rule, category=category,
-            severity=severity, file=rel(path), line=line, message=message,
-            snippet=_snippet(Path(path), line),
-        ))
+        findings.append(
+            ScanFinding(
+                id=f"F{len(findings) + 1}",
+                tool=tool,
+                rule=rule,
+                category=category,
+                severity=severity,
+                file=rel(path),
+                line=line,
+                message=message,
+                snippet=_snippet(Path(path), line),
+            )
+        )
 
     sg_results, errors = run_semgrep(files, root)
     if binaries:
         errors.append("binary files not reviewed: " + ", ".join(rel(b) for b in binaries[:10]))
     for r in sg_results:
-        add("semgrep", r["check_id"].rsplit(".", 1)[-1], "vuln",
+        add(
+            "semgrep",
+            r["check_id"].rsplit(".", 1)[-1],
+            "vuln",
             SEMGREP_SEVERITY.get(r["extra"].get("severity", ""), "MEDIUM"),
-            root / r["path"], r["start"]["line"], r["extra"].get("message", "").strip()[:400])
+            root / r["path"],
+            r["start"]["line"],
+            r["extra"].get("message", "").strip()[:400],
+        )
 
     gl_results, gl_errors = run_gitleaks(files)
     errors += gl_errors
     for r in gl_results:
-        add("gitleaks", r.get("RuleID", "secret"), "secret", "CRITICAL",
-            r["_file"], r.get("StartLine", 0), r.get("Description", "Secret detected"))
+        add(
+            "gitleaks",
+            r.get("RuleID", "secret"),
+            "secret",
+            "CRITICAL",
+            r["_file"],
+            r.get("StartLine", 0),
+            r.get("Description", "Secret detected"),
+        )
 
     for f in files:
         if f.name in LOCK_FILES:
@@ -167,14 +255,28 @@ def scan_files(files: list[Path], root: Path) -> tuple[list[ScanFinding], list[s
         except OSError:
             continue
         for x in secrets.scan(text):
-            add("agentsentinel", x.rule, "secret", x.severity, f, _line_of(text, x.start),
-                f"{x.message} ({mask(text[x.start:x.end])})")
+            add(
+                "agentsentinel",
+                x.rule,
+                "secret",
+                x.severity,
+                f,
+                _line_of(text, x.start),
+                f"{x.message} ({mask(text[x.start : x.end])})",
+            )
         for x in pii.scan(text):
             add("agentsentinel", x.rule, "pii", x.severity, f, _line_of(text, x.start), x.message)
         for x in injection.scan(text, rel(f)):
             line = _line_of(text, x.start) if x.start >= 0 else 1
-            add("agentsentinel", x.rule, "injection", x.severity, f, line,
-                f"{x.message}" + (f": {x.preview!r}" if x.preview and x.start >= 0 else ""))
+            add(
+                "agentsentinel",
+                x.rule,
+                "injection",
+                x.severity,
+                f,
+                line,
+                f"{x.message}" + (f": {x.preview!r}" if x.preview and x.start >= 0 else ""),
+            )
     return findings, errors
 
 
@@ -182,8 +284,16 @@ def scan_pr_text(pr_body: str) -> list[ScanFinding]:
     """AI-trap rules on the PR description (it is shown to AI reviewers too)."""
     out = []
     for x in injection.scan(pr_body):
-        out.append(ScanFinding(
-            id="", tool="agentsentinel", rule=x.rule, category="injection", severity=x.severity,
-            file="PR description", line=_line_of(pr_body, x.start) if x.start >= 0 else 0,
-            message=f"{x.message}: {x.preview!r}"))
+        out.append(
+            ScanFinding(
+                id="",
+                tool="agentsentinel",
+                rule=x.rule,
+                category="injection",
+                severity=x.severity,
+                file="PR description",
+                line=_line_of(pr_body, x.start) if x.start >= 0 else 0,
+                message=f"{x.message}: {x.preview!r}",
+            )
+        )
     return out

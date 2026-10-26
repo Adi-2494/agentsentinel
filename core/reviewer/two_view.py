@@ -6,6 +6,7 @@ View 2: comments/docstrings stripped, user-defined names renamed to neutral
 If View 1 says "safe" but View 2 says "vulnerable", the persuasive parts of the
 PR (comments, names, PR text) changed the reviewer's mind -> MANIPULATION SUSPECTED.
 """
+
 import ast
 import builtins
 import io
@@ -21,7 +22,7 @@ from core.detectors import pii, secrets
 from core.llm import LLMError, ask_json
 
 MAX_CHARS = 60_000  # code per review batch (one batch = 2 LLM calls)
-MAX_BATCHES = 10    # ~600 KB per PR; larger PRs fail closed instead of being partly reviewed
+MAX_BATCHES = 10  # ~600 KB per PR; larger PRs fail closed instead of being partly reviewed
 SEV_RANK = {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
 _KEEP = set(dir(builtins)) | set(keyword.kwlist) | {"self", "cls", "__name__", "__init__", "__main__"}
 
@@ -73,8 +74,9 @@ def _neutralize_python(code: str) -> str:
         if t == tokenize.COMMENT:
             edits.append((tok.start, tok.end, ""))
             continue
-        if t == tokenize.STRING and (prev is None or prev.type in (
-                tokenize.NEWLINE, tokenize.NL, tokenize.INDENT, tokenize.DEDENT)):
+        if t == tokenize.STRING and (
+            prev is None or prev.type in (tokenize.NEWLINE, tokenize.NL, tokenize.INDENT, tokenize.DEDENT)
+        ):
             nxt = toks[i + 1] if i + 1 < len(toks) else None
             if nxt is None or nxt.type in (tokenize.NEWLINE, tokenize.NL, tokenize.ENDMARKER):
                 # docstring / bare string statement -> "..." plus blank lines
@@ -104,7 +106,7 @@ def _neutralize_python(code: str) -> str:
     pos = lambda rc: offsets[rc[0] - 1] + rc[1]  # noqa: E731
     out = code
     for start, end, new in sorted(edits, key=lambda e: e[0], reverse=True):
-        out = out[:pos(start)] + new + out[pos(end):]
+        out = out[: pos(start)] + new + out[pos(end) :]
     return "\n".join(line.rstrip() for line in out.split("\n"))
 
 
@@ -147,8 +149,7 @@ def _strip_comments_generic(code: str, hash_comments: bool) -> str:
     return "".join(out)
 
 
-_DECL = re.compile(
-    r"\b(?:function|class|const|let|var|def|func|fn|interface|type|struct)\s+([A-Za-z_$][\w$]*)")
+_DECL = re.compile(r"\b(?:function|class|const|let|var|def|func|fn|interface|type|struct)\s+([A-Za-z_$][\w$]*)")
 _HASH_LANGS = {".sh", ".rb", ".yml", ".yaml", ".toml", ".pl", ".r", ".ps1"}
 
 
@@ -156,8 +157,13 @@ def _neutralize_generic(code: str, suffix: str) -> str:
     code = _strip_comments_generic(code, hash_comments=suffix in _HASH_LANGS)
     namer = _Namer()
     for m in _DECL.finditer(code):
-        kind = "class" if m.group(0).startswith(("class", "interface", "struct", "type")) else \
-            "func" if m.group(0).startswith(("function", "def", "func", "fn")) else "var"
+        kind = (
+            "class"
+            if m.group(0).startswith(("class", "interface", "struct", "type"))
+            else "func"
+            if m.group(0).startswith(("function", "def", "func", "fn"))
+            else "var"
+        )
         namer.add(m.group(1), kind)
     return _rename_words(code, namer.map)
 
@@ -207,9 +213,11 @@ class TwoViewResult:
 
     def to_dict(self) -> dict:
         return {
-            "view1": self.view1.__dict__, "view2": self.view2.__dict__,
+            "view1": self.view1.__dict__,
+            "view2": self.view2.__dict__,
             "manipulation_suspected": self.manipulation_suspected,
-            "reason": self.reason, "file_map": self.file_map,
+            "reason": self.reason,
+            "file_map": self.file_map,
         }
 
 
@@ -242,8 +250,16 @@ def build_batches(files: dict[str, str], pr_description: str = "") -> list[tuple
         ranges.append((start, len(l1)))
         for k, (a, b) in enumerate(ranges, 1):
             tag = f" (part {k}/{len(ranges)}, lines {a + 1}-{b})" if len(ranges) > 1 else ""
-            parts.append((f"=== FILE: {name}{tag} ===", f"=== FILE: {neutral_name}{tag} ===",
-                          "\n".join(l1[a:b]), "\n".join(l2[a:b]), neutral_name, name))
+            parts.append(
+                (
+                    f"=== FILE: {name}{tag} ===",
+                    f"=== FILE: {neutral_name}{tag} ===",
+                    "\n".join(l1[a:b]),
+                    "\n".join(l2[a:b]),
+                    neutral_name,
+                    name,
+                )
+            )
     batches, cur, size = [], [], 0
     for part in parts:
         if cur and size + len(part[2]) > MAX_CHARS:
@@ -300,13 +316,19 @@ def compare(v1: ViewResult, v2: ViewResult) -> tuple[bool, str]:
     s1, s2 = _serious(v1), _serious(v2)
     if s2 and not s1:
         if v1.verdict == "safe":
-            return True, ("The reviewer called the code SAFE when it could read the comments, names and "
-                          "PR description, but found a serious issue once those were removed. The PR's "
-                          "wording is likely steering the AI reviewer.")
-        return True, ("With the comments, names and PR description removed, the reviewer rated the issues "
-                      "much more severe. The PR's wording may be downplaying the risk.")
-    return False, (f"Consistent: serious issue in view 1: {'yes' if s1 else 'no'}, "
-                   f"view 2: {'yes' if s2 else 'no'} (verdicts {v1.verdict} / {v2.verdict}).")
+            return True, (
+                "The reviewer called the code SAFE when it could read the comments, names and "
+                "PR description, but found a serious issue once those were removed. The PR's "
+                "wording is likely steering the AI reviewer."
+            )
+        return True, (
+            "With the comments, names and PR description removed, the reviewer rated the issues "
+            "much more severe. The PR's wording may be downplaying the risk."
+        )
+    return False, (
+        f"Consistent: serious issue in view 1: {'yes' if s1 else 'no'}, "
+        f"view 2: {'yes' if s2 else 'no'} (verdicts {v1.verdict} / {v2.verdict})."
+    )
 
 
 def _combine(views: list[ViewResult]) -> ViewResult:
@@ -318,8 +340,7 @@ def _combine(views: list[ViewResult]) -> ViewResult:
     return ViewResult(verdict, min((v.confidence for v in views), default=0.0), issues)
 
 
-def two_view_check(files: dict[str, str], pr_description: str = "",
-                   model: str | None = None) -> TwoViewResult:
+def two_view_check(files: dict[str, str], pr_description: str = "", model: str | None = None) -> TwoViewResult:
     model = model or config.MAIN_MODEL
     batches = build_batches(files, pr_description)
     fmap_all = {k: v for _, _, fm in batches for k, v in fm.items()}
@@ -348,6 +369,7 @@ def two_view_check(files: dict[str, str], pr_description: str = "",
 
 if __name__ == "__main__":  # quick look: python -m core.reviewer.two_view file.py
     import sys
+
     p = Path(sys.argv[1])
     print(neutralize(p.read_text(encoding="utf-8"), p.name))
     print(json.dumps({"chars": len(p.read_text(encoding="utf-8"))}))

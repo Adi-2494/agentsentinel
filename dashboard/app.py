@@ -2,6 +2,7 @@
 
 Read-only: it only reads the SQLite log and saved result files. No LLM calls.
 """
+
 import os
 import sys
 from pathlib import Path
@@ -41,8 +42,11 @@ def bar_by_rule(df: pd.DataFrame):
     base = alt.Chart(counts).encode(
         y=alt.Y("rule:N", sort="-x", title=None, axis=alt.Axis(labelLimit=220)),
         x=alt.X("count:Q", title="Events", axis=alt.Axis(tickMinStep=1, grid=True, gridOpacity=0.3)),
-        tooltip=[alt.Tooltip("rule:N", title="Rule"), alt.Tooltip("category:N", title="Category"),
-                 alt.Tooltip("count:Q", title="Events")],
+        tooltip=[
+            alt.Tooltip("rule:N", title="Rule"),
+            alt.Tooltip("category:N", title="Category"),
+            alt.Tooltip("count:Q", title="Events"),
+        ],
     )
     bars = base.mark_bar(color=BAR_COLOR, cornerRadiusEnd=4, height={"band": 0.7})
     labels = base.mark_text(align="left", dx=4, color="gray").encode(text="count:Q")
@@ -54,33 +58,54 @@ def line_over_time(df: pd.DataFrame):
     if series.empty:
         return None
     hover = alt.selection_point(fields=["bucket"], nearest=True, on="pointerover", empty=False)
-    color = alt.Color("part:N", title=None, legend=alt.Legend(orient="top"),
-                      scale=alt.Scale(domain=list(PART_COLORS), range=list(PART_COLORS.values())))
+    color = alt.Color(
+        "part:N",
+        title=None,
+        legend=alt.Legend(orient="top"),
+        scale=alt.Scale(domain=list(PART_COLORS), range=list(PART_COLORS.values())),
+    )
     base = alt.Chart(series).encode(
-        x=alt.X("bucket:T", title=None), y=alt.Y("count:Q", title=f"Events per {unit}",
-                                                 axis=alt.Axis(tickMinStep=1, gridOpacity=0.3)), color=color)
+        x=alt.X("bucket:T", title=None),
+        y=alt.Y("count:Q", title=f"Events per {unit}", axis=alt.Axis(tickMinStep=1, gridOpacity=0.3)),
+        color=color,
+    )
     lines = base.mark_line(strokeWidth=2)
     few = series["bucket"].nunique() <= 24  # sparse data: keep points visible
     points = base.mark_point(size=60, filled=True).encode(
-        opacity=alt.condition(hover, alt.value(1), alt.value(0.9 if few else 0)))
-    rule = alt.Chart(series).mark_rule(color="gray", opacity=0.4).encode(
-        x="bucket:T",
-        tooltip=[alt.Tooltip("bucket:T", title=unit.title(), format="%d %b %H:%M"),
-                 alt.Tooltip("part:N", title="Part"), alt.Tooltip("count:Q", title="Events")],
-    ).transform_filter(hover)
+        opacity=alt.condition(hover, alt.value(1), alt.value(0.9 if few else 0))
+    )
+    rule = (
+        alt.Chart(series)
+        .mark_rule(color="gray", opacity=0.4)
+        .encode(
+            x="bucket:T",
+            tooltip=[
+                alt.Tooltip("bucket:T", title=unit.title(), format="%d %b %H:%M"),
+                alt.Tooltip("part:N", title="Part"),
+                alt.Tooltip("count:Q", title="Events"),
+            ],
+        )
+        .transform_filter(hover)
+    )
     hit = alt.Chart(series).mark_rule(opacity=0, strokeWidth=20).encode(x="bucket:T").add_params(hover)
     return (lines + points + rule + hit).properties(height=260)
 
 
 def events_table(df: pd.DataFrame):
-    view = df[df["rule"] != "gate_run"][["time", "source", "action", "severity", "rule", "category", "tool",
-                                        "where", "info"]].copy()
+    view = df[df["rule"] != "gate_run"][
+        ["time", "source", "action", "severity", "rule", "category", "tool", "where", "info"]
+    ].copy()
     view["severity"] = view["severity"].map(sev_label)
-    st.dataframe(view, hide_index=True, width="stretch", column_config={
-        "time": st.column_config.DatetimeColumn("Time (UTC)", format="D MMM, HH:mm:ss"),
-        "where": st.column_config.TextColumn("Target / PR", width="large"),
-        "info": st.column_config.TextColumn("Reason", width="large"),
-    })
+    st.dataframe(
+        view,
+        hide_index=True,
+        width="stretch",
+        column_config={
+            "time": st.column_config.DatetimeColumn("Time (UTC)", format="D MMM, HH:mm:ss"),
+            "where": st.column_config.TextColumn("Target / PR", width="large"),
+            "info": st.column_config.TextColumn("Reason", width="large"),
+        },
+    )
 
 
 # ---------------------------------------------------------------- layout
@@ -90,7 +115,7 @@ def _setting(name: str) -> str:
         return os.environ[name]
     try:
         return str(st.secrets.get(name, ""))
-    except Exception:  # no secrets file locally
+    except Exception:  # noqa: BLE001 - st.secrets raises various errors when no secrets file exists
         return ""
 
 
@@ -98,15 +123,22 @@ def _setting(name: str) -> str:
 def _seeded_demo_db() -> str:
     """Hosted demo without a build step: create the labelled synthetic log once per server."""
     import tempfile
+
     from dashboard.seed_demo import seed
+
     return str(seed(Path(tempfile.gettempdir()) / "agentsentinel_demo.db"))
 
 
 PUBLIC = _setting("AGENTSENTINEL_PUBLIC") == "1"  # hosted demo: no file-path input
 st.title("🛡️ AgentSentinel")
-st.caption("Live Guard for AI coding tools · Merge Gate for pull requests · " + (
-    "public demo: event views use synthetic data; Benchmark and Real-world data show measured results"
-    if PUBLIC else "everything below is read from the local log"))
+st.caption(
+    "Live Guard for AI coding tools · Merge Gate for pull requests · "
+    + (
+        "public demo: event views use synthetic data; Benchmark and Real-world data show measured results"
+        if PUBLIC
+        else "everything below is read from the local log"
+    )
+)
 if PUBLIC:
     db_path = str(config.DB_PATH)
 else:
@@ -120,11 +152,16 @@ elif PUBLIC and not Path(db_path).exists():
     db_path = _seeded_demo_db()  # hosted demo (e.g. Streamlit Community Cloud)
 events = load(db_path)
 if not events.empty and events["detail_obj"].map(lambda d: bool(d.get("demo"))).any():
-    st.warning("**Demo data.** Everything on this page is synthetic sample data, not real activity. "
-               "Run AgentSentinel locally to see your own events.", icon="🧪")
+    st.warning(
+        "**Demo data.** Everything on this page is synthetic sample data, not real activity. "
+        "Run AgentSentinel locally to see your own events.",
+        icon="🧪",
+    )
 
 if events.empty:
-    st.info("No events yet. Trigger the Live Guard in Claude Code or run `python gate/run_gate.py --path examples/vulnerable_pr`.")
+    st.info(
+        "No events yet. Trigger the Live Guard in Claude Code or run `python gate/run_gate.py --path examples/vulnerable_pr`."
+    )
 
 # filters: one row, above the charts
 c1, c2, c3 = st.columns([2, 2, 1])
@@ -139,12 +176,15 @@ if span != "All" and not df.empty:
     df = df[df["time"] >= cutoff]
 
 tab_over, tab_guard, tab_gate, tab_real, tab_bench = st.tabs(
-    ["Overview", "Live Guard", "Merge Gate", "Real-world data", "Benchmark"])
+    ["Overview", "Live Guard", "Merge Gate", "Real-world data", "Benchmark"]
+)
 
 with tab_over:
     m = data.metrics(df)
     cols = st.columns(5)
-    cols[0].metric("Blocked AI actions", m["blocked_actions"], help=f"{m['warnings']} more were sent to the user to confirm")
+    cols[0].metric(
+        "Blocked AI actions", m["blocked_actions"], help=f"{m['warnings']} more were sent to the user to confirm"
+    )
     cols[1].metric("Secrets caught", m["secrets_caught"])
     cols[2].metric("Personal data caught", m["pii_caught"])
     cols[3].metric("PRs failed", f"{m['prs_failed']} / {m['prs_checked']}")
@@ -185,61 +225,113 @@ with tab_gate:
     else:
         runs["result"] = runs["result"].map({"failed": "❌ failed", "passed": "✅ passed"}).fillna(runs["result"])
         runs["manipulation"] = runs["manipulation"].map({True: "🚨 yes", False: "no"})
-        st.dataframe(runs, hide_index=True, width="stretch",
-                     column_config={"time": st.column_config.DatetimeColumn("Time (UTC)", format="D MMM, HH:mm")})
+        st.dataframe(
+            runs,
+            hide_index=True,
+            width="stretch",
+            column_config={"time": st.column_config.DatetimeColumn("Time (UTC)", format="D MMM, HH:mm")},
+        )
 
 with tab_real:
     results_dir = ROOT / "benchmark" / "results"
-    st.caption("Real public data only, downloaded at runtime and never redistributed. No personal information "
-               "is used; personal data in tests is generated in real formats.")
+    st.caption(
+        "Real public data only, downloaded at runtime and never redistributed. No personal information "
+        "is used; personal data in tests is generated in real formats."
+    )
 
     gh = data.load_json(results_dir / "ghsa.json")
     st.subheader("Real vulnerabilities: GitHub Security Advisories")
     if not gh:
         st.info("Run `python benchmark/ghsa.py collect` then `python benchmark/ghsa.py eval`.")
     else:
-        st.markdown(f"**{gh['static']['n']} reviewed HIGH/CRITICAL advisories** from "
-                    f"{len({a['repo'] for a in gh['advisories']})} real projects. Each is scanned **before** its real "
-                    f"fix commit (vulnerable) and **after** it (fixed).")
+        st.markdown(
+            f"**{gh['static']['n']} reviewed HIGH/CRITICAL advisories** from "
+            f"{len({a['repo'] for a in gh['advisories']})} real projects. Each is scanned **before** its real "
+            f"fix commit (vulnerable) and **after** it (fixed)."
+        )
         st.dataframe(pd.DataFrame(data.ghsa_summary_rows(gh)), hide_index=True, width="stretch")
-        st.dataframe(pd.DataFrame(data.ghsa_case_rows(gh)), hide_index=True, width="stretch",
-                     column_config={"advisory": st.column_config.LinkColumn(
-                         "Advisory", display_text=r"https://github\.com/advisories/(.*)")})
+        st.dataframe(
+            pd.DataFrame(data.ghsa_case_rows(gh)),
+            hide_index=True,
+            width="stretch",
+            column_config={
+                "advisory": st.column_config.LinkColumn("Advisory", display_text=r"https://github\.com/advisories/(.*)")
+            },
+        )
 
     ext = data.load_json(results_dir / "external.json") or {}
     pi, se = ext.get("prompt_injections"), ext.get("securityeval")
     if pi:
         st.subheader("Real prompt injections: deepset/prompt-injections (Apache-2.0)")
-        st.markdown(f"{pi['n']} real prompts, {pi['positives']} labelled injections (about 36% German). Rules were "
-                    "tuned on the train split only; the held-out test split is the honest score.")
+        st.markdown(
+            f"{pi['n']} real prompts, {pi['positives']} labelled injections (about 36% German). Rules were "
+            "tuned on the train split only; the held-out test split is the honest score."
+        )
         st.dataframe(pd.DataFrame(data.injection_rows(pi)), hide_index=True, width="stretch")
     if se:
         st.subheader("Real insecure code: SecurityEval (s2e-lab)")
         llm = se.get("llm_sample") or {}
-        st.dataframe(pd.DataFrame([
-            {"Layer": "Static rules (Semgrep + Gitleaks + AgentSentinel)", "Caught": f"{se['static_blocking_recall_pct']}%",
-             "Sample": se["n"]},
-            *([{"Layer": f"Claude review ({llm['model']})", "Caught": f"{llm['llm_recall_pct']}%", "Sample": llm["n"]},
-               {"Layer": "Combined", "Caught": f"{llm['combined_recall_pct']}%", "Sample": llm["n"]}] if llm else []),
-        ]), hide_index=True, width="stretch")
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    {
+                        "Layer": "Static rules (Semgrep + Gitleaks + AgentSentinel)",
+                        "Caught": f"{se['static_blocking_recall_pct']}%",
+                        "Sample": se["n"],
+                    },
+                    *(
+                        [
+                            {
+                                "Layer": f"Claude review ({llm['model']})",
+                                "Caught": f"{llm['llm_recall_pct']}%",
+                                "Sample": llm["n"],
+                            },
+                            {"Layer": "Combined", "Caught": f"{llm['combined_recall_pct']}%", "Sample": llm["n"]},
+                        ]
+                        if llm
+                        else []
+                    ),
+                ]
+            ),
+            hide_index=True,
+            width="stretch",
+        )
 
     real = data.load_json(results_dir / "real_repos.json")
     st.subheader("Real commits of public repos (static mode)")
     if not real:
         st.info("No results yet. Run `python benchmark/real_repos.py --workdir <folder>`.")
     else:
-        rows = [{"repo": r["repo"], "kind": r["kind"], "commits checked": len(r["prs"]),
-                 "blocked": sum(p["exit"] for p in r["prs"]),
-                 "findings": sum(len(p["findings"]) for p in r["prs"]),
-                 "head": r["head"][:8]} for r in real]
+        rows = [
+            {
+                "repo": r["repo"],
+                "kind": r["kind"],
+                "commits checked": len(r["prs"]),
+                "blocked": sum(p["exit"] for p in r["prs"]),
+                "findings": sum(len(p["findings"]) for p in r["prs"]),
+                "head": r["head"][:8],
+            }
+            for r in real
+        ]
         st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
         pick = st.selectbox("Commits for", [r["repo"] for r in real])
         rep = next(r for r in real if r["repo"] == pick)
-        st.dataframe(pd.DataFrame([{
-            "commit": p["sha"], "subject": p["subject"], "files": p["files"],
-            "result": "❌ blocked" if p["exit"] else "✅ passed",
-            "rules": ", ".join(sorted({f["rule"] for f in p["findings"]})),
-        } for p in rep["prs"]]), hide_index=True, width="stretch")
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    {
+                        "commit": p["sha"],
+                        "subject": p["subject"],
+                        "files": p["files"],
+                        "result": "❌ blocked" if p["exit"] else "✅ passed",
+                        "rules": ", ".join(sorted({f["rule"] for f in p["findings"]})),
+                    }
+                    for p in rep["prs"]
+                ]
+            ),
+            hide_index=True,
+            width="stretch",
+        )
 
 BENCH_COLORS = {"Haiku": "#2a78d6", "Sonnet": "#eb6834", "No LLM": "#1baf7a"}
 CONDITION_ORDER = ["Plain review", "Static only", "AgentSentinel"]
@@ -253,13 +345,22 @@ def bench_chart(long: pd.DataFrame, metric: str):
     base = alt.Chart(d).encode(
         x=alt.X("Condition:N", sort=CONDITION_ORDER, title=None, axis=alt.Axis(labelAngle=0)),
         xOffset=alt.XOffset("Model:N", sort=models),
-        y=alt.Y("value:Q", title="% of cases (lower is better)", scale=alt.Scale(domain=[0, 100]),
-                axis=alt.Axis(gridOpacity=0.3)),
+        y=alt.Y(
+            "value:Q",
+            title="% of cases (lower is better)",
+            scale=alt.Scale(domain=[0, 100]),
+            axis=alt.Axis(gridOpacity=0.3),
+        ),
         tooltip=[alt.Tooltip("Condition:N"), alt.Tooltip("Model:N"), alt.Tooltip("value:Q", title="%", format=".1f")],
     )
-    bars = base.mark_bar(cornerRadiusEnd=4).encode(color=alt.Color(
-        "Model:N", title=None, legend=alt.Legend(orient="top"),
-        scale=alt.Scale(domain=models, range=[BENCH_COLORS[m] for m in models])))
+    bars = base.mark_bar(cornerRadiusEnd=4).encode(
+        color=alt.Color(
+            "Model:N",
+            title=None,
+            legend=alt.Legend(orient="top"),
+            scale=alt.Scale(domain=models, range=[BENCH_COLORS[m] for m in models]),
+        )
+    )
     labels = base.mark_text(dy=-6, color="gray").encode(text=alt.Text("value:Q", format=".0f"))
     return (bars + labels).properties(height=240, title=metric)
 
@@ -270,17 +371,28 @@ with tab_bench:
         st.info("No benchmark results yet. Run `python benchmark/run_benchmark.py`.")
     else:
         long, table, per_case = data.benchmark_frames(bench)
-        st.caption(f"38 cases (10 leak attempts, 10 vulnerable PRs, 10 trick PRs, 8 safe PRs), all fake data. "
-                   f"Generated {bench.get('generated', '')}. Plain review = one LLM asked to approve or request "
-                   f"changes. Leaks with AgentSentinel = the agent's recorded actions replayed through the Live Guard.")
+        st.caption(
+            f"38 cases (10 leak attempts, 10 vulnerable PRs, 10 trick PRs, 8 safe PRs), all fake data. "
+            f"Generated {bench.get('generated', '')}. Plain review = one LLM asked to approve or request "
+            f"changes. Leaks with AgentSentinel = the agent's recorded actions replayed through the Live Guard."
+        )
         cols = st.columns(2)
         for i, (_, title) in enumerate(data.BENCH_METRICS):
             chart = bench_chart(long, title)
             if chart:
                 cols[i % 2].altair_chart(chart, width="stretch")
         st.subheader("All metrics")
-        show = ["Condition", "Model", "vulnerable_approved_pct", "manipulated_approval_pct", "false_block_pct",
-                "precision_pct", "recall_pct", "manipulation_alerts", "leak_rate_pct"]
+        show = [
+            "Condition",
+            "Model",
+            "vulnerable_approved_pct",
+            "manipulated_approval_pct",
+            "false_block_pct",
+            "precision_pct",
+            "recall_pct",
+            "manipulation_alerts",
+            "leak_rate_pct",
+        ]
         st.dataframe(table[[c for c in show if c in table]], hide_index=True, width="stretch")
         st.subheader("Per case")
         st.dataframe(per_case.sort_values(["case", "condition", "model"]), hide_index=True, width="stretch")

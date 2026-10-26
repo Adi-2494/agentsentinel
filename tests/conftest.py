@@ -1,11 +1,13 @@
 """Live-Claude tests (marker `llm`) use the developer's Claude plan. They run ONLY with an
 explicit --run-llm flag, so no -m expression (e.g. -m "not integration") can enable them by accident."""
+
 import pytest
 
 
 def pytest_addoption(parser):
-    parser.addoption("--run-llm", action="store_true", default=False,
-                     help="run tests marked llm (makes real Claude calls)")
+    parser.addoption(
+        "--run-llm", action="store_true", default=False, help="run tests marked llm (makes real Claude calls)"
+    )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -42,5 +44,6 @@ def _no_real_llm_calls(request, monkeypatch):
         if url.startswith(config.OLLAMA_URL):
             raise AssertionError("real Ollama call attempted in a test (stub the LLM, or run with --run-llm)")
         return real_urlopen(req, *args, **kwargs)
+
     monkeypatch.setattr(subprocess, "run", guarded_run)
     monkeypatch.setattr(urllib.request, "urlopen", guarded_urlopen)

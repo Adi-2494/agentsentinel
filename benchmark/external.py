@@ -8,6 +8,7 @@ Rules only by default (no Claude calls). --llm N adds an LLM sample of N items p
     python benchmark/external.py              # free, rules only
     python benchmark/external.py --llm 40     # + 40 Claude Haiku calls per dataset
 """
+
 import argparse
 import json
 import random
@@ -32,12 +33,18 @@ OUT = ROOT / "benchmark" / "results" / "external.json"
 HF = "https://huggingface.co/datasets"
 SOURCES = {
     "prompt_injections": {
-        "dataset": "deepset/prompt-injections", "license": "Apache-2.0",
-        "files": ["data/train-00000-of-00001-9564e8b05b4757ab.parquet",
-                  "data/test-00000-of-00001-701d16158af87368.parquet"]},
+        "dataset": "deepset/prompt-injections",
+        "license": "Apache-2.0",
+        "files": [
+            "data/train-00000-of-00001-9564e8b05b4757ab.parquet",
+            "data/test-00000-of-00001-701d16158af87368.parquet",
+        ],
+    },
     "securityeval": {
-        "dataset": "s2e-lab/SecurityEval", "license": "none stated (used for evaluation only, not redistributed)",
-        "files": ["dataset.jsonl"]},
+        "dataset": "s2e-lab/SecurityEval",
+        "license": "none stated (used for evaluation only, not redistributed)",
+        "files": ["dataset.jsonl"],
+    },
 }
 
 
@@ -54,9 +61,16 @@ def download(name: str) -> list[Path]:
 
 def metrics(tp: int, fp: int, fn: int, tn: int) -> dict:
     pct = lambda n, d: round(100 * n / d, 1) if d else None  # noqa: E731
-    return {"tp": tp, "fp": fp, "fn": fn, "tn": tn, "precision_pct": pct(tp, tp + fp),
-            "recall_pct": pct(tp, tp + fn), "false_positive_rate_pct": pct(fp, fp + tn),
-            "accuracy_pct": pct(tp + tn, tp + fp + fn + tn)}
+    return {
+        "tp": tp,
+        "fp": fp,
+        "fn": fn,
+        "tn": tn,
+        "precision_pct": pct(tp, tp + fp),
+        "recall_pct": pct(tp, tp + fn),
+        "false_positive_rate_pct": pct(fp, fp + tn),
+        "accuracy_pct": pct(tp + tn, tp + fp + fn + tn),
+    }
 
 
 def confusion(pairs) -> dict:
@@ -74,29 +88,50 @@ def eval_prompt_injections(llm_n: int, model: str) -> dict:
     df = pd.concat(parts, ignore_index=True)
     df["pred_rules"] = df["text"].map(lambda t: bool(injection.scan(t)))
     # Rules were tuned on the TRAIN split only; the TEST split is the honest, held-out score.
-    out = {"source": SOURCES["prompt_injections"], "n": len(df), "positives": int(df["label"].sum()),
-           "rules_test_heldout": confusion(zip(df[df.split == "test"]["label"], df[df.split == "test"]["pred_rules"])),
-           "rules_train_used_for_tuning": confusion(zip(df[df.split == "train"]["label"],
-                                                        df[df.split == "train"]["pred_rules"])),
-           "rules": confusion(zip(df["label"], df["pred_rules"]))}
+    out = {
+        "source": SOURCES["prompt_injections"],
+        "n": len(df),
+        "positives": int(df["label"].sum()),
+        "rules_test_heldout": confusion(
+            zip(df[df.split == "test"]["label"], df[df.split == "test"]["pred_rules"], strict=False)
+        ),
+        "rules_train_used_for_tuning": confusion(
+            zip(df[df.split == "train"]["label"], df[df.split == "train"]["pred_rules"], strict=False)
+        ),
+        "rules": confusion(zip(df["label"], df["pred_rules"], strict=False)),
+    }
     # scores only: dataset texts (some offensive jailbreak strings) are not copied into results
     if llm_n:
         rnd = random.Random(7)
-        idx = rnd.sample(list(df[df.label == 1].index), llm_n // 2) + rnd.sample(list(df[df.label == 0].index), llm_n // 2)
+        idx = rnd.sample(list(df[df.label == 1].index), llm_n // 2) + rnd.sample(
+            list(df[df.label == 0].index), llm_n // 2
+        )
         pairs = []
         from core.reviewer import injection_check  # the gate's own prompt, not a side prompt
+
         for i in idx:
-            r = ask_json(injection_check.PROMPT.format(text=f"=== PR DESCRIPTION ===\n{df.at[i, 'text'][:4000]}"), model)
+            r = ask_json(
+                injection_check.PROMPT.format(text=f"=== PR DESCRIPTION ===\n{df.at[i, 'text'][:4000]}"), model
+            )
             pairs.append((df.at[i, "label"], isinstance(r, dict) and str(r.get("verdict", "")).upper() == "SUSPICIOUS"))
-        out["llm_sample"] = {"model": model, "n": len(pairs), **confusion(pairs),
-                             "rules_on_same_sample": confusion((df.at[i, "label"], df.at[i, "pred_rules"]) for i in idx)}
+        out["llm_sample"] = {
+            "model": model,
+            "n": len(pairs),
+            **confusion(pairs),
+            "rules_on_same_sample": confusion((df.at[i, "label"], df.at[i, "pred_rules"]) for i in idx),
+        }
     return out
 
 
 # ------------------------------------------------------------------ SecurityEval
 def eval_securityeval(llm_n: int, model: str) -> dict:
     from core.reviewer import static_scan
-    rows = [json.loads(line) for line in download("securityeval")[0].read_text(encoding="utf-8").splitlines() if line.strip()]
+
+    rows = [
+        json.loads(line)
+        for line in download("securityeval")[0].read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
     by_id = {}
     with tempfile.TemporaryDirectory(prefix="as-secev-") as tmp:
         files = []
@@ -116,13 +151,17 @@ def eval_securityeval(llm_n: int, model: str) -> dict:
         detected_blocking += hit
         per_cwe[cwe(r["ID"])][0] += hit
         per_cwe[cwe(r["ID"])][1] += 1
-    out = {"source": SOURCES["securityeval"], "n": len(rows),
-           "static_blocking_recall_pct": round(100 * detected_blocking / len(rows), 1),
-           "static_any_finding_pct": round(100 * sum(bool(by_id.get(r["ID"])) for r in rows) / len(rows), 1),
-           "per_cwe": {k: {"detected": v[0], "total": v[1]} for k, v in sorted(per_cwe.items())},
-           "tool_warnings": errors[:3]}
+    out = {
+        "source": SOURCES["securityeval"],
+        "n": len(rows),
+        "static_blocking_recall_pct": round(100 * detected_blocking / len(rows), 1),
+        "static_any_finding_pct": round(100 * sum(bool(by_id.get(r["ID"])) for r in rows) / len(rows), 1),
+        "per_cwe": {k: {"detected": v[0], "total": v[1]} for k, v in sorted(per_cwe.items())},
+        "tool_warnings": errors[:3],
+    }
     if llm_n:
         from core.reviewer import two_view
+
         sample = random.Random(7).sample(rows, min(llm_n, len(rows)))
         hits = []
         for r in sample:
@@ -134,10 +173,12 @@ def eval_securityeval(llm_n: int, model: str) -> dict:
             static_hit = any(f.severity in config.FAIL_ON_SEVERITIES for f in by_id.get(r["ID"], []))
             hits.append((static_hit, two_view._serious(view)))
         out["llm_sample"] = {
-            "model": model, "n": len(hits),
+            "model": model,
+            "n": len(hits),
             "static_recall_pct": round(100 * sum(s for s, _ in hits) / len(hits), 1) if hits else None,
             "llm_recall_pct": round(100 * sum(llm for _, llm in hits) / len(hits), 1) if hits else None,
-            "combined_recall_pct": round(100 * sum(s or llm for s, llm in hits) / len(hits), 1) if hits else None}
+            "combined_recall_pct": round(100 * sum(s or llm for s, llm in hits) / len(hits), 1) if hits else None,
+        }
     return out
 
 
@@ -148,8 +189,10 @@ def main() -> int:
     ap.add_argument("--only", choices=list(SOURCES), help="run one dataset")
     args = ap.parse_args()
     previous = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
-    results = {"generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **{
-        k: v for k, v in previous.items() if k in SOURCES}}
+    results = {
+        "generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        **{k: v for k, v in previous.items() if k in SOURCES},
+    }
     try:
         for name, fn in (("prompt_injections", eval_prompt_injections), ("securityeval", eval_securityeval)):
             if not args.only or args.only == name:
@@ -157,8 +200,10 @@ def main() -> int:
                 results[name] = fn(args.llm, args.model)
                 if kept:  # a rules-only re-run keeps the earlier (paid) LLM sample
                     results[name]["llm_sample"] = kept
-                print(name, json.dumps({k: v for k, v in results[name].items()
-                                        if k not in ("per_cwe", "source")}, indent=1))
+                print(
+                    name,
+                    json.dumps({k: v for k, v in results[name].items() if k not in ("per_cwe", "source")}, indent=1),
+                )
     except (LLMLimitReached, LLMError) as e:
         print(f"LLM stopped: {e}")
     OUT.write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")

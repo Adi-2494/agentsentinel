@@ -1,4 +1,5 @@
 """Security gate report (B5): Markdown PR comment + pass/fail decision."""
+
 from dataclasses import dataclass, field
 
 from core import config
@@ -38,8 +39,11 @@ class GateResult:
     def reviewer_blocking(self) -> list[dict]:
         if not self.two_view or self.two_view.view2.verdict != "vulnerable":
             return []
-        return [i for i in self.two_view.view2.issues if isinstance(i, dict)
-                and str(i.get("severity", "")).upper() in config.FAIL_ON_SEVERITIES]
+        return [
+            i
+            for i in self.two_view.view2.issues
+            if isinstance(i, dict) and str(i.get("severity", "")).upper() in config.FAIL_ON_SEVERITIES
+        ]
 
     @property
     def manipulation(self) -> bool:
@@ -68,12 +72,19 @@ def build_markdown(r: GateResult) -> str:
     status = "❌ **FAILED**: merge blocked" if r.failed else "✅ **PASSED**"
     md = [MARKER, f"## 🛡️ AgentSentinel Merge Gate: {status}", ""]
     if r.outage_blocks:
-        md += ["### ⛔ AI review did not complete", "",
-               "The merge is blocked because these AI checks could not run (fail closed): "
-               + ", ".join(r.llm_incomplete) + ". Re-run the check when the AI is available.", ""]
-    md.append(f"Scanned **{r.files_scanned}** changed file(s) · "
-              f"**{len(r.real)}** real finding(s) · **{len(r.blocking)}** blocking · "
-              f"**{len(r.false_alarms)}** false alarm(s) filtered")
+        md += [
+            "### ⛔ AI review did not complete",
+            "",
+            "The merge is blocked because these AI checks could not run (fail closed): "
+            + ", ".join(r.llm_incomplete)
+            + ". Re-run the check when the AI is available.",
+            "",
+        ]
+    md.append(
+        f"Scanned **{r.files_scanned}** changed file(s) · "
+        f"**{len(r.real)}** real finding(s) · **{len(r.blocking)}** blocking · "
+        f"**{len(r.false_alarms)}** false alarm(s) filtered"
+    )
     md.append("")
 
     if r.manipulation:
@@ -81,16 +92,23 @@ def build_markdown(r: GateResult) -> str:
 
     if r.two_view:
         tv = r.two_view
-        md += ["### Two-view check", "",
-               "| View | What the reviewer saw | Verdict |", "|---|---|---|",
-               f"| 1 | Code as written + PR description | **{tv.view1.verdict}** |",
-               f"| 2 | Comments removed, names neutralised, no PR text | **{tv.view2.verdict}** |", ""]
+        md += [
+            "### Two-view check",
+            "",
+            "| View | What the reviewer saw | Verdict |",
+            "|---|---|---|",
+            f"| 1 | Code as written + PR description | **{tv.view1.verdict}** |",
+            f"| 2 | Comments removed, names neutralised, no PR text | **{tv.view2.verdict}** |",
+            "",
+        ]
         if r.reviewer_blocking:
             md += ["**Issues found by the reviewer (view 2):**", ""]
             for i in r.reviewer_blocking:
-                md.append(f"- {SEV_ICON.get(str(i.get('severity')).upper(), '')} "
-                          f"`{i.get('file', '?')}:{i.get('line', '?')}` **{_cell(i.get('type', ''), 60)}**: "
-                          f"{_cell(i.get('explanation', ''))}")
+                md.append(
+                    f"- {SEV_ICON.get(str(i.get('severity')).upper(), '')} "
+                    f"`{i.get('file', '?')}:{i.get('line', '?')}` **{_cell(i.get('type', ''), 60)}**: "
+                    f"{_cell(i.get('explanation', ''))}"
+                )
             md.append("")
 
     if r.real:
@@ -98,8 +116,10 @@ def build_markdown(r: GateResult) -> str:
         for f in sorted(r.real, key=lambda f: -SEV_RANK.get(r.severity(f), 0)):
             sev = r.severity(f)
             why = f.triage.get("explanation") or f.message
-            md.append(f"| {SEV_ICON.get(sev, '')} {sev} | `{f.file}:{f.line}` | **{f.rule}**: {_cell(why)} "
-                      f"| {f.tool} | {_cell(f.triage.get('fix', '') or '-')} |")
+            md.append(
+                f"| {SEV_ICON.get(sev, '')} {sev} | `{f.file}:{f.line}` | **{f.rule}**: {_cell(why)} "
+                f"| {f.tool} | {_cell(f.triage.get('fix', '') or '-')} |"
+            )
         md.append("")
 
     if r.false_alarms:

@@ -1,7 +1,7 @@
 import pytest
 
 from core.detectors import pii
-from core.detectors.pii import _V_D, _V_P, verhoeff_valid, luhn_valid
+from core.detectors.pii import _V_D, _V_P, luhn_valid, verhoeff_valid
 
 _V_INV = [0, 4, 3, 2, 1, 5, 6, 7, 8, 9]
 
@@ -28,32 +28,38 @@ def test_checksums():
     assert not luhn_valid("4111111111111112")
 
 
-@pytest.mark.parametrize("text,rule", [
-    ("contact: priya.sharma@acme-mail.co.in", "email"),
-    ("call +91 98765 43210", "phone_in"),
-    ("call 9876543210", "phone_in"),
-    ("call 09876-543210", "phone_in"),
-    (f"aadhaar {AADHAAR[:4]} {AADHAAR[4:8]} {AADHAAR[8:]}", "aadhaar"),
-    (f"aadhaar={AADHAAR}", "aadhaar"),
-    ("PAN: ABCPE1234F", "pan"),
-    (f"card {TEST_CARD}", "card_number"),
-    ("card 5555555555554444", "card_number"),
-])
+@pytest.mark.parametrize(
+    "text,rule",
+    [
+        ("contact: priya.sharma@acme-mail.co.in", "email"),
+        ("call +91 98765 43210", "phone_in"),
+        ("call 9876543210", "phone_in"),
+        ("call 09876-543210", "phone_in"),
+        (f"aadhaar {AADHAAR[:4]} {AADHAAR[4:8]} {AADHAAR[8:]}", "aadhaar"),
+        (f"aadhaar={AADHAAR}", "aadhaar"),
+        ("PAN: ABCPE1234F", "pan"),
+        (f"card {TEST_CARD}", "card_number"),
+        ("card 5555555555554444", "card_number"),
+    ],
+)
 def test_detects_pii(text, rule):
     assert rule in rules(text)
 
 
-@pytest.mark.parametrize("text", [
-    "order id 123456789012",  # 12 digits, fails Verhoeff / starts with 1
-    "timestamp 1729771234567",  # fails Luhn
-    "version 1.2.3, port 8080",
-    "call 1234567890",  # Indian mobiles start with 6-9
-    "ABCDE1234F",  # 4th char D is not a valid PAN holder type
-    "user@localhost",
-    "dev@example.com",
-    "qa@staging.example.org",
-    "bot@ci.test",
-])
+@pytest.mark.parametrize(
+    "text",
+    [
+        "order id 123456789012",  # 12 digits, fails Verhoeff / starts with 1
+        "timestamp 1729771234567",  # fails Luhn
+        "version 1.2.3, port 8080",
+        "call 1234567890",  # Indian mobiles start with 6-9
+        "ABCDE1234F",  # 4th char D is not a valid PAN holder type
+        "user@localhost",
+        "dev@example.com",
+        "qa@staging.example.org",
+        "bot@ci.test",
+    ],
+)
 def test_ignores_non_pii(text):
     assert pii.scan(text) == []
 

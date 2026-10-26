@@ -1,4 +1,5 @@
 """Dashboard data layer + a full-page smoke test (Streamlit AppTest, no browser)."""
+
 from pathlib import Path
 
 import pytest
@@ -26,8 +27,15 @@ def db(tmp_path):
 
 def test_metrics(db):
     m = data.metrics(data.load_events(db))
-    assert m == {"blocked_actions": 2, "warnings": 1, "secrets_caught": 2, "pii_caught": 1,
-                 "prs_checked": 2, "prs_failed": 1, "manipulation_alerts": 1}
+    assert m == {
+        "blocked_actions": 2,
+        "warnings": 1,
+        "secrets_caught": 2,
+        "pii_caught": 1,
+        "prs_checked": 2,
+        "prs_failed": 1,
+        "manipulation_alerts": 1,
+    }
 
 
 def test_categorise():
@@ -59,22 +67,31 @@ def test_missing_db_is_empty(tmp_path):
 @pytest.mark.parametrize("use_data", [True, False])
 def test_app_renders_without_errors(db, tmp_path, monkeypatch, use_data):
     from streamlit.testing.v1 import AppTest
+
     monkeypatch.setattr("core.config.DB_PATH", db if use_data else tmp_path / "empty.db")
     at = AppTest.from_file(APP, default_timeout=30).run()
     assert not at.exception, at.exception
     labels = [m.label for m in at.metric]
-    assert labels == ["Blocked AI actions", "Secrets caught", "Personal data caught", "PRs failed",
-                      "Manipulation alerts"]
+    assert labels == [
+        "Blocked AI actions",
+        "Secrets caught",
+        "Personal data caught",
+        "PRs failed",
+        "Manipulation alerts",
+    ]
     if use_data:
         assert [m.value for m in at.metric] == ["2", "2", "1", "1 / 2", "1"]
 
 
 def test_demo_log_is_labelled_and_safe(tmp_path, monkeypatch):
     from streamlit.testing.v1 import AppTest
+
     from core.detectors import pii, secrets
     from dashboard.seed_demo import seed
+
     demo = seed(tmp_path / "demo.db")
     import sqlite3
+
     assert sqlite3.connect(demo).execute("PRAGMA journal_mode").fetchone()[0] == "delete"
     demo.chmod(0o444)  # like the root-owned file inside the container
     df = data.load_events(demo)
@@ -88,25 +105,51 @@ def test_demo_log_is_labelled_and_safe(tmp_path, monkeypatch):
 
 
 def test_benchmark_frames_and_page(tmp_path, monkeypatch):
-    results = {"generated": "now", "table": [
-        {"condition": "baseline", "model": "haiku", "manipulated_approval_pct": 20.0, "false_block_pct": 0.0,
-         "leak_attempt_pct": 60.0},
-        {"condition": "static", "model": "-", "manipulated_approval_pct": 30.0, "false_block_pct": 12.5},
-        {"condition": "agentsentinel", "model": "haiku", "manipulated_approval_pct": 0.0, "false_block_pct": 0.0,
-         "leak_attempt_pct": 60.0, "leak_with_agentsentinel_pct": 10.0}],
-        "per_case": {"trick-01|baseline|haiku": {"blocked": False},
-                     "leak-01|agentsentinel|haiku": {"attempted": True, "prevented": True}}}
-    long, table, per_case = data.benchmark_frames(results)
+    results = {
+        "generated": "now",
+        "table": [
+            {
+                "condition": "baseline",
+                "model": "haiku",
+                "manipulated_approval_pct": 20.0,
+                "false_block_pct": 0.0,
+                "leak_attempt_pct": 60.0,
+            },
+            {"condition": "static", "model": "-", "manipulated_approval_pct": 30.0, "false_block_pct": 12.5},
+            {
+                "condition": "agentsentinel",
+                "model": "haiku",
+                "manipulated_approval_pct": 0.0,
+                "false_block_pct": 0.0,
+                "leak_attempt_pct": 60.0,
+                "leak_with_agentsentinel_pct": 10.0,
+            },
+        ],
+        "per_case": {
+            "trick-01|baseline|haiku": {"blocked": False},
+            "leak-01|agentsentinel|haiku": {"attempted": True, "prevented": True},
+        },
+    }
+    long, _table, per_case = data.benchmark_frames(results)
     leak = long[long["metric"] == "Leak attempts that got through"].set_index("Condition")["value"]
     assert leak["Plain review"] == 60.0 and leak["AgentSentinel"] == 10.0
     assert set(per_case["outcome"]) == {"approved", "prevented"}
 
 
-
 def test_real_world_rows():
-    gh = {"static": {"n": 2, "caught_vulnerable_pct": 50.0, "still_flagged_after_fix_pct": 50.0, "fix_aware_pct": 0.0},
-          "advisories": [{"ghsa": "GHSA-x", "repo": "o/r", "ecosystem": "pip", "severity": "critical", "cwes": ["CWE-78"],
-                          "static": {"before": {"blocked": True}, "after": {"blocked": False}}}]}
+    gh = {
+        "static": {"n": 2, "caught_vulnerable_pct": 50.0, "still_flagged_after_fix_pct": 50.0, "fix_aware_pct": 0.0},
+        "advisories": [
+            {
+                "ghsa": "GHSA-x",
+                "repo": "o/r",
+                "ecosystem": "pip",
+                "severity": "critical",
+                "cwes": ["CWE-78"],
+                "static": {"before": {"blocked": True}, "after": {"blocked": False}},
+            }
+        ],
+    }
     assert data.ghsa_summary_rows(gh)[0]["Caught bug AND passed fix"] == "0.0%"
     row = data.ghsa_case_rows(gh)[0]
     assert row["static (before → after fix)"] == "blocked → passed" and row["Haiku (before → after fix)"] == "–"
@@ -116,6 +159,7 @@ def test_real_world_rows():
 
 def test_public_mode_hides_path_input(monkeypatch, tmp_path):
     from streamlit.testing.v1 import AppTest
+
     monkeypatch.setattr("core.config.DB_PATH", tmp_path / "none.db")
     monkeypatch.setenv("AGENTSENTINEL_PUBLIC", "1")
     at = AppTest.from_file(APP, default_timeout=30).run()
@@ -125,6 +169,7 @@ def test_public_mode_hides_path_input(monkeypatch, tmp_path):
 def test_public_mode_seeds_demo_without_docker(monkeypatch, tmp_path):
     """Streamlit Community Cloud: no demo DB env, no log -> labelled demo data is generated."""
     from streamlit.testing.v1 import AppTest
+
     monkeypatch.setattr("core.config.DB_PATH", tmp_path / "none.db")
     monkeypatch.delenv("AGENTSENTINEL_DEMO_DB", raising=False)
     monkeypatch.setenv("AGENTSENTINEL_PUBLIC", "1")

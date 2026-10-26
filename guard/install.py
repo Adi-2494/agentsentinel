@@ -3,6 +3,7 @@
 Usage: python guard/install.py [--cursor] /path/to/project
 Existing settings and other hooks are kept; re-running is safe.
 """
+
 import json
 import sys
 from pathlib import Path
@@ -60,8 +61,7 @@ def install(project: Path) -> Path:
     for event, matcher in (("PreToolUse", MATCHER), ("PostToolUse", POST_MATCHER)):
         groups = settings.setdefault("hooks", {}).setdefault(event, [])
         # drop any older AgentSentinel entry, then add the current one
-        groups[:] = [g for g in groups
-                     if not any("claude_hook.py" in h.get("command", "") for h in g.get("hooks", []))]
+        groups[:] = [g for g in groups if not any("claude_hook.py" in h.get("command", "") for h in g.get("hooks", []))]
         groups.append({"matcher": matcher, "hooks": [{"type": "command", "command": cmd}]})
     settings_path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
     return settings_path

@@ -1,4 +1,5 @@
 """Shared result type for every detector."""
+
 from dataclasses import asdict, dataclass
 
 SEVERITY_ORDER = {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}

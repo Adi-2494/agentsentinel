@@ -3,6 +3,7 @@
 Values come from environment variables, falling back to a local `.env` file
 (never committed) and then to safe defaults.
 """
+
 import os
 from pathlib import Path
 
@@ -40,18 +41,43 @@ DB_PATH = Path(os.getenv("AGENTSENTINEL_DB", ROOT / "data" / "agentsentinel.db")
 # --- Live Guard ----------------------------------------------------------
 # Files the AI must never read (glob patterns, matched against the path).
 PROTECTED_FILE_PATTERNS = [
-    ".env", ".env.*", "*.env",
-    "*.pem", "*.key", "*.p12", "*.pfx",
-    "id_rsa*", "id_ed25519*", "id_ecdsa*", "id_dsa*",
-    "*/.ssh/*", ".ssh/*",
-    "*/.aws/credentials", "*/.aws/config",
-    "*/.config/gcloud/*", "*/.azure/*",
-    "*/.kube/config", "*/.docker/config.json",
-    ".netrc", "*/.netrc", ".npmrc", "*/.npmrc", ".pypirc", "*/.pypirc",
-    "credentials.json", "service-account*.json",
+    ".env",
+    ".env.*",
+    "*.env",
+    "*.pem",
+    "*.key",
+    "*.p12",
+    "*.pfx",
+    "id_rsa*",
+    "id_ed25519*",
+    "id_ecdsa*",
+    "id_dsa*",
+    "*/.ssh/*",
+    ".ssh/*",
+    "*/.aws/credentials",
+    "*/.aws/config",
+    "*/.config/gcloud/*",
+    "*/.azure/*",
+    "*/.kube/config",
+    "*/.docker/config.json",
+    ".netrc",
+    "*/.netrc",
+    ".npmrc",
+    "*/.npmrc",
+    ".pypirc",
+    "*/.pypirc",
+    "credentials.json",
+    "service-account*.json",
     # also common on Windows (and elsewhere)
-    "*.ppk", ".git-credentials", "*/.git-credentials", ".pgpass", "*/.pgpass", "*.kdbx",
-    "*/gcloud/credentials.db", "*/gcloud/access_tokens.db", "*/gcloud/application_default_credentials.json",
+    "*.ppk",
+    ".git-credentials",
+    "*/.git-credentials",
+    ".pgpass",
+    "*/.pgpass",
+    "*.kdbx",
+    "*/gcloud/credentials.db",
+    "*/gcloud/access_tokens.db",
+    "*/gcloud/application_default_credentials.json",
     "*/gcloud/legacy_credentials/*",
 ]
 # Template files that look protected but are safe to read.
@@ -59,11 +85,12 @@ PROTECTED_FILE_EXCEPTIONS = [".env.example", ".env.sample", ".env.template"]
 
 # Hosts that commands may send data to without being flagged.
 ALLOWED_HOSTS = [
-    h.strip() for h in os.getenv(
+    h.strip()
+    for h in os.getenv(
         "ALLOWED_HOSTS",
-        "github.com,api.github.com,pypi.org,files.pythonhosted.org,"
-        "registry.npmjs.org,localhost,127.0.0.1",
-    ).split(",") if h.strip()
+        "github.com,api.github.com,pypi.org,files.pythonhosted.org,registry.npmjs.org,localhost,127.0.0.1",
+    ).split(",")
+    if h.strip()
 ]
 
 # --- Merge Gate ----------------------------------------------------------

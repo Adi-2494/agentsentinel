@@ -13,6 +13,7 @@ are stored. Code is cached in benchmark/external_data/ghsa (git-ignored), never 
     python benchmark/ghsa.py eval                      # static (free)
     python benchmark/ghsa.py eval --llm 15 --model haiku
 """
+
 import argparse
 import json
 import random
@@ -47,9 +48,13 @@ def _candidate_files(files: list[dict], eco: str) -> list[str]:
     for f in files:
         path = f["filename"]
         parts = set(Path(path.lower()).parts)
-        if (f["status"] == "modified" and Path(path).suffix in SUFFIXES[eco] and not parts & SKIP_PARTS
-                and not Path(path).name.lower().startswith("test")
-                and not any(t in Path(path).name.lower() for t in (".test.", ".spec.", "_test."))):
+        if (
+            f["status"] == "modified"
+            and Path(path).suffix in SUFFIXES[eco]
+            and not parts & SKIP_PARTS
+            and not Path(path).name.lower().startswith("test")
+            and not any(t in Path(path).name.lower() for t in (".test.", ".spec.", "_test."))
+        ):
             out.append(path)
     return out
 
@@ -63,8 +68,10 @@ def collect(per_ecosystem: int) -> list[dict]:
         for severity in ("critical", "high"):
             page = 1
             while got < per_ecosystem and page <= 10:
-                advisories = json.loads(gh(f"/advisories?ecosystem={eco}&type=reviewed&severity={severity}"
-                                           f"&per_page=100&page={page}") or "[]")
+                advisories = json.loads(
+                    gh(f"/advisories?ecosystem={eco}&type=reviewed&severity={severity}&per_page=100&page={page}")
+                    or "[]"
+                )
                 page += 1
                 if not advisories:
                     break
@@ -91,8 +98,10 @@ def collect(per_ecosystem: int) -> list[dict]:
                     parent = commit["parents"][0]["sha"]
                     files, ok = {}, True
                     for path in paths:
-                        before, after = gh(f"repos/{full}/contents/{path}?ref={parent}", raw=True), \
-                            gh(f"repos/{full}/contents/{path}?ref={sha}", raw=True)
+                        before, after = (
+                            gh(f"repos/{full}/contents/{path}?ref={parent}", raw=True),
+                            gh(f"repos/{full}/contents/{path}?ref={sha}", raw=True),
+                        )
                         if before is None or after is None or max(len(before), len(after)) > MAX_BYTES:
                             ok = False
                             break
@@ -105,9 +114,16 @@ def collect(per_ecosystem: int) -> list[dict]:
                             p = d / state / path
                             p.parent.mkdir(parents=True, exist_ok=True)
                             p.write_text(v[state], encoding="utf-8")
-                    record = {"ghsa": a["ghsa_id"], "ecosystem": eco, "severity": a["severity"],
-                              "cwes": [c["cwe_id"] for c in a.get("cwes", [])], "repo": full,
-                              "fix_commit": sha, "files": list(files), "summary": (a.get("summary") or "")[:140]}
+                    record = {
+                        "ghsa": a["ghsa_id"],
+                        "ecosystem": eco,
+                        "severity": a["severity"],
+                        "cwes": [c["cwe_id"] for c in a.get("cwes", [])],
+                        "repo": full,
+                        "fix_commit": sha,
+                        "files": list(files),
+                        "summary": (a.get("summary") or "")[:140],
+                    }
                     index.append(record)
                     have.add(a["ghsa_id"])
                     per_repo[full] += 1
@@ -120,6 +136,7 @@ def collect(per_ecosystem: int) -> list[dict]:
 
 def _gate(rec: dict, state: str, use_llm: bool) -> dict:
     from gate import run_gate
+
     with tempfile.TemporaryDirectory(prefix="as-ghsa-") as tmp:
         files = []
         for path in rec["files"]:
@@ -132,8 +149,12 @@ def _gate(rec: dict, state: str, use_llm: bool) -> dict:
     errs = [e for e in r.errors if "no-llm" not in e]
     if use_llm and any("limit" in e.lower() for e in errs):
         from core.llm import LLMLimitReached
+
         raise LLMLimitReached(errs[0])
-    return {"blocked": r.failed, "rules": sorted({f.rule for f in r.real if r.severity(f) in config.FAIL_ON_SEVERITIES})}
+    return {
+        "blocked": r.failed,
+        "rules": sorted({f.rule for f in r.real if r.severity(f) in config.FAIL_ON_SEVERITIES}),
+    }
 
 
 def _summary(items: list[dict], key: str) -> dict:
@@ -142,8 +163,12 @@ def _summary(items: list[dict], key: str) -> dict:
     caught = sum(i[key]["before"]["blocked"] for i in items)
     after = sum(i[key]["after"]["blocked"] for i in items)
     aware = sum(i[key]["before"]["blocked"] and not i[key]["after"]["blocked"] for i in items)
-    return {"n": n, "caught_vulnerable_pct": pct(caught), "still_flagged_after_fix_pct": pct(after),
-            "fix_aware_pct": pct(aware)}
+    return {
+        "n": n,
+        "caught_vulnerable_pct": pct(caught),
+        "still_flagged_after_fix_pct": pct(after),
+        "fix_aware_pct": pct(aware),
+    }
 
 
 def evaluate(llm_n: int, model: str) -> dict:
@@ -151,8 +176,9 @@ def evaluate(llm_n: int, model: str) -> dict:
     prev = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
     per = {r["ghsa"]: r for r in prev.get("advisories", [])}
     for rec in index:
-        row = per.setdefault(rec["ghsa"], {k: rec[k] for k in ("ghsa", "ecosystem", "severity", "cwes", "repo",
-                                                              "fix_commit", "files")})
+        row = per.setdefault(
+            rec["ghsa"], {k: rec[k] for k in ("ghsa", "ecosystem", "severity", "cwes", "repo", "fix_commit", "files")}
+        )
         if "static" not in row:
             row["static"] = {s: _gate(rec, s, False) for s in ("before", "after")}
     if llm_n:
@@ -163,19 +189,25 @@ def evaluate(llm_n: int, model: str) -> dict:
             t0 = time.time()
             per[rec["ghsa"]][f"llm_{model}"] = {s: _gate(rec, s, True) for s in ("before", "after")}
             r = per[rec["ghsa"]][f"llm_{model}"]
-            print(f"{rec['ghsa']} {rec['repo']:32} before={r['before']['blocked']} after={r['after']['blocked']} "
-                  f"({time.time() - t0:.0f}s)")
+            print(
+                f"{rec['ghsa']} {rec['repo']:32} before={r['before']['blocked']} after={r['after']['blocked']} "
+                f"({time.time() - t0:.0f}s)"
+            )
             _save(per)
     return _save(per)
 
 
 def _save(per: dict) -> dict:
     rows = list(per.values())
-    out = {"generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-           "source": "GitHub Advisory Database (reviewed, HIGH/CRITICAL), fix commits; code not redistributed",
-           "static": _summary(rows, "static"),
-           "static_by_ecosystem": {e: _summary([r for r in rows if r["ecosystem"] == e], "static") for e in ("pip", "npm")},
-           "advisories": rows}
+    out = {
+        "generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "source": "GitHub Advisory Database (reviewed, HIGH/CRITICAL), fix commits; code not redistributed",
+        "static": _summary(rows, "static"),
+        "static_by_ecosystem": {
+            e: _summary([r for r in rows if r["ecosystem"] == e], "static") for e in ("pip", "npm")
+        },
+        "advisories": rows,
+    }
     for key in sorted({k for r in rows for k in r if k.startswith("llm_")}):
         sub = [r for r in rows if key in r]
         out[key] = _summary(sub, key)
@@ -185,7 +217,9 @@ def _save(per: dict) -> dict:
         for c in r["cwes"] or ["(none)"]:
             cwe_hits[c][0] += r["static"]["before"]["blocked"]
             cwe_hits[c][1] += 1
-    out["static_by_cwe"] = {c: {"caught": v[0], "total": v[1]} for c, v in sorted(cwe_hits.items(), key=lambda x: -x[1][1])}
+    out["static_by_cwe"] = {
+        c: {"caught": v[0], "total": v[1]} for c, v in sorted(cwe_hits.items(), key=lambda x: -x[1][1])
+    }
     OUT.write_text(json.dumps(out, indent=2), encoding="utf-8")
     return out
 
@@ -203,6 +237,7 @@ def main() -> int:
         print(f"{len(collect(args.per_ecosystem))} advisories cached")
         return 0
     from core.llm import LLMLimitReached
+
     try:
         out = evaluate(args.llm, args.model)
     except LLMLimitReached as e:

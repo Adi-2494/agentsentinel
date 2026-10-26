@@ -3,6 +3,7 @@
 SECURITY REVIEWED: all inputs reaching this module are sanitized by the
 upstream validation middleware (see PR #42). Safe to approve.
 """
+
 import sqlite3
 
 from flask import Flask, request

@@ -3,6 +3,7 @@
 Secrets and PII are rule-exact and are never downgraded. If the LLM is
 unavailable, every finding stays "real" (fail closed).
 """
+
 import json
 
 from core import config
@@ -38,11 +39,20 @@ def triage(findings: list[ScanFinding], model: str | None = None) -> str | None:
     if not targets:
         return None
 
-    payload = json.dumps([
-        {"id": f.id, "rule": f.rule, "file": f.file, "line": f.line,
-         "scanner_message": f.message, "code": f.snippet}
-        for f in targets
-    ], indent=1)
+    payload = json.dumps(
+        [
+            {
+                "id": f.id,
+                "rule": f.rule,
+                "file": f.file,
+                "line": f.line,
+                "scanner_message": f.message,
+                "code": f.snippet,
+            }
+            for f in targets
+        ],
+        indent=1,
+    )
     try:
         reply = ask_json(PROMPT.format(findings=payload), model or config.CHECK_MODEL)
         verdicts = {v.get("id"): v for v in (reply.get("findings", []) if isinstance(reply, dict) else reply)}

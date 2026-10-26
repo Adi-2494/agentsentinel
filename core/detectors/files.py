@@ -1,4 +1,5 @@
 """Protected-path check (A1 secret file lock), shared by the guard and commands."""
+
 import fnmatch
 import os
 import re
@@ -38,9 +39,13 @@ def _protected(norm: str) -> bool:
 
 def check_path(path: str) -> list[Finding]:
     if is_protected_path(path):
-        return [Finding(
-            rule="protected_file", category="file", severity="CRITICAL",
-            message=f"Access to secret/credential file blocked: {path}",
-            preview=path,
-        )]
+        return [
+            Finding(
+                rule="protected_file",
+                category="file",
+                severity="CRITICAL",
+                message=f"Access to secret/credential file blocked: {path}",
+                preview=path,
+            )
+        ]
     return []

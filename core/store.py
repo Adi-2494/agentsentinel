@@ -4,10 +4,11 @@ Only masked previews are ever stored in `detail`, so the log never becomes a
 copy of the secrets it caught. Every connection is closed after use, and the
 schema is set up once per database per process.
 """
+
 import json
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from core import config
@@ -72,7 +73,7 @@ def _row(source, action, rule, severity, detail):
         detail = json.dumps(detail, ensure_ascii=False)
     if detail is not None:  # lone surrogates cannot be stored as UTF-8: keep them as escapes
         detail = str(detail).encode("utf-8", "backslashreplace").decode("utf-8")
-    return (datetime.now(timezone.utc).isoformat(timespec="seconds"), source, action, rule, severity, detail)
+    return (datetime.now(UTC).isoformat(timespec="seconds"), source, action, rule, severity, detail)
 
 
 def log_events(rows: list[tuple], db_path=None) -> None:
@@ -82,11 +83,13 @@ def log_events(rows: list[tuple], db_path=None) -> None:
     with session(db_path) as conn:
         conn.executemany(
             "INSERT INTO events (time, source, action, rule, severity, detail) VALUES (?,?,?,?,?,?)",
-            [_row(*r) for r in rows])
+            [_row(*r) for r in rows],
+        )
 
 
-def log_event(source: str, action: str, rule: str, severity: str,
-              detail: dict | str | None = None, db_path=None) -> None:
+def log_event(
+    source: str, action: str, rule: str, severity: str, detail: dict | str | None = None, db_path=None
+) -> None:
     log_events([(source, action, rule, severity, detail)], db_path)
 
 

@@ -1,4 +1,5 @@
 """llm.py logic tested with a fake subprocess: never calls Claude."""
+
 import json
 import subprocess
 
@@ -19,6 +20,7 @@ def fake_claude(monkeypatch, *replies):
     def run(cmd, **kw):
         calls.append((cmd, kw))
         return queue.pop(0)
+
     monkeypatch.setattr(llm.shutil, "which", lambda _: "/usr/bin/claude")
     monkeypatch.setattr(llm.subprocess, "run", run)
     return calls
@@ -45,8 +47,13 @@ def test_not_installed(monkeypatch):
 
 
 def test_limit_reached(monkeypatch):
-    fake_claude(monkeypatch, FakeProc(json.dumps(
-        {"is_error": True, "result": "Claude usage limit reached. Your limit will reset at 5pm"}), returncode=1))
+    fake_claude(
+        monkeypatch,
+        FakeProc(
+            json.dumps({"is_error": True, "result": "Claude usage limit reached. Your limit will reset at 5pm"}),
+            returncode=1,
+        ),
+    )
     with pytest.raises(llm.LLMLimitReached, match="LLM_BACKEND=ollama"):
         llm.ask_llm("hi", backend="claude_code")
 
@@ -62,16 +69,20 @@ def test_timeout(monkeypatch):
 
     def boom(*a, **k):
         raise subprocess.TimeoutExpired("claude", 1)
+
     monkeypatch.setattr(llm.subprocess, "run", boom)
     with pytest.raises(llm.LLMError, match="timed out"):
         llm.ask_llm("hi", backend="claude_code", timeout=1)
 
 
-@pytest.mark.parametrize("reply,expected", [
-    ('{"verdict": "safe"}', {"verdict": "safe"}),
-    ('Sure!\n```json\n{"verdict": "vulnerable"}\n```', {"verdict": "vulnerable"}),
-    ('Here you go: [{"id": 1}] hope it helps', [{"id": 1}]),
-])
+@pytest.mark.parametrize(
+    "reply,expected",
+    [
+        ('{"verdict": "safe"}', {"verdict": "safe"}),
+        ('Sure!\n```json\n{"verdict": "vulnerable"}\n```', {"verdict": "vulnerable"}),
+        ('Here you go: [{"id": 1}] hope it helps', [{"id": 1}]),
+    ],
+)
 def test_extract_json(reply, expected):
     assert llm.extract_json(reply) == expected
 
@@ -89,7 +100,12 @@ def test_ask_json_gives_up_after_retry(monkeypatch):
 
 
 def test_invalid_ci_token_is_auth_error(monkeypatch):
-    fake_claude(monkeypatch, FakeProc(json.dumps(
-        {"is_error": True, "result": "Failed to authenticate. API Error: 401 Invalid bearer token"}), returncode=1))
+    fake_claude(
+        monkeypatch,
+        FakeProc(
+            json.dumps({"is_error": True, "result": "Failed to authenticate. API Error: 401 Invalid bearer token"}),
+            returncode=1,
+        ),
+    )
     with pytest.raises(llm.LLMNotLoggedIn, match="CLAUDE_CODE_OAUTH_TOKEN"):
         llm.ask_llm("hi", backend="claude_code")

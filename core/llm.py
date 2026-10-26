@@ -8,6 +8,7 @@ Security: Claude runs with every tool disabled (`--tools ""`) and no MCP
 servers, so untrusted code inside a prompt cannot make it run commands or read
 files. It can only return text.
 """
+
 import json
 import re
 import shutil
@@ -74,15 +75,18 @@ def _classify_error(text: str) -> LLMError:
 def _ask_claude_code(prompt: str, model: str, system: str, timeout: int) -> str:
     exe = shutil.which("claude")
     if not exe:
-        raise LLMNotInstalled(
-            "Claude Code is not installed. Run: npm install -g @anthropic-ai/claude-code"
-        )
+        raise LLMNotInstalled("Claude Code is not installed. Run: npm install -g @anthropic-ai/claude-code")
     cmd = [
-        exe, "-p",
-        "--model", model,
-        "--output-format", "json",
-        "--system-prompt", system,
-        "--tools", "",
+        exe,
+        "-p",
+        "--model",
+        model,
+        "--output-format",
+        "json",
+        "--system-prompt",
+        system,
+        "--tools",
+        "",
         "--strict-mcp-config",
         "--no-session-persistence",
     ]
@@ -90,8 +94,14 @@ def _ask_claude_code(prompt: str, model: str, system: str, timeout: int) -> str:
     with tempfile.TemporaryDirectory(prefix="agentsentinel-llm-") as cwd:
         try:
             proc = subprocess.run(
-                cmd, input=prompt, capture_output=True, text=True,
-                timeout=timeout, cwd=cwd, encoding="utf-8", errors="replace"
+                cmd,
+                input=prompt,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd=cwd,
+                encoding="utf-8",
+                errors="replace",
             )
         except subprocess.TimeoutExpired as e:
             raise LLMError(f"Claude Code timed out after {timeout}s") from e
@@ -99,8 +109,8 @@ def _ask_claude_code(prompt: str, model: str, system: str, timeout: int) -> str:
     raw = proc.stdout.strip()
     try:
         data = json.loads(raw)
-    except json.JSONDecodeError:
-        raise _classify_error(proc.stderr or raw or f"exit code {proc.returncode}")
+    except json.JSONDecodeError as e:
+        raise _classify_error(proc.stderr or raw or f"exit code {proc.returncode}") from e
 
     result = data.get("result") or ""
     if data.get("is_error") or proc.returncode != 0:
@@ -109,20 +119,25 @@ def _ask_claude_code(prompt: str, model: str, system: str, timeout: int) -> str:
 
 
 def _ask_ollama(prompt: str, model: str, system: str, timeout: int) -> str:
-    body = json.dumps({
-        "model": model, "prompt": prompt, "system": system, "stream": False,
-    }).encode()
-    req = urllib.request.Request(
-        f"{config.OLLAMA_URL}/api/generate", data=body,
+    body = json.dumps(
+        {
+            "model": model,
+            "prompt": prompt,
+            "system": system,
+            "stream": False,
+        }
+    ).encode()
+    req = urllib.request.Request(  # noqa: S310 - scheme validated in core.config
+        f"{config.OLLAMA_URL}/api/generate",
+        data=body,
         headers={"Content-Type": "application/json"},
     )
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        # OLLAMA_URL is validated to be http(s) in core.config (no file:// or custom schemes)
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
             return json.loads(resp.read())["response"]
     except urllib.error.URLError as e:
-        raise LLMNotInstalled(
-            f"Ollama is not reachable at {config.OLLAMA_URL}. Run `ollama serve`. ({e})"
-        ) from e
+        raise LLMNotInstalled(f"Ollama is not reachable at {config.OLLAMA_URL}. Run `ollama serve`. ({e})") from e
 
 
 def ask_llm(
