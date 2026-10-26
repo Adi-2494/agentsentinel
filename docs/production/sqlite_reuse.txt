@@ -1,0 +1,22 @@
+SQLite connection reuse (core/store.py): evidence
+=================================================
+Who writes the activity log: the hooks and the gate start a new process per action and
+write once (reuse cannot help them). The MCP server is long-running and writes on every
+tool call; that is where reuse matters.
+
+Measured, 500 writes, median per write:
+  fresh connection every write (before)   0.736 ms
+  reused connection (after)               0.072 ms   (10x less; about 0.66 ms saved per MCP call)
+
+Safety, each with a test (tests/test_store_reuse.py):
+  - 100 writes open exactly 1 connection
+  - one connection per thread: 8 threads x 50 writes = all rows, no errors
+  - an SQLite error drops the connection; the next write reconnects (1 new connection)
+  - a crash mid-write is rolled back
+  - at most MAX_CACHED (4) databases open per thread; close_all() closes them
+  - the file is re-identified (device + inode) on every use. A database that was replaced
+    gets a new connection. WITHOUT that check, the write after a replace fails with
+    "sqlite3.OperationalError: no such table: events", and since logging errors are
+    swallowed by the hooks, the log entry would be silently lost.
+  - the existing robustness tests still hold: 200 writes leave <= 3 extra file descriptors
+    open (one connection: db + WAL + shm), schema setup runs once per database.

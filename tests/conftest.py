@@ -47,3 +47,13 @@ def _no_real_llm_calls(request, monkeypatch):
 
     monkeypatch.setattr(subprocess, "run", guarded_run)
     monkeypatch.setattr(urllib.request, "urlopen", guarded_urlopen)
+
+
+@pytest.fixture(autouse=True)
+def _close_cached_db_connections():
+    """The activity log reuses connections; close them after each test so temp folders can be
+    deleted (Windows refuses to delete an open file) and tests never share a connection."""
+    yield
+    from core import store
+
+    store.close_all()
