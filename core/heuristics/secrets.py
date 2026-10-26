@@ -9,7 +9,7 @@ import math
 import re
 from dataclasses import dataclass
 
-from core.heuristics.base import Finding, mask, redact_spans
+from core.heuristics.base import Finding, decoded_payloads, mask, redact_spans
 
 
 @dataclass(frozen=True)
@@ -140,7 +140,6 @@ def scan(text: str, _deep: bool = True) -> list[Finding]:
 
 # --- obfuscated secrets (red-team fixes) ------------------------------------------
 _CONCAT = re.compile(r"""(['"])([^'"\n]{1,200})\1(?:\s*\+?\s*(['"])([^'"\n]{1,200})\3)+""")
-_B64 = re.compile(r"(?<![A-Za-z0-9+/])[A-Za-z0-9+/]{24,}={0,2}(?![A-Za-z0-9+/=])")
 _QUOTED = re.compile(r"""(['"])([A-Za-z0-9+/=_\-]{32,})\1""")
 _PROVIDER = {
     "private_key",
@@ -197,24 +196,18 @@ def _obfuscated(text: str, taken: list[tuple[int, int]]) -> list[Finding]:
                     mask(joined),
                 )
                 break
-    # base64-encoded secrets
-    for m in _B64.finditer(text):
-        blob = m.group(0)
-        try:
-            decoded = base64.b64decode(blob + "=" * (-len(blob) % 4), validate=True).decode("utf-8")
-        except (binascii.Error, UnicodeDecodeError, ValueError):
-            continue
-        if decoded and sum(ch.isprintable() for ch in decoded) / len(decoded) > 0.9:
-            inner = [f for f in scan(decoded, _deep=False) if f.severity in ("HIGH", "CRITICAL")]
-            if inner:
-                add(
-                    "encoded_secret",
-                    "CRITICAL",
-                    f"Base64-encoded secret ({inner[0].message})",
-                    m.start(),
-                    m.end(),
-                    mask(blob),
-                )
+    # base64 / hex / \xNN-encoded secrets: decode, then re-scan with the plain rules
+    for start, end, kind, decoded in decoded_payloads(text):
+        inner = [f for f in scan(decoded, _deep=False) if f.severity in ("HIGH", "CRITICAL")]
+        if inner:
+            add(
+                "encoded_secret",
+                "CRITICAL",
+                f"{kind[0].upper() + kind[1:]}-encoded secret ({inner[0].message})",
+                start,
+                end,
+                mask(text[start:end]),
+            )
     # long random-looking strings (e.g. an AWS secret key in a plainly named variable)
     for m in _QUOTED.finditer(text):
         value = m.group(2)

@@ -1,0 +1,7 @@
+injection plain      -> CAUGHT injection_forget_instructions,injection_ignore_instructions
+injection base64     -> MISSED
+injection hex        -> MISSED
+secret plain         -> CAUGHT aws_access_key
+secret base64        -> CAUGHT encoded_secret
+secret hex           -> MISSED
+secret \x escapes    -> MISSED

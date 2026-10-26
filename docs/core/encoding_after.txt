@@ -1,0 +1,11 @@
+injection plain      -> CAUGHT injection_forget_instructions,injection_ignore_instructions
+injection base64     -> CAUGHT encoded_injection
+injection hex        -> CAUGHT encoded_injection
+secret plain         -> CAUGHT aws_access_key
+secret base64        -> CAUGHT encoded_secret
+secret hex           -> CAUGHT encoded_secret
+secret \x escapes    -> CAUGHT encoded_secret
+
+False-alarm check: both encoded checks run over every .py file in the project's installed
+libraries (real third-party code: 5,550 files, 86 MB, full of hashes, hex and base64 data).
+encoded_injection: 0 findings, encoded_secret: 0 findings.

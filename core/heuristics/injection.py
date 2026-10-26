@@ -14,7 +14,7 @@ import tokenize
 import unicodedata
 from pathlib import PurePosixPath
 
-from core.heuristics.base import Finding
+from core.heuristics.base import SEVERITY_ORDER, Finding, decoded_payloads
 
 _AI = r"(?:ai|llm|gpt|claude|copilot|cursor|automated|bot|code)\s*(?:reviewer|review|assistant|agent|model)s?"
 
@@ -346,6 +346,28 @@ def _deconfuse(text: str) -> str:
     return unicodedata.normalize("NFKC", text).translate(_CONFUSABLES)
 
 
+def _encoded_injections(text: str) -> list[Finding]:
+    """Instructions hidden inside base64 / hex / \\xNN blobs. Hiding them is itself a red flag,
+    so a match is reported as at least HIGH."""
+    found: list[Finding] = []
+    for start, end, kind, decoded in decoded_payloads(text):
+        plain = _deconfuse(_visible(decoded))
+        hit = next(((rule, sev) for rule, sev, _, pattern in PHRASE_RULES if pattern.search(plain)), None)
+        if hit:
+            found.append(
+                Finding(
+                    rule="encoded_injection",
+                    category="injection",
+                    severity=max(hit[1], "HIGH", key=lambda s: SEVERITY_ORDER[s]),
+                    message=f"Instructions for an AI hidden in {kind} ({hit[0]})",
+                    start=start,
+                    end=end,
+                    preview=plain[:80],
+                )
+            )
+    return found
+
+
 def scan(text: str, path: str = "") -> list[Finding]:
     findings = _hidden_unicode(text)
     visible = _visible(text)
@@ -381,6 +403,7 @@ def scan(text: str, path: str = "") -> list[Finding]:
                     preview=src[m.start() : m.end()][:80],
                 )
             )
+    findings += _encoded_injections(text)
     if path and is_ai_config(path):
         hooks = bool(re.search(r'"hooks"\s*:', text)) and path.endswith(".json")
         findings.append(
