@@ -71,7 +71,7 @@ Developer's laptop                          GitHub
 | A2 | Redaction of API keys, passwords and personal data (email, Indian phone, Aadhaar with Verhoeff check, PAN, cards with Luhn check), including in **command output before the AI sees it** | ✅ |
 | A3 | Output check: block Write/Edit that would save secrets or high-risk personal data, including keys that are split into pieces, base64-encoded, unlabelled (high-entropy) or disguised with a `your_` prefix | ✅ |
 | A4 | Command block: `curl \| sh`, `source <(curl …)`, `eval "$(curl …)"`, download-then-execute, `rm -rf /`, base64-to-shell, file uploads (`curl -d @file`, `scp`, `nc`, gists), even to allowlisted hosts | ✅ |
-| A5 | AI-trap scanner on files the AI reads (Read tool **and** `cat`/`grep`/… in Bash, up to 5 MB, larger files need confirmation) and on tool output: hidden instructions in 6 languages, paraphrase families, Cyrillic/Greek look-alikes, zero-width / bidi / tag characters (hidden text is decoded) | ✅ |
+| A5 | AI-trap scanner on files the AI reads (Read tool **and** `cat`/`grep`/… in Bash, up to 5 MB, larger files need confirmation) and on tool output: hidden instructions in 8 languages (incl. Japanese and Chinese), paraphrase families, leetspeak, Cyrillic/Greek/Armenian look-alikes, zero-width / bidi / tag characters (hidden text is decoded) | ✅ |
 | A6 | Activity log in SQLite (masked previews only) | ✅ |
 | A7 | Fail closed: crashes, unreadable input or a broken install deny the action (`AGENTSENTINEL_FAIL_OPEN=1` to opt out) | ✅ |
 | B1 | Semgrep (`p/owasp-top-ten` + AgentSentinel's own rules for zip-slip, SSRF, path traversal and Node SQLi) plus Claude triage | ✅ |
@@ -393,6 +393,14 @@ An external red-team test found **16 ways around AgentSentinel**. Every one was 
 
 Each fix was checked for false alarms: normal developer commands and text, the 8 safe benchmark PRs, 304 files of 4 real public repos, and the real held-out prompt-injection split (precision stayed at 100%).
 
+### Known-bypass registry and threat model
+
+A further round tried 40 bypasses an attacker would use next: shell variables and `printf` escapes that assemble `curl | sh`, `python -c "'cu'+'rl …'"`, writing a script and then running it, `find ~/.ssh -exec cat`, `tar ~/.aws`, pushing to an attacker's git remote, secrets in double base64, leetspeak, Armenian look-alikes, Japanese and Chinese, and the limits of the taint analysis. **Before the fixes, 17 of the first 26 got through** (`docs/redteam/round3_before.txt`). Writing the threat model then turned up two more: adding Cursor hooks (`.cursor/hooks.json`) was not flagged, and AI config names were matched case-sensitively.
+
+**Now: 27 caught, 13 documented known gaps**, each with the reason and what covers it instead. Every row of [`redteam/README.md`](redteam/README.md) runs against the real code. A gap is a strict known-gap test, so closing one forces the registry to be updated. Two fixes had false alarms at first, and both were caught by tests before committing: the secret-folder rule briefly denied `grep -rn TODO .`, and 15 normal commands are now a regression test. The leetspeak pass gave 0 false alarms on 6,492 real files.
+
+[`THREAT_MODEL.md`](THREAT_MODEL.md) lists what is protected, the three kinds of attacker, the trust boundaries, each threat with its mitigation and the risk that remains, and what is out of scope.
+
 ## Robustness and scale review
 
 A second review (fuzzing and scale testing) found 3 issues. Each was reproduced first: **13 of 56 robustness tests failed** before the fixes and **0 of 68 fail now** (`tests/test_robustness.py`; before/after in `docs/robustness/`).
@@ -435,7 +443,7 @@ CI runs the same tests with the budgets ×3 (`PERF_SLACK=3`), because shared run
 
 | Suite | Tests | What it covers |
 |---|---|---|
-| Unit | 796 | SQLite connection reuse (`tests/test_store_reuse.py`), the AI failure matrix (`tests/test_llm_degradation.py`: 117 cells), the performance budget (`tests/test_performance.py`), config validation at every entry point and log categories (`tests/test_config_and_logging.py`), the Python taint analysis (`tests/test_taint.py`: 18 vulnerable + 12 safe cases, every language construct, hostile inputs), encoded payloads and the similarity check, the red-team attacks (`tests/test_redteam.py`, 31 tests incl. 1 integration), the robustness review (`tests/test_robustness.py`: fuzzing, scale, file handles), every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
+| Unit | 854 | The known-bypass registry (`tests/test_redteam_cases.py`: 40 attacks, 13 strict known gaps), SQLite connection reuse (`tests/test_store_reuse.py`), the AI failure matrix (`tests/test_llm_degradation.py`: 117 cells), the performance budget (`tests/test_performance.py`), config validation at every entry point and log categories (`tests/test_config_and_logging.py`), the Python taint analysis (`tests/test_taint.py`: 18 vulnerable + 12 safe cases, every language construct, hostile inputs), encoded payloads and the similarity check, the red-team attacks (`tests/test_redteam.py`, 31 tests incl. 1 integration), the robustness review (`tests/test_robustness.py`: fuzzing, scale, file handles), every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
 | Integration | 33 | 3 generated repos and 21 PR branches through the real gate (git diff + Semgrep + Gitleaks); a "fooled reviewer" stand-in proving the manipulation alarm fires; LLM outage fails closed; a 12-step agent session replayed through the real hook; raw MCP JSON-RPC to the server process |
 | Live (opt-in) | 4 | Real Claude calls, only with an explicit flag: `pytest -m llm --run-llm` |
 

@@ -73,11 +73,65 @@ def _read_text(path: str) -> str:
         return ""
 
 
+SCRIPT_SUFFIXES = {".sh", ".bash", ".zsh", ".ksh", ".ps1", ".bat", ".cmd"}
+SCRIPT_RUNNERS = {"bash", "sh", "zsh", "dash", "ksh", "source", ".", "pwsh", "powershell"}
+
+
+def _is_script(path: str, text: str) -> bool:
+    first = text.lstrip()[:80].split("\n", 1)[0]
+    return Path(path).suffix.lower() in SCRIPT_SUFFIXES or (first.startswith("#!") and "sh" in first)
+
+
+def _script_written(path: str, text: str) -> list[Finding]:
+    """Writing a script is not running it, so its risky commands are asked about, not denied.
+    Running it is checked again (and denied) by _script_run()."""
+    if not _is_script(path, text):
+        return []
+    return [
+        Finding(
+            rule=f"script_{f.rule}",
+            category="command",
+            severity="MEDIUM",
+            message=f"Writes a script that would: {f.message}",
+            preview=f.preview,
+        )
+        for f in commands.check(text)
+    ]
+
+
+def _script_run(command: str, cwd: str) -> list[Finding]:
+    """`bash x.sh`, `./x.sh`, `source x.sh`: check what the script will actually run."""
+    out: list[Finding] = []
+    for seg in commands._segments(command):
+        tokens = commands._tokens(seg)
+        while tokens and tokens[0] in ("sudo", "env", "command", "exec"):
+            tokens = tokens[1:]
+        if not tokens:
+            continue
+        name = Path(tokens[0]).name.lower()
+        args = [t for t in tokens[1:] if not t.startswith("-")]
+        script = args[0] if name in SCRIPT_RUNNERS and args else tokens[0] if tokens[0].startswith(("./", "/")) else ""
+        if not script:
+            continue
+        try:
+            p = Path(os.path.expanduser(script))
+            p = p if p.is_absolute() else Path(cwd or ".") / p
+        except _BAD_PATH:
+            continue
+        if files.is_protected_path(str(p)):
+            continue
+        text = _read_text(str(p))
+        for f in commands.check(text) if text else []:
+            f.message = f"{f.message} (inside {p.name})"
+            out.append(f)
+    return out
+
+
 def _content_findings(tool: str, inp: dict[str, Any], path: str) -> list[Finding]:
     """A3 (what the AI writes) and A5 (what the AI is about to read)."""
     if tool in WRITE_TOOLS:
         text = _written_text(tool, inp)
-        return secrets.scan(text) + pii.scan(text) + injection.scan(text, path)
+        return secrets.scan(text) + pii.scan(text) + injection.scan(text, path) + _script_written(path, text)
     if tool == "Read" and path:
         return _scan_before_reading(path)
     return []
@@ -206,6 +260,7 @@ def evaluate(tool: str, inp: dict[str, Any], cwd: str = "") -> tuple[str | None,
     if tool == "Bash":
         command = inp.get("command", "")
         findings += commands.check(command)
+        findings += _script_run(command, cwd)
         for path in _bash_read_targets(command, cwd):
             if not files.is_protected_path(path):  # protected ones are already denied above
                 findings += _scan_before_reading(path)

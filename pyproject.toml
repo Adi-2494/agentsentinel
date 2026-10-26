@@ -25,6 +25,7 @@ ignore = [
 "benchmark/**" = ["S108", "S310"]
 "examples/**" = ["S"]  # deliberately vulnerable demo PRs
 "tests/fixtures/**" = ["S", "UP031", "UP032", "F841"]  # deliberately vulnerable taint cases
+"redteam/**" = ["S108", "E501"]  # attack strings (/tmp paths are only evaluated, never written)
 
 [tool.ruff.format]
 quote-style = "double"

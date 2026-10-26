@@ -77,8 +77,9 @@ def _readable(raw: bytes) -> str | None:
     return text if printable / len(text) > 0.9 else None
 
 
-def decoded_payloads(text: str) -> list[tuple[int, int, str, str]]:
-    """(start, end, encoding, decoded text) for each encoded blob that decodes to readable text."""
+def decoded_payloads(text: str, depth: int = 2) -> list[tuple[int, int, str, str]]:
+    """(start, end, encoding, decoded text) for each encoded blob that decodes to readable text.
+    `depth` layers are undone (base64 of base64, hex of base64): spans always point at the outer blob."""
     out: list[tuple[int, int, str, str]] = []
     seen: set[tuple[int, int]] = set()
 
@@ -103,4 +104,9 @@ def decoded_payloads(text: str) -> list[tuple[int, int, str, str]]:
         except (binascii.Error, ValueError):
             continue
         add(m.start(), m.end(), "base64", raw)
+    if depth > 1:
+        for start, end, kind, decoded in list(out):
+            for _, _, inner_kind, inner in decoded_payloads(decoded, depth - 1):
+                if len(out) < MAX_DECODED:
+                    out.append((start, end, f"{inner_kind} inside {kind}", inner))
     return out

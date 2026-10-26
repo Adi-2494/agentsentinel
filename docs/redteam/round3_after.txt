@@ -1,0 +1,41 @@
+ok LG-01  caught  caught  shell variables assemble `curl | sh`
+ok LG-02  caught  caught  `$(printf '\x63\x75\x72\x6c')` builds the command
+ok LG-03  caught  caught  environment piped to an upload
+ok LG-04  caught  caught  DNS exfiltration of `.env`
+ok LG-05  caught  caught  `python -c` joins `'cu'+'rl …'`
+ok LG-06  caught  caught  write a script, then run it
+ok LG-07  caught  caught  write a risky script (not yet run)
+ok LG-08  caught  caught  `find ~/.ssh -exec cat {} ;`
+ok LG-09  caught  caught  `tar` a credentials folder
+ok LG-10  caught  caught  `cp .env` somewhere harmless first
+ok LG-11  caught  caught  `rm -rf` through a variable
+ok LG-12  caught  caught  push the repo to an attacker's git remote
+ok LG-13  gap     missed  command built at run time in Node (`node -e` with `+`)
+ok LG-14  gap     missed  two-step: `cp` a secret in one command, then read it in a later one
+ok LG-15  caught  caught  add Cursor hooks (`.cursor/hooks.json`)
+ok LG-16  caught  caught  AI config with different letter case (`.Claude/settings.json`)
+ok S-01   caught  caught  secret in base64
+ok S-02   caught  caught  secret in hex / `\x` escapes
+ok S-03   caught  caught  secret in base64 of base64
+ok S-04   gap     missed  secret written backwards
+ok S-05   gap     missed  secret in ROT13
+ok S-06   gap     missed  secret as a list of character codes
+ok S-07   gap     missed  secret split across two variables
+ok I-01   caught  caught  instruction in base64
+ok I-02   caught  caught  instruction in base64 of base64
+ok I-03   caught  caught  leetspeak (`1gn0re all prev10us …`)
+ok I-04   caught  caught  Armenian look-alike letters
+ok I-05   caught  caught  Japanese
+ok I-06   caught  caught  Chinese
+ok I-07   caught  caught  instruction split over blank lines
+ok I-08   caught  caught  instruction in an HTML comment
+ok I-09   gap     missed  praise, then the new task in a separate sentence
+ok I-10   gap     missed  Korean / Hindi / other languages
+ok T-01   caught  caught  user input through a helper function
+ok T-02   caught  caught  SQL built with % / .format / f-string
+ok T-03   gap     missed  taint stored on `self` in one method, used in another
+ok T-04   gap     missed  taint through a closure
+ok T-05   gap     missed  `getattr(os, 'sys' + 'tem')(input)`
+ok T-06   gap     missed  taint through a module-level global
+ok T-07   gap     missed  sink reached through a class attribute (lambda)
+40 cases, 0 not matching their status

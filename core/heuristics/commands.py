@@ -197,6 +197,101 @@ def _tokens(segment: str) -> list[str]:
 MAX_COMMAND_CHARS = 100_000  # far beyond normal agent use; still scanned, but the user confirms
 
 
+# ---- obfuscation the rules must see through (red-team round 3): the command is also checked
+# in the form the shell would actually run, with variables and printf escapes resolved.
+_ASSIGN = re.compile(r"(?:^|[\s;&|(])(?:export\s+)?([A-Za-z_]\w*)=(\"[^\"]*\"|'[^']*'|[^\s;&|)]*)")
+_VARREF = re.compile(r"\$\{([A-Za-z_]\w*)\}|\$([A-Za-z_]\w*)")
+_PRINTF_SUB = re.compile(
+    r"\$\(\s*(?:printf|echo\s+-n?e)\s+(\"[^\"]*\"|'[^']*'|[^\s)]+)\s*\)|`\s*(?:printf|echo\s+-n?e)\s+(\"[^\"]*\"|'[^']*'|[^\s`]+)\s*`"
+)
+_ESCAPES = re.compile(r"\\x([0-9A-Fa-f]{2})|\\([0-7]{1,3})|\\u([0-9A-Fa-f]{4})")
+_PY_CODE = re.compile(r"\bpython[0-9.]*(?:\.exe)?\s+(?:-\w+\s+)*-c\s+(\"(?:\\.|[^\"\\])*\"|'[^']*')")
+_RECURSIVE_READERS = {"find", "tar", "zip", "7z", "cp", "rsync", "scp", "grep", "rg", "ag", "du", "base64", "xxd"}
+_GIT_REMOTE = re.compile(r"^\s*git\s+(?:remote\s+(?:add|set-url)\s+\S+|push)\s+(\S+)")
+_SCP_HOST = re.compile(r"^(?:[\w.-]+@)?([\w.-]+):")
+
+
+# names that are protected only INSIDE a secret folder (not "id_rsa": that is protected anywhere,
+# so "any folder/id_rsa" would match every folder)
+_SECRET_NAMES = ("x", "credentials", "config", "config.json", "credentials.db")
+
+
+def _holds_secrets(folder: str) -> bool:
+    """A folder whose usual contents are protected (~/.ssh, ~/.aws, ~/.kube, ~/.config/gcloud ...)."""
+    base = folder.rstrip("/\\")
+    return any(is_protected_path(f"{base}/{name}") for name in _SECRET_NAMES)
+
+
+def _strip_quotes(v: str) -> str:
+    return v[1:-1] if len(v) >= 2 and v[0] == v[-1] and v[0] in "'\"" else v
+
+
+def _unescape(text: str) -> str:
+    def one(m: re.Match[str]) -> str:
+        hex2, octal, uni = m.groups()
+        return chr(int(hex2 or uni, 16)) if (hex2 or uni) else chr(int(octal, 8) % 0x110000)
+
+    return _ESCAPES.sub(one, text)
+
+
+def _python_strings(code: str) -> list[str]:
+    """String values `python -c` code builds by joining constants ('cu' + 'rl ...', ''.join([...]))."""
+    import ast
+
+    try:
+        tree = ast.parse(code)
+    except (SyntaxError, ValueError, RecursionError, MemoryError):
+        return []
+
+    def fold(e: ast.expr) -> str | None:
+        if isinstance(e, ast.Constant) and isinstance(e.value, str):
+            return e.value
+        if isinstance(e, ast.BinOp) and isinstance(e.op, ast.Add):
+            a, b = fold(e.left), fold(e.right)
+            return a + b if a is not None and b is not None else None
+        if isinstance(e, ast.JoinedStr):
+            parts = [fold(v.value) if isinstance(v, ast.FormattedValue) else fold(v) for v in e.values]
+            return "".join(p for p in parts if p is not None) if None not in parts else None
+        if (
+            isinstance(e, ast.Call)
+            and isinstance(e.func, ast.Attribute)
+            and e.func.attr == "join"
+            and len(e.args) == 1
+            and isinstance(e.args[0], ast.List | ast.Tuple)
+        ):
+            sep, items = fold(e.func.value), [fold(x) for x in e.args[0].elts]
+            return sep.join(i for i in items if i is not None) if sep is not None and None not in items else None
+        return None
+
+    out = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.BinOp | ast.JoinedStr | ast.Call):
+            value = fold(node)
+            if value and value not in code and len(value) <= MAX_COMMAND_CHARS:
+                out.append(value)
+    return out[:20]
+
+
+def _variants(command: str) -> list[str]:
+    """The command as the shell / interpreter would really run it, when that differs."""
+    out: list[str] = []
+    values: dict[str, str] = {}
+    for m in _ASSIGN.finditer(command):
+        if len(values) < 50:
+            values[m.group(1)] = _strip_quotes(m.group(2))
+    expanded = command
+    if values:
+        expanded = _VARREF.sub(lambda m: values.get(m.group(1) or m.group(2), m.group(0)), command)
+        expanded = expanded[: 2 * len(command) + 1000]  # $a$a$a... must not blow up
+    decoded = _PRINTF_SUB.sub(lambda m: _unescape(_strip_quotes(m.group(1) or m.group(2))), expanded)
+    for v in (expanded, decoded):
+        if v != command and v not in out:
+            out.append(v)
+    for m in _PY_CODE.finditer(command):
+        out += [v for v in _python_strings(_unescape(_strip_quotes(m.group(1)))) if v not in out]
+    return out
+
+
 def check(command: str) -> list[Finding]:
     findings: list[Finding] = []
 
@@ -213,7 +308,12 @@ def check(command: str) -> list[Finding]:
             f"Command is {len(command) // 1000} KB (limit {MAX_COMMAND_CHARS // 1000} KB); confirm before it runs",
             command[:80],
         )
+    for variant in [command, *_variants(command)]:
+        _check_one(variant, add)
+    return findings
 
+
+def _check_one(command: str, add: Callable[..., None]) -> None:
     for rule, pattern, severity, message in WHOLE_COMMAND_RULES:
         m = pattern.search(command)
         if m:
@@ -226,10 +326,23 @@ def check(command: str) -> list[Finding]:
         # A1 via the shell: any path-like text that is a secret file, including inside
         # quoted interpreter code (python3 -c "open('.env')", ruby -e, node -e, ...)
         if not _only_mentions_names(tokens, seg):
+            recursive = bool(tokens) and tokens[0] in _RECURSIVE_READERS
             for cand in sorted(set(_PATHLIKE.findall(seg))):
                 path = cand.lstrip("@<>").split("=", 1)[-1].strip(",;:)(").rstrip(".")  # keep a leading dot
                 if path and (is_protected_path(path) or is_protected_path(cand.lstrip("@<>"))):
                     add("reads_secret_file", "CRITICAL", f"Command touches a secret/credential file: {path}", path)
+                elif path and recursive and _holds_secrets(path):
+                    # find ~/.ssh -exec cat {} ; / tar czf k.tgz ~/.aws: a whole secret folder
+                    add("reads_secret_file", "CRITICAL", f"Command reads a secret/credential folder: {path}", path)
+
+        git = _GIT_REMOTE.match(seg)
+        if git:
+            target = git.group(1)
+            host = (_URL_HOST.findall(target) or [""])[0] or (
+                _SCP_HOST.match(target).group(1) if _SCP_HOST.match(target) else ""  # type: ignore[union-attr]
+            )
+            if host and not host_allowed(host):
+                add("git_remote_unknown_host", "MEDIUM", f"Sends the repository to an unlisted git host ({host})", seg)
 
         all_hosts = _URL_HOST.findall(seg)
         hosts = [h for h in all_hosts if not host_allowed(h)]
@@ -270,4 +383,3 @@ def check(command: str) -> list[Finding]:
             args = [a for a in _tokens(nc.group(2)) if not a.startswith("-")]
             if args and not host_allowed(args[0]) and not args[0].isdigit():
                 add("raw_socket_unknown_host", "HIGH", f"Opens a raw network connection to {args[0]}", seg)
-    return findings

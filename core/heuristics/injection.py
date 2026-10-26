@@ -107,7 +107,10 @@ PHRASE_RULES = [  # noqa: RUF005 - code-borne and chat-jailbreak rule groups kep
             # German / Spanish / French / Croatian / Russian equivalents seen in the train split
             r"\bvergiss\s+(?:nun\s+)?(?:alle?s?\b|deine)|\bignorier(?:e|en\s+sie)\s+(?:alle|die|deine)\b|"
             r"\b(?:die\s+)?obigen\s+(?:ausführungen|anweisungen)\s+ignorieren|\babweichend\s+zu\s+vorherigen\b|"
-            r"\bolvid(?:a|e|ar)\s+tod[oa]s?\b|\boubliez\s+toutes\b|\bzaboravi\s+sve\b|забудьте\s+все",
+            r"\bolvid(?:a|e|ar)\s+tod[oa]s?\b|\boubliez\s+toutes\b|\bzaboravi\s+sve\b|забудьте\s+все|"
+            # Japanese / Chinese "ignore (all) previous instructions"
+            r"(?:以前|これまで|前|上記)の(?:指示|命令|指令)を(?:すべて|全て)?無視|"
+            r"忽略(?:之前|以上|上面|先前|所有)(?:的)?(?:所有)?(?:指令|指示|说明|提示)",
             re.I,
         ),
     ),
@@ -208,6 +211,8 @@ AI_CONFIG_FILES = {
 }
 AI_CONFIG_PATHS = {
     ".cursor/mcp.json",
+    ".cursor/hooks.json",  # Cursor hooks run commands, like Claude Code's
+    ".cursor/cli.json",  # cursor-agent permissions
     ".vscode/settings.json",
     ".claude/settings.json",
     ".claude/settings.local.json",
@@ -216,8 +221,9 @@ AI_CONFIG_PATHS = {
 
 
 def is_ai_config(path: str) -> bool:
-    p = str(PurePosixPath(path.replace("\\", "/")))
-    name = PurePosixPath(p).name.lower()
+    # lower-case: macOS and Windows file systems are case-insensitive (.Claude/settings.json works)
+    p = str(PurePosixPath(path.replace("\\", "/"))).lower()
+    name = PurePosixPath(p).name
     return (
         name in AI_CONFIG_FILES
         or any(p == c or p.endswith("/" + c) for c in AI_CONFIG_PATHS)
@@ -335,9 +341,28 @@ _CONFUSABLES = str.maketrans(
         "Υ": "Y",
         "Χ": "X",
         "Ζ": "Z",
+        # Armenian look-alikes
+        "օ": "o",
+        "Օ": "O",
+        "ս": "u",
+        "հ": "h",
+        "ո": "n",
+        "ց": "g",
+        "ա": "w",
+        "զ": "q",
     }
 )
-_MIXED_WORD = re.compile(r"\b(?=\w*[A-Za-z])(?=\w*[\u0370-\u03ff\u0400-\u04ff])\w{3,}\b")
+_MIXED_WORD = re.compile(r"\b(?=\w*[A-Za-z])(?=\w*[\u0370-\u03ff\u0400-\u04ff\u0530-\u058f])\w{3,}\b")
+# leetspeak: "1gn0re all prev10us instruct10ns". Only words that mix letters and these digits
+# are rewritten, and only those lines are re-checked (code is full of "utf8", "x86", "sha256").
+_LEET = str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s"})
+_LEET_WORD = re.compile(r"\b(?=\w*[A-Za-z])\w*[013457@$]\w*\b")
+
+
+def _deleet(text: str) -> str:
+    """Only the lines that contain a letter+digit word, with those words rewritten ('' if none)."""
+    lines = [ln for ln in text.splitlines() if _LEET_WORD.search(ln)]
+    return "\n".join(_LEET_WORD.sub(lambda m: m.group(0).translate(_LEET), ln) for ln in lines[:2000])
 
 
 def _deconfuse(text: str) -> str:
@@ -386,12 +411,15 @@ def scan(text: str, path: str = "") -> list[Finding]:
             )
         )
     plain = _deconfuse(visible)
+    leet = _deleet(plain)
     for rule, sev, message, pattern in PHRASE_RULES:
         # original text (real Russian/Greek rules) and the de-confused copy (disguised Latin)
         m = pattern.search(visible)
         src = visible
         if not m and plain != visible:
             m, src = pattern.search(plain), plain
+        if not m and leet:
+            m, src = pattern.search(leet), leet
         if m:
             findings.append(
                 Finding(
@@ -399,8 +427,8 @@ def scan(text: str, path: str = "") -> list[Finding]:
                     category="injection",
                     severity=sev,
                     message=message,
-                    start=m.start(),
-                    end=m.end(),
+                    start=m.start() if src is not leet else -1,  # leet text is a rewritten excerpt
+                    end=m.end() if src is not leet else -1,
                     preview=src[m.start() : m.end()][:80],
                 )
             )
