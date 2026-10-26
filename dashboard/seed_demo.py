@@ -12,6 +12,7 @@ import sqlite3
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -65,7 +66,7 @@ def seed(path: Path, days: int = 7, seed_value: int = 7) -> Path:
     if path.exists():
         path.unlink()
     now = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
-    rows = []
+    rows: list[tuple[datetime, str, str, str, str, dict[str, Any]]] = []
     for d in range(days, -1, -1):
         for _ in range(rnd.randint(2, 6)):
             rule, sev, action, tool, preview, msg = rnd.choice(GUARD)

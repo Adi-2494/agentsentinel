@@ -16,6 +16,7 @@ import re
 import tokenize
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from core import config
 from core.detectors import pii, secrets
@@ -29,17 +30,17 @@ _KEEP = set(dir(builtins)) | set(keyword.kwlist) | {"self", "cls", "__name__", "
 
 # --------------------------------------------------------------- neutralise
 class _Namer:
-    def __init__(self):
+    def __init__(self) -> None:
         self.map: dict[str, str] = {}
         self.count = {"var": 0, "func": 0, "class": 0}
 
-    def add(self, name: str, kind: str):
+    def add(self, name: str, kind: str) -> None:
         if name and name not in self.map and name not in _KEEP and not name.startswith("__"):
             self.count[kind] += 1
             self.map[name] = f"{kind}{self.count[kind]}"
 
 
-def _python_defined_names(tree: ast.AST, namer: _Namer):
+def _python_defined_names(tree: ast.AST, namer: _Namer) -> None:
     imported = set()
     for node in ast.walk(tree):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
@@ -103,7 +104,10 @@ def _neutralize_python(code: str) -> str:
     offsets = [0]
     for line in lines:
         offsets.append(offsets[-1] + len(line))
-    pos = lambda rc: offsets[rc[0] - 1] + rc[1]  # noqa: E731
+
+    def pos(rc: tuple[int, int]) -> int:
+        return offsets[rc[0] - 1] + rc[1]
+
     out = code
     for start, end, new in sorted(edits, key=lambda e: e[0], reverse=True):
         out = out[: pos(start)] + new + out[pos(end) :]
@@ -199,7 +203,7 @@ Reply with ONLY this JSON:
 class ViewResult:
     verdict: str  # safe | vulnerable | error
     confidence: float = 0.0
-    issues: list = field(default_factory=list)
+    issues: list[Any] = field(default_factory=list)
     error: str = ""
 
 
@@ -209,9 +213,9 @@ class TwoViewResult:
     view2: ViewResult
     manipulation_suspected: bool
     reason: str
-    file_map: dict = field(default_factory=dict)  # neutral name -> real name
+    file_map: dict[str, Any] = field(default_factory=dict)  # neutral name -> real name
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "view1": self.view1.__dict__,
             "view2": self.view2.__dict__,
@@ -226,7 +230,7 @@ def _safe_for_llm(text: str) -> str:
     return secrets.redact(pii.redact(text)[0])[0]
 
 
-def build_batches(files: dict[str, str], pr_description: str = "") -> list[tuple[str, str, dict]]:
+def build_batches(files: dict[str, str], pr_description: str = "") -> list[tuple[str, str, dict[str, str]]]:
     """Split ALL files into review batches of at most MAX_CHARS each: nothing is dropped.
 
     Each file is neutralized whole (line numbers are preserved), then cut into line ranges, so
@@ -238,7 +242,8 @@ def build_batches(files: dict[str, str], pr_description: str = "") -> list[tuple
         code = _safe_for_llm(code)
         neutral_name = f"file{i}{Path(name).suffix}"
         l1, l2 = code.splitlines(), neutralize(code, name).splitlines()
-        chunk, start = [], 0
+        chunk: list[str] = []
+        start = 0
         ranges = []
         size = 0
         for n, line in enumerate(l1):
@@ -260,7 +265,9 @@ def build_batches(files: dict[str, str], pr_description: str = "") -> list[tuple
                     name,
                 )
             )
-    batches, cur, size = [], [], 0
+    batches: list[list[tuple[str, str, str, str, str, str]]] = []
+    cur: list[tuple[str, str, str, str, str, str]] = []
+    size = 0
     for part in parts:
         if cur and size + len(part[2]) > MAX_CHARS:
             batches.append(cur)
@@ -278,7 +285,7 @@ def build_batches(files: dict[str, str], pr_description: str = "") -> list[tuple
     return out
 
 
-def build_views(files: dict[str, str], pr_description: str = "") -> tuple[str, str, dict]:
+def build_views(files: dict[str, str], pr_description: str = "") -> tuple[str, str, dict[str, str]]:
     """Single-batch view of small PRs (kept for callers and tests)."""
     return build_batches(files, pr_description)[0]
 

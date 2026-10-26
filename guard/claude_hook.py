@@ -15,6 +15,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -38,7 +39,7 @@ TIPS = {
 }
 
 
-def _written_text(tool: str, inp: dict) -> str:
+def _written_text(tool: str, inp: dict[str, Any]) -> str:
     if tool == "Write":
         return inp.get("content", "") or ""
     if tool == "Edit":
@@ -72,7 +73,7 @@ def _read_text(path: str) -> str:
         return ""
 
 
-def _content_findings(tool: str, inp: dict, path: str) -> list[Finding]:
+def _content_findings(tool: str, inp: dict[str, Any], path: str) -> list[Finding]:
     """A3 (what the AI writes) and A5 (what the AI is about to read)."""
     if tool in WRITE_TOOLS:
         text = _written_text(tool, inp)
@@ -184,7 +185,7 @@ def _bash_read_targets(command: str, cwd: str) -> list[str]:
     return targets[:20]
 
 
-def _paths(tool: str, inp: dict) -> list[str]:
+def _paths(tool: str, inp: dict[str, Any]) -> list[str]:
     if tool in ("Read", "Write", "Edit", "MultiEdit"):
         return [inp.get("file_path", "")]
     if tool == "NotebookEdit":
@@ -194,7 +195,7 @@ def _paths(tool: str, inp: dict) -> list[str]:
     return []
 
 
-def evaluate(tool: str, inp: dict, cwd: str = "") -> tuple[str | None, list[Finding]]:
+def evaluate(tool: str, inp: dict[str, Any], cwd: str = "") -> tuple[str | None, list[Finding]]:
     """Return (decision, findings); decision is 'deny', 'ask' or None."""
     findings: list[Finding] = []
     for path in _paths(tool, inp):
@@ -237,7 +238,7 @@ def _clean_output(text: str) -> tuple[str, list[Finding]]:
     return visible, found + sec + pii_high
 
 
-def post_tool(event: dict) -> dict | None:
+def post_tool(event: dict[str, Any]) -> dict[str, Any] | None:
     """PostToolUse: the tool already ran; clean what Claude is about to see."""
     tool, resp = event.get("tool_name", ""), event.get("tool_response")
     if tool == "Bash" and isinstance(resp, dict):
@@ -283,13 +284,13 @@ def post_tool(event: dict) -> dict | None:
         )
         + "Tell the user what was found."
     )
-    out = {"hookEventName": "PostToolUse", "additionalContext": note}
+    out: dict[str, Any] = {"hookEventName": "PostToolUse", "additionalContext": note}
     if updated is not None:
         out["updatedToolOutput"] = updated
     return {"hookSpecificOutput": out}
 
 
-def _log(rows: list[tuple]) -> None:
+def _log(rows: list[tuple[str, str, str, str, Any]]) -> None:
     """One connection for all findings; a logging problem never changes a decision."""
     try:
         store.log_events(rows)
@@ -334,7 +335,7 @@ def _utf8_stdio() -> None:
     and a non-encodable character in an error message must never crash the hook (crash = allow)."""
     for stream in (sys.stdout, sys.stderr):
         try:
-            stream.reconfigure(encoding="utf-8", errors="backslashreplace")
+            stream.reconfigure(encoding="utf-8", errors="backslashreplace")  # type: ignore[union-attr]
         except (AttributeError, ValueError):
             pass
 

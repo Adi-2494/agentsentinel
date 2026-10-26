@@ -7,6 +7,7 @@ wrapped as untrusted data.
 """
 
 from pathlib import Path
+from typing import Any
 
 from core import config
 from core.detectors import injection, pii, secrets
@@ -94,7 +95,7 @@ def check(
     return findings, None
 
 
-def _to_findings(r) -> list[ScanFinding]:
+def _to_findings(r: Any) -> list[ScanFinding]:
     if not isinstance(r, dict) or str(r.get("verdict", "")).upper() != "SUSPICIOUS":
         return []
     try:

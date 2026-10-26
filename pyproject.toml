@@ -27,3 +27,9 @@ ignore = [
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true  # streamlit/altair/mcp ship partial or no stubs
+files = ["core", "guard", "gate", "dashboard"]

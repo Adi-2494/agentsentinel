@@ -63,7 +63,7 @@ def files_from_git(base: str, head: str, repo: Path, dest: Path) -> tuple[list[P
     return files, errors
 
 
-def _renumber(findings) -> None:
+def _renumber(findings: list[static_scan.ScanFinding]) -> None:
     for i, f in enumerate(findings, 1):
         f.id = f"F{i}"
 
@@ -101,8 +101,8 @@ def run(
                 errors.append(tv.reason)
                 incomplete.append("two-view code review")
     else:
-        for f in findings:
-            f.triage = {"verdict": "real", "severity": f.severity, "by": "no-llm"}
+        for finding in findings:
+            finding.triage = {"verdict": "real", "severity": finding.severity, "by": "no-llm"}
         errors.append("LLM disabled (--no-llm): static scan only, no triage / two-view / AI-trap LLM check")
     return GateResult(
         findings=findings,
@@ -127,7 +127,7 @@ def log_result(result: GateResult, label: str) -> None:
             )
             for f in result.real
         ]
-        if result.manipulation:
+        if result.manipulation and result.two_view is not None:
             rows.append(
                 ("gate", action, "two_view_manipulation", "CRITICAL", {"pr": label, "reason": result.two_view.reason})
             )
@@ -152,7 +152,7 @@ def log_result(result: GateResult, label: str) -> None:
         print(f"warning: could not log to SQLite: {e}", file=sys.stderr)
 
 
-def main(argv=None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="AgentSentinel Merge Gate")
     src = ap.add_mutually_exclusive_group(required=True)
     src.add_argument("--path", type=Path, help="scan a folder or file (local mode)")

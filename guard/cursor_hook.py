@@ -9,6 +9,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -23,7 +24,7 @@ AFTER_EVENTS = {"afterShellExecution"}
 WRITE_TOOL_HINTS = ("write", "edit", "replace", "create", "patch")
 
 
-def _strings(value) -> list[str]:
+def _strings(value: Any) -> list[str]:
     """All string values inside a (possibly JSON-encoded) tool_input."""
     if isinstance(value, str):
         try:
@@ -41,7 +42,7 @@ def _content_findings(text: str, path: str = "") -> list[Finding]:
     return secrets.scan(text) + pii.scan(text) + injection.scan(text, path)
 
 
-def evaluate_cursor(event: dict) -> tuple[str | None, list[Finding]]:
+def evaluate_cursor(event: dict[str, Any]) -> tuple[str | None, list[Finding]]:
     name = event.get("hook_event_name", "")
     if name == "beforeShellExecution":
         return evaluate("Bash", {"command": event.get("command", "")}, event.get("cwd", ""))
@@ -84,7 +85,7 @@ def evaluate_cursor(event: dict) -> tuple[str | None, list[Finding]]:
     return None, found
 
 
-def after_event(event: dict) -> list[Finding]:
+def after_event(event: dict[str, Any]) -> list[Finding]:
     """afterShellExecution: Cursor can't rewrite output, so log traps/secrets for the dashboard."""
     if event.get("hook_event_name") != "afterShellExecution":
         return []
@@ -96,6 +97,8 @@ def main() -> int:
     _utf8_stdio()
     try:
         event = _read_event()
+        if not isinstance(event, dict):  # valid JSON but not an object: refuse explicitly
+            raise ValueError("hook input is not a JSON object")
         name = event.get("hook_event_name", "")
         if name in AFTER_EVENTS:  # not a permission event: log only, print nothing
             _log(

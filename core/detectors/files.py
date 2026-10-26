@@ -21,7 +21,7 @@ def is_protected_path(path: str) -> bool:
 
 
 @lru_cache(maxsize=1)
-def _pattern(patterns: tuple[str, ...]) -> re.Pattern:
+def _pattern(patterns: tuple[str, ...]) -> re.Pattern[str]:
     """All protected-file globs as ONE case-insensitive regex. macOS (APFS) and Windows (NTFS)
     are case-insensitive: ".ENV" opens ".env", so the lock must not depend on letter case."""
     return re.compile("|".join(f"(?:{fnmatch.translate(p)})" for p in patterns), re.IGNORECASE)

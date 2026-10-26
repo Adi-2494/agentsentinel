@@ -1,6 +1,7 @@
 """Shared result type for every detector."""
 
 from dataclasses import asdict, dataclass
+from typing import Any
 
 SEVERITY_ORDER = {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
 
@@ -15,7 +16,7 @@ class Finding:
     end: int = -1
     preview: str = ""  # masked snippet, safe to log
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 

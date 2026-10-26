@@ -16,6 +16,7 @@ import subprocess
 import tempfile
 import urllib.error
 import urllib.request
+from typing import Any
 
 from core import config
 
@@ -135,7 +136,7 @@ def _ask_ollama(prompt: str, model: str, system: str, timeout: int) -> str:
     try:
         # OLLAMA_URL is validated to be http(s) in core.config (no file:// or custom schemes)
         with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
-            return json.loads(resp.read())["response"]
+            return str(json.loads(resp.read())["response"])
     except urllib.error.URLError as e:
         raise LLMNotInstalled(f"Ollama is not reachable at {config.OLLAMA_URL}. Run `ollama serve`. ({e})") from e
 
@@ -162,7 +163,7 @@ def ask_llm(
     raise LLMError(f"Unknown LLM_BACKEND '{backend}' (use claude_code or ollama)")
 
 
-def extract_json(text: str):
+def extract_json(text: str) -> Any:
     """Pull the first JSON object/array out of a reply (handles ``` fences)."""
     fenced = re.search(r"```(?:json)?\s*(.*?)```", text, re.S)
     candidates = [fenced.group(1)] if fenced else []
@@ -178,7 +179,7 @@ def extract_json(text: str):
     raise LLMBadResponse(f"No valid JSON in model reply: {text[:200]!r}")
 
 
-def ask_json(prompt: str, model: str | None = None, **kwargs):
+def ask_json(prompt: str, model: str | None = None, **kwargs: Any) -> Any:
     """Like ask_llm, but returns parsed JSON. Retries once on invalid JSON."""
     reply = ask_llm(prompt, model, **kwargs)
     try:

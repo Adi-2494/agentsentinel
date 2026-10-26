@@ -2,6 +2,7 @@
 
 import re
 import shlex
+from collections.abc import Callable
 
 from core import config
 from core.detectors.base import Finding
@@ -137,7 +138,7 @@ _DL_TARGET = re.compile(
 _RUNNERS = r"(?:sudo\s+)?(?:(?:ba|z|da|k)?sh|source|\.|python[0-9.]*|node|perl|ruby)"
 
 
-def _download_then_execute(command: str, add) -> None:
+def _download_then_execute(command: str, add: Callable[..., None]) -> None:
     """curl URL -o FILE && FILE / sh FILE / chmod +x FILE && ./FILE ..."""
     for m in _DL_TARGET.finditer(command):
         target = m.group(1).strip("'\"")
@@ -173,9 +174,9 @@ _QUOTED_PART = re.compile(r"'([^']*)'|\"((?:\\.|[^\"\\])*)\"")
 _ESCAPE = re.compile(r"\\(.)")
 
 
-def _unquote(m: re.Match) -> str:
+def _unquote(m: re.Match[str]) -> str:
     if m.group(1) is not None:  # '...': literal
-        return m.group(1)
+        return str(m.group(1))
     return _ESCAPE.sub(r"\1", m.group(2))  # "...": backslash escapes
 
 
@@ -199,7 +200,7 @@ MAX_COMMAND_CHARS = 100_000  # far beyond normal agent use; still scanned, but t
 def check(command: str) -> list[Finding]:
     findings: list[Finding] = []
 
-    def add(rule, severity, message, preview=""):
+    def add(rule: str, severity: str, message: str, preview: str = "") -> None:
         if not any(f.rule == rule and f.preview == preview for f in findings):
             findings.append(
                 Finding(rule=rule, category="command", severity=severity, message=message, preview=preview[:120])

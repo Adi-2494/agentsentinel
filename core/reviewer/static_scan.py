@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path, PurePath
+from typing import Any
 
 from core.detectors import injection, pii, secrets
 from core.detectors.base import mask
@@ -77,9 +78,9 @@ class ScanFinding:
     line: int
     message: str
     snippet: str = ""  # already redacted, safe to show and to send to the LLM
-    triage: dict = field(default_factory=dict)  # filled by triage.py
+    triage: dict[str, Any] = field(default_factory=dict)  # filled by triage.py
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -116,7 +117,7 @@ def _snippet(path: Path, line: int, context: int = 3) -> str:
     return "\n".join(f"{i + 1:>4}| {lines[i]}" for i in range(lo, hi))
 
 
-def run_semgrep(files: list[Path], root: Path) -> tuple[list[dict], list[str]]:
+def run_semgrep(files: list[Path], root: Path) -> tuple[list[dict[str, Any]], list[str]]:
     if not files:
         return [], []
     if not shutil.which("semgrep"):
@@ -153,12 +154,12 @@ def run_semgrep(files: list[Path], root: Path) -> tuple[list[dict], list[str]]:
     return data.get("results", []), errors
 
 
-def run_gitleaks(files: list[Path]) -> tuple[list[dict], list[str]]:
+def run_gitleaks(files: list[Path]) -> tuple[list[dict[str, Any]], list[str]]:
     if not files:
         return [], []
     if not shutil.which("gitleaks"):
         return [], ["gitleaks not installed (brew install gitleaks)"]
-    results: list[dict] = []
+    results: list[dict[str, Any]] = []
     with tempfile.TemporaryDirectory() as tmp:
         report = Path(tmp) / "r.json"
         for f in files:  # per file, so only changed files are scanned
@@ -195,11 +196,14 @@ def scan_files(files: list[Path], root: Path) -> tuple[list[ScanFinding], list[s
     candidates = [f.resolve() for f in files if f.is_file()]
     binaries = [f for f in candidates if not is_text_file(f)]
     files = [f for f in candidates if f not in binaries]  # every text file, whatever its extension
-    rel = lambda p: display_path(Path(p).resolve(), root)  # noqa: E731
-    findings: list[ScanFinding] = []
-    seen: set[tuple] = set()
 
-    def add(tool, rule, category, severity, path, line, message):
+    def rel(p: Path | str) -> str:
+        return display_path(Path(p).resolve(), root)
+
+    findings: list[ScanFinding] = []
+    seen: set[tuple[str, str, int, str]] = set()
+
+    def add(tool: str, rule: str, category: str, severity: str, path: Path | str, line: int, message: str) -> None:
         # same issue reported by two tools / rules -> keep one; but different
         # kinds of personal data on one line are separate findings
         key = (category, rel(path), line, rule if category in ("pii", "injection") else "")

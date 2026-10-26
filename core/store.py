@@ -7,9 +7,11 @@ schema is set up once per database per process.
 
 import json
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from core import config
 
@@ -29,7 +31,10 @@ CREATE INDEX IF NOT EXISTS idx_events_time ON events(time);
 _READY: set[str] = set()  # databases whose schema was already set up in this process
 
 
-def _path(db_path) -> Path:
+DbPath = Path | str | None  # None = config.DB_PATH
+
+
+def _path(db_path: DbPath) -> Path:
     path = Path(db_path or config.DB_PATH)
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
@@ -44,7 +49,7 @@ def _ensure_schema(conn: sqlite3.Connection, path: Path) -> None:
     _READY.add(key)
 
 
-def _schema_ready(db_path) -> bool:
+def _schema_ready(db_path: DbPath) -> bool:
     return str(_path(db_path).resolve()) in _READY
 
 
@@ -58,7 +63,7 @@ def connect(db_path: Path | str | None = None) -> sqlite3.Connection:
 
 
 @contextmanager
-def session(db_path=None):
+def session(db_path: DbPath = None) -> Iterator[sqlite3.Connection]:
     """Open, commit on success, and always close (sqlite3's own `with` does not close)."""
     conn = connect(db_path)
     try:
@@ -68,7 +73,7 @@ def session(db_path=None):
         conn.close()
 
 
-def _row(source, action, rule, severity, detail):
+def _row(source: str, action: str, rule: str, severity: str, detail: Any) -> tuple[str, ...]:
     if isinstance(detail, dict):
         detail = json.dumps(detail, ensure_ascii=False)
     if detail is not None:  # lone surrogates cannot be stored as UTF-8: keep them as escapes
@@ -76,7 +81,7 @@ def _row(source, action, rule, severity, detail):
     return (datetime.now(UTC).isoformat(timespec="seconds"), source, action, rule, severity, detail)
 
 
-def log_events(rows: list[tuple], db_path=None) -> None:
+def log_events(rows: list[tuple[str, str, str, str, Any]], db_path: DbPath = None) -> None:
     """Write many events through ONE connection: rows of (source, action, rule, severity, detail)."""
     if not rows:
         return
@@ -88,12 +93,17 @@ def log_events(rows: list[tuple], db_path=None) -> None:
 
 
 def log_event(
-    source: str, action: str, rule: str, severity: str, detail: dict | str | None = None, db_path=None
+    source: str,
+    action: str,
+    rule: str,
+    severity: str,
+    detail: dict[str, Any] | str | None = None,
+    db_path: DbPath = None,
 ) -> None:
     log_events([(source, action, rule, severity, detail)], db_path)
 
 
-def recent_events(limit: int = 200, db_path=None) -> list[dict]:
+def recent_events(limit: int = 200, db_path: DbPath = None) -> list[dict[str, Any]]:
     with session(db_path) as conn:
         rows = conn.execute("SELECT * FROM events ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
     return [dict(r) for r in rows]

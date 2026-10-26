@@ -81,7 +81,7 @@ def scan(text: str) -> list[Finding]:
     findings: list[Finding] = []
     taken: list[tuple[int, int]] = []
 
-    def add(m: re.Match, rule: str, severity: str, message: str):
+    def add(m: re.Match[str], rule: str, severity: str, message: str) -> None:
         s, e = m.span()
         if any(a < e and s < b for a, b in taken):  # overlaps a stronger match
             return

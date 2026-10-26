@@ -1,6 +1,7 @@
 """Security gate report (B5): Markdown PR comment + pass/fail decision."""
 
 from dataclasses import dataclass, field
+from typing import Any
 
 from core import config
 from core.reviewer.static_scan import ScanFinding
@@ -29,14 +30,14 @@ class GateResult:
         return [f for f in self.findings if f.triage.get("verdict") == "false_alarm"]
 
     def severity(self, f: ScanFinding) -> str:
-        return f.triage.get("severity", f.severity)
+        return str(f.triage.get("severity", f.severity))
 
     @property
     def blocking(self) -> list[ScanFinding]:
         return [f for f in self.real if self.severity(f) in config.FAIL_ON_SEVERITIES]
 
     @property
-    def reviewer_blocking(self) -> list[dict]:
+    def reviewer_blocking(self) -> list[dict[str, Any]]:
         if not self.two_view or self.two_view.view2.verdict != "vulnerable":
             return []
         return [
@@ -87,7 +88,7 @@ def build_markdown(r: GateResult) -> str:
     )
     md.append("")
 
-    if r.manipulation:
+    if r.manipulation and r.two_view is not None:  # manipulation implies a two-view result
         md += ["### 🚨 AI reviewer manipulation suspected", "", f"> {r.two_view.reason}", ""]
 
     if r.two_view:

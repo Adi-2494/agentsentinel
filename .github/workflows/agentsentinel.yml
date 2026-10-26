@@ -29,6 +29,19 @@ jobs:
       - name: Formatting
         run: ruff format --check .
 
+  typecheck:
+    name: typecheck (mypy --strict)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt mypy==2.4.0
+      - name: mypy
+        run: mypy
+
   tests:
     name: tests (${{ matrix.os }})
     strategy:

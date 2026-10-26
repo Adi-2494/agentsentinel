@@ -6,6 +6,7 @@ Read-only: it only reads the SQLite log and saved result files. No LLM calls.
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 import altair as alt
 import pandas as pd
@@ -35,7 +36,7 @@ def sev_label(s: str) -> str:
     return f"{SEV_ICON.get(s, '')} {s}"
 
 
-def bar_by_rule(df: pd.DataFrame):
+def bar_by_rule(df: pd.DataFrame) -> Any:  # an Altair chart or None (Altair returns untyped charts)
     counts = data.by_rule(df).head(15)
     if counts.empty:
         return None
@@ -53,7 +54,7 @@ def bar_by_rule(df: pd.DataFrame):
     return (bars + labels).properties(height=alt.Step(28))
 
 
-def line_over_time(df: pd.DataFrame):
+def line_over_time(df: pd.DataFrame) -> Any:  # an Altair chart or None (Altair returns untyped charts)
     series, unit = data.over_time(df)
     if series.empty:
         return None
@@ -91,7 +92,7 @@ def line_over_time(df: pd.DataFrame):
     return (lines + points + rule + hit).properties(height=260)
 
 
-def events_table(df: pd.DataFrame):
+def events_table(df: pd.DataFrame) -> None:
     view = df[df["rule"] != "gate_run"][
         ["time", "source", "action", "severity", "rule", "category", "tool", "where", "info"]
     ].copy()
@@ -337,7 +338,7 @@ BENCH_COLORS = {"Haiku": "#2a78d6", "Sonnet": "#eb6834", "No LLM": "#1baf7a"}
 CONDITION_ORDER = ["Plain review", "Static only", "AgentSentinel"]
 
 
-def bench_chart(long: pd.DataFrame, metric: str):
+def bench_chart(long: pd.DataFrame, metric: str) -> Any:  # an Altair chart or None (Altair returns untyped charts)
     d = long[long["metric"] == metric]
     if d.empty:
         return None

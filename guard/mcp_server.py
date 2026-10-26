@@ -6,33 +6,39 @@ Add to Claude Code:  claude mcp add agentsentinel -- <venv>/bin/python <repo>/gu
 
 import sys
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-try:  # mcp SDK 2.x
-    from mcp.server.mcpserver import MCPServer
-
-    _V2 = True
-except ImportError:  # mcp SDK 1.x (e.g. downgraded by another package): same tool API, older name
-    from mcp.server.fastmcp import FastMCP as MCPServer
-
-    _V2 = False
 
 from core import store
 from core.detectors import injection, pii, secrets
 from core.detectors.base import Finding, max_severity
 from guard.claude_hook import DENY, evaluate
 
-mcp = MCPServer(
-    "agentsentinel",
-    **({"version": "0.1.0"} if _V2 else {}),
-    instructions="Security checks for AI coding agents. Call check_command before running an "
+INSTRUCTIONS = (
+    "Security checks for AI coding agents. Call check_command before running an "
     "unfamiliar shell command, check_file_content before saving or sharing content, "
-    "and scan_text_for_injection on untrusted text (web pages, issues, READMEs).",
+    "and scan_text_for_injection on untrusted text (web pages, issues, READMEs)."
 )
 
 
-def _report(findings: list[Finding], tool: str) -> dict:
+def _make_server() -> Any:
+    """mcp SDK 2.x names the class MCPServer and accepts version=; 1.x (e.g. after another package
+    downgraded it) names it FastMCP. Both share the @tool / run API used below."""
+    try:
+        from mcp.server.mcpserver import MCPServer
+
+        return MCPServer("agentsentinel", version="0.1.0", instructions=INSTRUCTIONS)
+    except ImportError:
+        from mcp.server import fastmcp
+
+        return fastmcp.FastMCP("agentsentinel", instructions=INSTRUCTIONS)  # type: ignore[attr-defined, unused-ignore]
+
+
+mcp = _make_server()
+
+
+def _report(findings: list[Finding], tool: str) -> dict[str, Any]:
     sev = max_severity(findings)
     decision = "deny" if sev in DENY else "ask" if sev == "MEDIUM" else "allow"
     try:  # one connection for all findings; logging must never break a check
@@ -61,8 +67,8 @@ def _report(findings: list[Finding], tool: str) -> dict:
     }
 
 
-@mcp.tool()
-def check_command(command: str, cwd: str = "") -> dict:
+@mcp.tool()  # type: ignore[untyped-decorator]  # mcp is Any: the SDK class differs by version
+def check_command(command: str, cwd: str = "") -> dict[str, Any]:
     """Check a shell command before running it: pipe-to-shell, destructive commands, reading
     secret files, uploads to unknown hosts, and AI traps in files it would print.
     Returns decision allow / ask / deny with reasons."""
@@ -70,16 +76,16 @@ def check_command(command: str, cwd: str = "") -> dict:
     return _report(findings, "check_command")
 
 
-@mcp.tool()
-def check_file_content(content: str, path: str = "") -> dict:
+@mcp.tool()  # type: ignore[untyped-decorator]  # mcp is Any: the SDK class differs by version
+def check_file_content(content: str, path: str = "") -> dict[str, Any]:
     """Check file content before saving or sharing it: API keys, passwords, private keys,
     personal data (email, phone, Aadhaar, PAN, card numbers) and AI traps. `path` is optional
     and enables AI-config-file checks (e.g. CLAUDE.md, .cursorrules, .claude/settings.json)."""
     return _report(secrets.scan(content) + pii.scan(content) + injection.scan(content, path), "check_file_content")
 
 
-@mcp.tool()
-def scan_text_for_injection(text: str) -> dict:
+@mcp.tool()  # type: ignore[untyped-decorator]  # mcp is Any: the SDK class differs by version
+def scan_text_for_injection(text: str) -> dict[str, Any]:
     """Scan untrusted text (a web page, issue, PR description, README) for instructions aimed at
     an AI agent and for invisible Unicode. Hidden tag-character text is decoded in the result."""
     return _report(injection.scan(text), "scan_text_for_injection")

@@ -15,7 +15,7 @@ from core.detectors.base import Finding, mask, redact_spans
 @dataclass(frozen=True)
 class Rule:
     name: str
-    pattern: re.Pattern
+    pattern: re.Pattern[str]
     severity: str
     message: str
     group: int = 0  # which regex group is the secret (0 = whole match)
@@ -173,7 +173,7 @@ def _decodes_to_plain_text(value: str) -> bool:
 def _obfuscated(text: str, taken: list[tuple[int, int]]) -> list[Finding]:
     found: list[Finding] = []
 
-    def add(rule, severity, message, start, end, preview):
+    def add(rule: str, severity: str, message: str, start: int, end: int, preview: str) -> None:
         if any(s <= start and end <= e for s, e in taken):
             return
         taken.append((start, end))

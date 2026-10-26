@@ -3,6 +3,7 @@
 import json
 import sqlite3
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -24,9 +25,9 @@ _COMMAND_RULES = {r[0] for r in commands.WHOLE_COMMAND_RULES} | {
 }
 
 
-def categorise(rule: str, detail: dict) -> str:
+def categorise(rule: str, detail: dict[str, Any]) -> str:
     if detail.get("category"):
-        return {"vuln": "vulnerability", "file": "secret_file"}.get(detail["category"], detail["category"])
+        return str({"vuln": "vulnerability", "file": "secret_file"}.get(detail["category"], detail["category"]))
     if rule == "gate_run":
         return "pr_run"
     if rule == "two_view_manipulation":
@@ -44,7 +45,7 @@ def categorise(rule: str, detail: dict) -> str:
     return "other"
 
 
-def _parse(detail) -> dict:
+def _parse(detail: Any) -> dict[str, Any]:
     if not detail:
         return {}
     try:
@@ -74,7 +75,7 @@ def load_events(db_path: Path | str | None = None) -> pd.DataFrame:
     return df
 
 
-def metrics(df: pd.DataFrame) -> dict:
+def metrics(df: pd.DataFrame) -> dict[str, Any]:
     findings = df[df["rule"] != "gate_run"]
     runs = df[df["rule"] == "gate_run"]
     return {
@@ -133,7 +134,7 @@ def pr_runs(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def load_json(path: Path):
+def load_json(path: Path) -> Any:
     try:
         return json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
@@ -151,7 +152,7 @@ BENCH_METRICS = [  # (key, title) - all "lower is better"
 ]
 
 
-def benchmark_frames(results: dict) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def benchmark_frames(results: dict[str, Any]) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """(long metrics for charts, summary table, per-case outcomes) from results.json."""
     rows = []
     for r in results.get("table", []):
@@ -209,7 +210,7 @@ def benchmark_frames(results: dict) -> tuple[pd.DataFrame, pd.DataFrame, pd.Data
 
 
 # ---------------------------------------------------------------- real-world data
-def ghsa_summary_rows(gh: dict) -> list[dict]:
+def ghsa_summary_rows(gh: dict[str, Any]) -> list[dict[str, Any]]:
     rows = [("Static only (all advisories)", gh.get("static"))]
     for key, label in (("haiku", "Haiku"), ("sonnet", "Sonnet")):
         if gh.get(f"llm_{key}"):
@@ -230,8 +231,8 @@ def ghsa_summary_rows(gh: dict) -> list[dict]:
     ]
 
 
-def ghsa_case_rows(gh: dict) -> list[dict]:
-    def fmt(r):
+def ghsa_case_rows(gh: dict[str, Any]) -> list[dict[str, Any]]:
+    def fmt(r: dict[str, Any] | None) -> str:
         return (
             "–"
             if not r
@@ -253,7 +254,7 @@ def ghsa_case_rows(gh: dict) -> list[dict]:
     ]
 
 
-def injection_rows(pi: dict) -> list[dict]:
+def injection_rows(pi: dict[str, Any]) -> list[dict[str, Any]]:
     rows = []
     for key, label in (
         ("rules_test_heldout", "Rules: held-out test split"),
