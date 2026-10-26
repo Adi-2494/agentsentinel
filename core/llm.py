@@ -153,6 +153,7 @@ def ask_llm(
     `model` is a Claude alias (sonnet/haiku) for claude_code; for ollama the
     configured OLLAMA_MODEL is used unless an Ollama model name is passed.
     """
+    config.require_valid()  # also for library callers (benchmarks) that skip the entry-point check
     backend = backend or config.LLM_BACKEND
     timeout = timeout or config.LLM_TIMEOUT_SECONDS
     if backend == "claude_code":

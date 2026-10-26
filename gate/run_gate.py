@@ -2,7 +2,8 @@
 
 Local:  python gate/run_gate.py --path examples/trick_pr --pr-body-file examples/trick_pr/PR_DESCRIPTION.md
 CI:     python gate/run_gate.py --base origin/main --head HEAD --pr-body-env PR_BODY --comment-out comment.md
-Exit code 1 = merge should be blocked.
+Exit code 1 = merge should be blocked. Exit code 2 = AgentSentinel is misconfigured (also blocks).
+--verbose prints step timings and decisions to stderr (never code or prompt contents).
 """
 
 import argparse
@@ -15,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from core import store
+from core import config, log, store
 from core.reviewer import injection_check, static_scan, triage, two_view
 from core.reviewer.report import GateResult, build_markdown
 
@@ -71,16 +72,22 @@ def _renumber(findings: list[static_scan.ScanFinding]) -> None:
 def run(
     files: list[Path], root: Path, pr_body: str = "", use_llm: bool = True, allow_llm_outage: bool = False
 ) -> GateResult:
-    findings, errors = static_scan.scan_files(files, root)
+    logger = log.get("gate")
+    logger.debug("files to review", extra={"files": len(files)})
+    with log.timed(logger, "static scan (taint, Semgrep, Gitleaks, rules)"):
+        findings, errors = static_scan.scan_files(files, root)
     incomplete: list[str] = []
     findings += static_scan.scan_pr_text(pr_body)
     _renumber(findings)
+    logger.debug("static findings", extra={"findings": len(findings), "rules": sorted({f.rule for f in findings})})
     tv = None
     if use_llm:
-        err = triage.triage(findings)
+        with log.timed(logger, "triage"):
+            err = triage.triage(findings)
         if err:
             errors.append(f"triage: {err}")  # findings stay "real" (fail closed already)
-        llm_findings, err = injection_check.check(files, root, pr_body)
+        with log.timed(logger, "AI-trap check"):
+            llm_findings, err = injection_check.check(files, root, pr_body)
         if err:
             errors.append(f"AI-trap check: {err}")
             incomplete.append("AI-trap check")
@@ -96,7 +103,9 @@ def run(
                 except (OSError, ValueError):
                     continue
         if code_files:
-            tv = two_view.two_view_check(code_files, pr_body)
+            with log.timed(logger, "two-view check", files=len(code_files)):
+                tv = two_view.two_view_check(code_files, pr_body)
+            logger.debug("two-view", extra={"manipulation": tv.manipulation_suspected, "reason": tv.reason[:120]})
             if "incomplete" in tv.reason:
                 errors.append(tv.reason)
                 incomplete.append("two-view code review")
@@ -104,6 +113,11 @@ def run(
         for finding in findings:
             finding.triage = {"verdict": "real", "severity": finding.severity, "by": "no-llm"}
         errors.append("LLM disabled (--no-llm): static scan only, no triage / two-view / AI-trap LLM check")
+    for e in errors:
+        if e.startswith("LLM disabled"):  # a choice, not a problem
+            logger.info(e)
+        else:
+            log.problem(logger, log.categorize(e), e)
     return GateResult(
         findings=findings,
         two_view=tv,
@@ -149,7 +163,7 @@ def log_result(result: GateResult, label: str) -> None:
         )
         store.log_events(rows)  # one connection for the whole run
     except Exception as e:  # noqa: BLE001 - logging must never break the gate
-        print(f"warning: could not log to SQLite: {e}", file=sys.stderr)
+        log.problem(log.get("gate"), "storage", f"could not log to SQLite: {e}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -170,7 +184,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--comment-out", type=Path, help="write the Markdown report here")
     ap.add_argument("--json-out", type=Path, help="write machine-readable results here")
     ap.add_argument("--label", default="", help="name for this run in the dashboard (e.g. PR #3)")
+    ap.add_argument("--verbose", "-v", action="store_true", help="debug logs on stderr: step timings and decisions")
     args = ap.parse_args(argv)
+    try:
+        config.require_valid()
+    except config.ConfigError as e:
+        print(f"AgentSentinel [config]: {e}\nThe gate did not run; fix the settings above.", file=sys.stderr)
+        return 2
+    log.setup("debug" if args.verbose else None)
 
     pr_body = ""
     if args.pr_body_file and args.pr_body_file.exists():

@@ -1,0 +1,22 @@
+== LLM_TIMEOUT_SECONDS=abc: hook on a dangerous command
+{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "AgentSentinel could not check this action, so it was blocked for safety (guard failed to load: invalid literal for int() with base 10: 'abc'). Set
+
+== LLM_TIMEOUT_SECONDS=-5
+accepted: -5
+
+== REVIEW_ENSEMBLE=true
+ensemble on? False
+
+== MAIN_MODEL=''
+model: ''
+
+== LLM_BACKEND=olama (typo)
+core.llm.LLMError: Unknown LLM_BACKEND 'olama' (use claude_code or ollama)
+loaded, backend = olama
+
+== OLLAMA_URL=file:///etc with LLM_BACKEND=ollama
+core.llm.LLMNotInstalled: Ollama is not reachable at file:///etc. Run `ollama serve`. (<urlopen error [Errno 2] No such file or directory: '/etc/api/generate'>)
+loaded, url = file:///etc
+
+== AGENTSENTINEL_DB=/dev/null/x.db (unwritable): hook on a dangerous command
+{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "AgentSentinel blocked this action:\n- [CRITICAL] pipe_to_shell: Downloads a script and

@@ -10,7 +10,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from core import store
+from core import config, log, store
 from core.heuristics import injection, pii, secrets
 from core.heuristics.base import Finding, max_severity
 from guard.claude_hook import DENY, evaluate
@@ -55,7 +55,7 @@ def _report(findings: list[Finding], tool: str) -> dict[str, Any]:
             ]
         )
     except Exception as e:  # noqa: BLE001 - logging must never break a check
-        print(f"AgentSentinel MCP: could not write the event log: {e}", file=sys.stderr)
+        log.problem(log.get("mcp"), "storage", f"could not write the event log: {e}")
     return {
         "safe": decision == "allow",
         "decision": decision,
@@ -92,4 +92,9 @@ def scan_text_for_injection(text: str) -> dict[str, Any]:
 
 
 if __name__ == "__main__":
+    try:
+        config.require_valid()
+    except config.ConfigError as e:  # refuse to start: the MCP client then shows the server as failed
+        print(f"AgentSentinel MCP [config]: {e}", file=sys.stderr)
+        sys.exit(2)
     mcp.run(transport="stdio")

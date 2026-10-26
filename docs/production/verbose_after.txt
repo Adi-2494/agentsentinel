@@ -1,0 +1,20 @@
+== gate --verbose --no-llm on a PR with a command injection and a fake AWS key (stderr)
+exit=1
+AgentSentinel debug: files to review (files=1)
+AgentSentinel debug: static scan (taint, Semgrep, Gitleaks, rules) done (step=static scan (taint, Semgrep, Gitleaks, rules) ms=2714)
+AgentSentinel debug: static findings (findings=2 rules=['aws-access-token', 'os-system-injection'])
+AgentSentinel info: LLM disabled (--no-llm): static scan only, no triage / two-view / AI-trap LLM check
+
+== same, AGENTSENTINEL_LOG_FORMAT=json (stderr)
+{"time": "2026-10-26T12:13:32", "level": "debug", "logger": "agentsentinel.gate", "message": "files to review", "files": 1}
+{"time": "2026-10-26T12:13:34", "level": "debug", "logger": "agentsentinel.gate", "message": "static scan (taint, Semgrep, Gitleaks, rules) done", "step": "static scan (taint, Semgrep, Gitleaks, rules)", "ms": 2044}
+{"time": "2026-10-26T12:13:34", "level": "debug", "logger": "agentsentinel.gate", "message": "static findings", "findings": 2, "rules": ["aws-access-token", "os-system-injection"]}
+{"time": "2026-10-26T12:13:34", "level": "info", "logger": "agentsentinel.gate", "message": "LLM disabled (--no-llm): static scan only, no triage / two-view / AI-trap LLM check"}
+
+== leak check: does the fake key appear in either log?
+<tmp>/e2.txt:0
+<tmp>/e1.txt:0
+
+== hook with AGENTSENTINEL_LOG_LEVEL=debug (stderr)
+AgentSentinel debug: evaluate done (step=evaluate ms=1 tool=Bash)
+AgentSentinel debug: decision (tool=Bash decision=deny rules=['pipe_to_shell', 'unknown_url'])

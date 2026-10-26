@@ -1,0 +1,43 @@
+Bad settings used below: LLM_TIMEOUT_SECONDS=-5 REVIEW_ENSEMBLE=maybe MAIN_MODEL= LLM_BACKEND=olama OLLAMA_URL=file:///etc ALLOWED_HOSTS=https://github.com
+
+== python -m core.config (setup check)
+AgentSentinel settings are INVALID:
+- LLM_BACKEND='olama': must be one of claude_code, ollama
+- MAIN_MODEL='': must not be empty
+- OLLAMA_URL='file:///etc': must be an http:// or https:// URL with a host (e.g. http://localhost:11434)
+- LLM_TIMEOUT_SECONDS='-5': must be a whole number from 1 to 3600
+- REVIEW_ENSEMBLE='maybe': must be 1/0, true/false, yes/no or on/off
+- ALLOWED_HOSTS='https://github.com': each entry must be a bare host name like github.com (no scheme, path or *)
+exit=2
+
+== Claude Code hook, harmless 'ls': denied, every problem named
+AgentSentinel could not check this action, so it was blocked for safety (invalid settings: LLM_BACKEND, MAIN_MODEL, OLLAMA_URL, LLM_TIMEOUT_SECONDS, REVIEW_ENSEMBLE, ALLOWED_HOSTS; run `python -m core.config`). Set AGENTSENTINEL_FAIL_OPEN=1 to allow on errors.
+
+== Cursor hook: denied
+deny | AgentSentinel could not check this action, so it was blocked for safety (invalid settings:
+
+== Merge Gate: does not run, exit 2
+AgentSentinel [config]: invalid AgentSentinel settings:
+- LLM_BACKEND='olama': must be one of claude_code, ollama
+- MAIN_MODEL='': must not be empty
+- OLLAMA_URL='file:///etc': must be an http:// or https:// URL with a host (e.g. http://localhost:11434)
+- LLM_TIMEOUT_SECONDS='-5': must be a whole number from 1 to 3600
+- REVIEW_ENSEMBLE='maybe': must be 1/0, true/false, yes/no or on/off
+- ALLOWED_HOSTS='https://github.com': each entry must be a bare host name like github.com (no scheme, path or *)
+The gate did not run; fix the settings above.
+exit=2
+
+== MCP server: refuses to start, exit 2
+AgentSentinel MCP [config]: invalid AgentSentinel settings:
+- LLM_BACKEND='olama': must be one of claude_code, ollama
+exit=2
+
+== library call to the LLM layer: refused before any call
+    raise ConfigError("invalid AgentSentinel settings:\n- " + "\n- ".join(ERRORS))
+core.config.ConfigError: invalid AgentSentinel settings:
+
+== REVIEW_ENSEMBLE=true now means ON
+ensemble on? True
+
+== explicit opt-out still works: AGENTSENTINEL_FAIL_OPEN=true with the bad settings
+(no output = allowed) exit=0

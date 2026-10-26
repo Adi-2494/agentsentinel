@@ -337,14 +337,37 @@ The dashboard also has a **public mode** (`AGENTSENTINEL_PUBLIC=1`) for anyone w
 
 `deploy/build_hf_space.sh` packages it as a Docker Space.
 
-### LLM backend
+### Settings
 
-The LLM layer is pluggable via `.env`:
+Settings come from environment variables or `.env`. **Every value is checked when AgentSentinel starts.** A typo never quietly changes what a security tool does: the hooks block the action and name the bad setting, the Merge Gate exits with code **2** without running, and the MCP server refuses to start. Check a setup with:
 
-- `LLM_BACKEND=claude_code` (default): runs `claude -p` using your Claude Code login
-- `LLM_BACKEND=ollama`: a fully offline local model (e.g. `qwen2.5-coder:7b`)
-- `MAIN_MODEL` / `CHECK_MODEL`: the models for the two-view review and for triage / AI-trap checks
-- `REVIEW_ENSEMBLE=1`: second-opinion review (see above). `AGENTSENTINEL_FAIL_OPEN=1`: Live Guard allows on its own errors (not recommended)
+```bash
+python -m core.config          # prints the settings, or every problem at once (exit 2)
+```
+
+| Setting | Allowed values | Default |
+|---|---|---|
+| `LLM_BACKEND` | `claude_code` (runs `claude -p` with your Claude Code login) or `ollama` (offline local model) | `claude_code` |
+| `MAIN_MODEL` / `CHECK_MODEL` | any non-empty model name: two-view review / triage and AI-trap checks | `sonnet` / `haiku` |
+| `OLLAMA_MODEL`, `OLLAMA_URL` | a model name; an `http://` or `https://` URL with a host (no `file://`) | `qwen2.5-coder:7b`, `http://localhost:11434` |
+| `LLM_TIMEOUT_SECONDS` | whole number 1–3600 | `180` |
+| `REVIEW_ENSEMBLE` | `1`/`0`, `true`/`false`, `yes`/`no`, `on`/`off`: second-opinion review (see above) | off |
+| `ALLOWED_HOSTS` | comma-separated bare host names (`github.com`, not `https://github.com`) | GitHub, PyPI, npm, localhost |
+| `AGENTSENTINEL_DB` | path of the SQLite activity log | `data/agentsentinel.db` |
+| `AGENTSENTINEL_LOG_LEVEL` | `debug`, `info`, `warning`, `error` | `warning` |
+| `AGENTSENTINEL_LOG_FORMAT` | `text` or `json` (one JSON object per line) | `text` |
+| `AGENTSENTINEL_FAIL_OPEN` | `1`/`true`: the Live Guard allows on its own errors. Not recommended; it is read even when other settings are broken | off |
+
+### Logs and debug mode
+
+Logs go to **stderr**, so they never mix with the hook protocol or the gate report on stdout. `python gate/run_gate.py ... --verbose` (or `AGENTSENTINEL_LOG_LEVEL=debug`) adds step timings, finding counts and decisions. **Logs never contain scanned code, prompts or secret values**: only names, counts, sizes, timings and masked previews. A test checks this with a fake key. Every problem carries one category:
+
+`config` · `input` (unreadable hook input or file) · `llm_unavailable` · `llm_limit` · `llm_reply` (the AI answered in the wrong format) · `tool_missing` (Semgrep/Gitleaks) · `tool_failed` · `storage` (activity log) · `internal` (a bug in AgentSentinel)
+
+```
+AgentSentinel debug: static scan (taint, Semgrep, Gitleaks, rules) done (step=... ms=2714)
+AgentSentinel warning [llm_limit]: triage: Pro limit reached, try again later or switch LLM_BACKEND=ollama
+```
 
 ## Red-team hardening
 
@@ -396,7 +419,7 @@ The speed fixes were checked for equivalence: the new protected-file matcher giv
 
 | Suite | Tests | What it covers |
 |---|---|---|
-| Unit | 612 | The Python taint analysis (`tests/test_taint.py`: 18 vulnerable + 12 safe cases, every language construct, hostile inputs), encoded payloads and the similarity check, the red-team attacks (`tests/test_redteam.py`, 31 tests incl. 1 integration), the robustness review (`tests/test_robustness.py`: fuzzing, scale, file handles), every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
+| Unit | 653 | Config validation at every entry point and log categories (`tests/test_config_and_logging.py`), the Python taint analysis (`tests/test_taint.py`: 18 vulnerable + 12 safe cases, every language construct, hostile inputs), encoded payloads and the similarity check, the red-team attacks (`tests/test_redteam.py`, 31 tests incl. 1 integration), the robustness review (`tests/test_robustness.py`: fuzzing, scale, file handles), every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
 | Integration | 33 | 3 generated repos and 21 PR branches through the real gate (git diff + Semgrep + Gitleaks); a "fooled reviewer" stand-in proving the manipulation alarm fires; LLM outage fails closed; a 12-step agent session replayed through the real hook; raw MCP JSON-RPC to the server process |
 | Live (opt-in) | 4 | Real Claude calls, only with an explicit flag: `pytest -m llm --run-llm` |
 

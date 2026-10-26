@@ -6,16 +6,16 @@ Rules only, no LLM. Register with:  python guard/install.py --cursor <project>
 """
 
 import json
-import os
 import sys
 from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from core import config
 from core.heuristics import files, injection, pii, secrets
 from core.heuristics.base import Finding, max_severity
-from guard.claude_hook import DENY, MAX_READ_BYTES, _log, _read_event, _reason, _utf8_stdio, evaluate
+from guard.claude_hook import DENY, MAX_READ_BYTES, _log, _read_event, _reason, _utf8_stdio, _warn, evaluate, fail_open
 
 SOURCE = "cursor"
 # events whose response schema accepts "ask"
@@ -96,6 +96,7 @@ def after_event(event: dict[str, Any]) -> list[Finding]:
 def main() -> int:
     _utf8_stdio()
     try:
+        config.require_valid()
         event = _read_event()
         if not isinstance(event, dict):  # valid JSON but not an object: refuse explicitly
             raise ValueError("hook input is not a JSON object")
@@ -145,8 +146,10 @@ def main() -> int:
         reason = _reason(findings)
         print(json.dumps({"permission": decision, "user_message": reason, "agent_message": reason}))
     except Exception as e:  # noqa: BLE001 - fail closed on ANY error, like the Claude Code hook
-        print(f"AgentSentinel cursor hook error: {e}", file=sys.stderr)
-        if os.environ.get("AGENTSENTINEL_FAIL_OPEN") == "1":
+        _warn("config" if isinstance(e, config.ConfigError) else "internal", f"cursor hook error: {e}")
+        if isinstance(e, config.ConfigError):
+            e = ValueError(f"invalid settings: {', '.join(config.bad_names())}; run `python -m core.config`")
+        if fail_open():
             print(json.dumps({"permission": "allow"}))
         else:
             msg = f"AgentSentinel could not check this action, so it was blocked for safety ({str(e)[:160]})"

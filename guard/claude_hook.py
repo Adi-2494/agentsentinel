@@ -20,7 +20,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 try:  # an import failure (broken install) must still produce a safe decision
-    from core import store
+    from core import config, log, store
     from core.heuristics import commands, files, injection, pii, secrets
     from core.heuristics.base import Finding, max_severity, redact_spans
 
@@ -290,18 +290,31 @@ def post_tool(event: dict[str, Any]) -> dict[str, Any] | None:
     return {"hookSpecificOutput": out}
 
 
+def _warn(category: str, message: str) -> None:
+    """Categorised problem on stderr. Works even when the install is broken (plain print)."""
+    try:
+        log.problem(log.get(SOURCE), category, message)
+    except Exception:  # noqa: BLE001 - the log module itself may be what failed to import
+        print(f"AgentSentinel [{category}]: {message}", file=sys.stderr)
+
+
+def fail_open() -> bool:
+    """Explicit opt-out only. Read from the environment directly: it must work when config is broken."""
+    return os.environ.get("AGENTSENTINEL_FAIL_OPEN", "").strip().lower() in ("1", "true", "yes", "on")
+
+
 def _log(rows: list[tuple[str, str, str, str, Any]]) -> None:
     """One connection for all findings; a logging problem never changes a decision."""
     try:
         store.log_events(rows)
     except Exception as e:  # noqa: BLE001 - a logging problem never changes a decision
-        print(f"AgentSentinel: could not write the event log: {e}", file=sys.stderr)
+        _warn("storage", f"could not write the event log: {e}")
 
 
-def _fail(reason: str, event_name: str = "PreToolUse") -> int:
+def _fail(reason: str, event_name: str = "PreToolUse", category: str = "internal") -> int:
     """Guard could not check the action: block it (fail closed) unless explicitly configured."""
-    print(f"AgentSentinel hook error: {reason}", file=sys.stderr)
-    if os.environ.get("AGENTSENTINEL_FAIL_OPEN") == "1":
+    _warn(category, f"hook error: {reason}")
+    if fail_open():
         return 0  # explicit opt-out: availability over safety
     if event_name == "PostToolUse":  # the tool already ran; warn instead
         print(
@@ -349,22 +362,33 @@ def main() -> int:
     if _IMPORT_ERROR is not None:
         return _fail(f"guard failed to load: {_IMPORT_ERROR}")
     try:
+        config.require_valid()
+    except config.ConfigError as e:
+        _warn("config", str(e))  # the full list, on stderr
+        return _fail(
+            f"invalid settings: {', '.join(config.bad_names())}; run `python -m core.config`", category="config"
+        )
+    try:
         event = _read_event()
         if not isinstance(event, dict):
             raise ValueError("hook input is not a JSON object")
     except Exception as e:  # noqa: BLE001 - any unreadable input fails closed
-        return _fail(f"unreadable hook input: {e}")
+        return _fail(f"unreadable hook input: {e}", category="input")
     name = event.get("hook_event_name", "PreToolUse")
+    logger = log.get(SOURCE)
     try:
         if name == "PostToolUse":
-            result = post_tool(event)
+            with log.timed(logger, "post_tool", tool=event.get("tool_name", "")):
+                result = post_tool(event)
             if result:
                 print(json.dumps(result))
             return 0
         tool, inp = event.get("tool_name", ""), event.get("tool_input") or {}
-        decision, findings = evaluate(tool, inp, event.get("cwd", ""))
+        with log.timed(logger, "evaluate", tool=tool):
+            decision, findings = evaluate(tool, inp, event.get("cwd", ""))
     except Exception as e:  # noqa: BLE001 - fail closed: a crash must not become a bypass
         return _fail(f"{type(e).__name__}: {e}", name)
+    logger.debug("decision", extra={"tool": tool, "decision": decision or "allow", "rules": [f.rule for f in findings]})
     if not decision:
         return 0
     action = "blocked" if decision == "deny" else "warned"
