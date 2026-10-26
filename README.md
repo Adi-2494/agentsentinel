@@ -186,7 +186,7 @@ The 2 train "false alarms" are benign prompts that really do contain hidden zero
 | Virtual env Python | `.venv/bin/python` | `.venv\Scripts\python.exe` |
 | Shell used by Claude Code hooks | your shell | Git Bash (installed with Claude Code's Git for Windows requirement) |
 
-<sup>*</sup> Native Semgrep on Windows: see the CI note under *Testing*. If it isn't available, run AgentSentinel inside WSL, or let the tests skip the Semgrep-dependent checks.
+<sup>*</sup> Verified in CI: Semgrep installs and runs natively on Windows with `pipx install semgrep`; WSL is not required. Install it with pipx (its own environment), not into the project venv, because Semgrep pulls in an older `mcp` library.
 
 **Windows (PowerShell):**
 
@@ -215,7 +215,7 @@ git clone https://github.com/Adi-2494/agentsentinel.git
 cd agentsentinel
 python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
 cp .env.example .env          # LLM_BACKEND=claude_code, MAIN_MODEL=sonnet, CHECK_MODEL=haiku
-.venv/bin/pytest -q           # 531 tests, no Claude calls
+.venv/bin/pytest -q           # 538 tests, no Claude calls
 ```
 
 ### A. Live Guard (Claude Code)
@@ -368,11 +368,11 @@ The speed fixes were checked for equivalence: the new protected-file matcher giv
 
 | Suite | Tests | What it covers |
 |---|---|---|
-| Unit | 499 | The red-team attacks (`tests/test_redteam.py`, 31 tests incl. 1 integration), the robustness review (`tests/test_robustness.py`: fuzzing, scale, file handles), every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
+| Unit | 506 | The red-team attacks (`tests/test_redteam.py`, 31 tests incl. 1 integration), the robustness review (`tests/test_robustness.py`: fuzzing, scale, file handles), every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
 | Integration | 32 | 3 generated repos and 20 PR branches through the real gate (git diff + Semgrep + Gitleaks); a "fooled reviewer" stand-in proving the manipulation alarm fires; LLM outage fails closed; a 12-step agent session replayed through the real hook; raw MCP JSON-RPC to the server process |
 | Live (opt-in) | 4 | Real Claude calls, only with an explicit flag: `pytest -m llm --run-llm` |
 
-**CI:** unit and integration tests run on **Linux, macOS and Windows** (GitHub Actions matrix). *Windows results: pending the first run.*
+**CI:** the full unit and integration suite runs on **Linux, macOS and Windows** on every push (GitHub Actions matrix). The Windows run found real Windows-only bugs (text read with the cp1252 code page, backslash paths treated as escapes) that are now fixed and covered by tests. On Windows, 2 file-handle tests are skipped, because `/dev/fd` doesn't exist there.
 
 ```bash
 .venv/bin/pytest -q            # unit + integration, no Claude calls
