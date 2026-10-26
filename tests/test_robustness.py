@@ -209,7 +209,9 @@ def test_live_claude_tests_need_explicit_flag():
     assert "4 skipped" in p.stdout and "passed" not in p.stdout
 
 
-def test_safety_net_blocks_real_claude_in_tests():
-    from core.llm import ask_llm
+def test_safety_net_blocks_real_claude_in_tests(monkeypatch):
+    from core import llm
+    # pretend Claude Code is installed (CI machines don't have it), so the call reaches the process start
+    monkeypatch.setattr(llm.shutil, "which", lambda name: "/usr/local/bin/claude")
     with pytest.raises(AssertionError, match="real `claude` call attempted"):
-        ask_llm("hi", backend="claude_code")
+        llm.ask_llm("hi", backend="claude_code")
