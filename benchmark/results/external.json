@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-25T15:15:31Z",
+  "generated": "2026-10-26T10:53:42Z",
   "prompt_injections": {
     "source": {
       "dataset": "deepset/prompt-injections",
@@ -12,6 +12,16 @@
     "n": 662,
     "positives": 263,
     "rules_test_heldout": {
+      "tp": 23,
+      "fp": 0,
+      "fn": 37,
+      "tn": 56,
+      "precision_pct": 100.0,
+      "recall_pct": 38.3,
+      "false_positive_rate_pct": 0.0,
+      "accuracy_pct": 68.1
+    },
+    "phrase_rules_only_test_heldout": {
       "tp": 19,
       "fp": 0,
       "fn": 41,
@@ -22,24 +32,24 @@
       "accuracy_pct": 64.7
     },
     "rules_train_used_for_tuning": {
-      "tp": 123,
+      "tp": 144,
       "fp": 2,
-      "fn": 80,
+      "fn": 59,
       "tn": 341,
-      "precision_pct": 98.4,
-      "recall_pct": 60.6,
+      "precision_pct": 98.6,
+      "recall_pct": 70.9,
       "false_positive_rate_pct": 0.6,
-      "accuracy_pct": 85.0
+      "accuracy_pct": 88.8
     },
     "rules": {
-      "tp": 142,
+      "tp": 167,
       "fp": 2,
-      "fn": 121,
+      "fn": 96,
       "tn": 397,
-      "precision_pct": 98.6,
-      "recall_pct": 54.0,
+      "precision_pct": 98.8,
+      "recall_pct": 63.5,
       "false_positive_rate_pct": 0.5,
-      "accuracy_pct": 81.4
+      "accuracy_pct": 85.2
     },
     "llm_sample": {
       "model": "haiku",

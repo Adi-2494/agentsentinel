@@ -14,6 +14,7 @@ import tokenize
 import unicodedata
 from pathlib import PurePosixPath
 
+from core.heuristics import similarity
 from core.heuristics.base import SEVERITY_ORDER, Finding, decoded_payloads
 
 _AI = r"(?:ai|llm|gpt|claude|copilot|cursor|automated|bot|code)\s*(?:reviewer|review|assistant|agent|model)s?"
@@ -401,6 +402,22 @@ def scan(text: str, path: str = "") -> list[Finding]:
                     start=m.start(),
                     end=m.end(),
                     preview=src[m.start() : m.end()][:80],
+                )
+            )
+    if not any(f.rule.startswith("injection_") for f in findings):  # reworded? (fuzzier second pass)
+        close = similarity.scan_text(plain)
+        if close:
+            score, sentence, proto = close
+            start = text.find(sentence)  # span in the ORIGINAL text (-1 if normalising changed it)
+            findings.append(
+                Finding(
+                    rule="injection_similar",
+                    category="injection",
+                    severity="MEDIUM",
+                    message=f'Reads like an instruction to an AI ({score:.0%} similar to "{proto}")',
+                    start=start,
+                    end=start + len(sentence) if start >= 0 else -1,
+                    preview=sentence[:80],
                 )
             )
     findings += _encoded_injections(text)

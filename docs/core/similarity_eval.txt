@@ -1,0 +1,22 @@
+Similarity check for reworded prompt injections: evaluation evidence
+=====================================================================
+Data: deepset/prompt-injections (Apache-2.0), downloaded at runtime, not committed.
+Examples (PROTOTYPES) and settings were chosen on the TRAIN split + developer docs only.
+
+Settings tried on TRAIN (rules + similarity) and on 198 library docs/READMEs:
+  version 1  cosine >= 0.50, no word rule      TRAIN recall 76.4%  FPR 2/343  docs flagged 7/198
+  version 2  >= 0.50, >= 3 shared words         TRAIN recall 73.4%  FPR 2/343  docs flagged 1/198
+             (4 real repos: 2/649 files flagged, "the user input without escaping")
+  version 3  >= 0.40, >= 3 shared NON-filler words  TRAIN recall 70.4%  FPR 2/343  docs 0/198, repos 0/649
+  version 4  bug fix: 6 of 58 short examples had < 3 content words and could never match;
+             they now need ALL their content words      TRAIN recall 70.9%  FPR 2/343  docs 0/198, repos 0/649   <- shipped
+
+TEST split (held out), scored after each version:
+  phrase rules only        recall 19/60 = 31.7%   false alarms 0/56
+  + similarity, version 1  recall 24/60 = 40.0%   false alarms 0/56
+  + similarity, version 2  recall 22/60 = 36.7%   false alarms 0/56
+  + similarity, version 3  recall 23/60 = 38.3%   false alarms 0/56
+  + similarity, version 4  recall 23/60 = 38.3%   false alarms 0/56   (shipped)
+
+Reproduce: python benchmark/external.py --only prompt_injections
+           (fields phrase_rules_only_test_heldout and rules_test_heldout)

@@ -86,7 +86,9 @@ def eval_prompt_injections(llm_n: int, model: str) -> dict:
         part["split"] = "train" if path.name.startswith("train") else "test"
         parts.append(part)
     df = pd.concat(parts, ignore_index=True)
-    df["pred_rules"] = df["text"].map(lambda t: bool(injection.scan(t)))
+    rules_fired = df["text"].map(lambda t: {f.rule for f in injection.scan(t)})
+    df["pred_rules"] = rules_fired.map(bool)
+    df["pred_phrase_only"] = rules_fired.map(lambda r: bool(r - {"injection_similar"}))  # without the similarity check
     # Rules were tuned on the TRAIN split only; the TEST split is the honest, held-out score.
     out = {
         "source": SOURCES["prompt_injections"],
@@ -94,6 +96,9 @@ def eval_prompt_injections(llm_n: int, model: str) -> dict:
         "positives": int(df["label"].sum()),
         "rules_test_heldout": confusion(
             zip(df[df.split == "test"]["label"], df[df.split == "test"]["pred_rules"], strict=False)
+        ),
+        "phrase_rules_only_test_heldout": confusion(
+            zip(df[df.split == "test"]["label"], df[df.split == "test"]["pred_phrase_only"], strict=False)
         ),
         "rules_train_used_for_tuning": confusion(
             zip(df[df.split == "train"]["label"], df[df.split == "train"]["pred_rules"], strict=False)
