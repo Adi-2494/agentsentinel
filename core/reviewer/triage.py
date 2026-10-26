@@ -5,6 +5,7 @@ unavailable, every finding stays "real" (fail closed).
 """
 
 import json
+from typing import Any
 
 from core import config
 from core.llm import LLMError, ask_json
@@ -28,6 +29,15 @@ Reply with ONLY this JSON (one entry per finding id, no prose):
 {{"findings": [{{"id": "F1", "verdict": "real" | "false_alarm",
   "severity": "LOW" | "MEDIUM" | "HIGH" | "CRITICAL",
   "explanation": "...", "fix": "..."}}]}}"""
+
+
+def _verdicts(reply: Any) -> tuple[dict[str, dict[str, Any]], str | None]:
+    """Valid entries by finding id. Anything malformed is dropped; those findings stay "real"."""
+    items = reply.get("findings") if isinstance(reply, dict) else reply
+    if not isinstance(items, list):
+        return {}, f"unexpected reply from the AI: {str(reply)[:200]}"
+    good = {str(v["id"]): v for v in items if isinstance(v, dict) and isinstance(v.get("id"), str)}
+    return good, None if good or not items else f"unexpected reply from the AI: {str(reply)[:200]}"
 
 
 def triage(findings: list[ScanFinding], model: str | None = None) -> str | None:
@@ -55,10 +65,11 @@ def triage(findings: list[ScanFinding], model: str | None = None) -> str | None:
     )
     try:
         reply = ask_json(PROMPT.format(findings=payload), model or config.CHECK_MODEL)
-        verdicts = {v.get("id"): v for v in (reply.get("findings", []) if isinstance(reply, dict) else reply)}
-        error = None
+        verdicts, error = _verdicts(reply)
     except LLMError as e:
         verdicts, error = {}, str(e)
+    except Exception as e:  # noqa: BLE001 - a bug or OS error in the AI path must not crash the gate
+        verdicts, error = {}, f"unexpected error in the AI call: {type(e).__name__}: {e}"
 
     for f in targets:
         v = verdicts.get(f.id)

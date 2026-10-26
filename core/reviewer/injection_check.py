@@ -42,7 +42,7 @@ Reply with ONLY this JSON:
 def collect_text(files: list[Path], root: Path, pr_body: str) -> str:
     parts = []
     if pr_body.strip():
-        parts.append(f"=== PR DESCRIPTION ===\n{pr_body[:5000]}")
+        parts.append(f"=== PR DESCRIPTION ===\n{pr_body}")  # whole text: a trick after 5,000 chars was missed
     for f in files:
         try:
             rel = f.resolve().relative_to(root.resolve()).as_posix()
@@ -91,6 +91,11 @@ def check(
             r = ask_json(PROMPT.format(text=batch), model or config.CHECK_MODEL)
         except LLMError as e:
             return [], str(e)
+        except Exception as e:  # noqa: BLE001 - a bug or OS error in the AI path must not crash the gate
+            return [], f"unexpected error in the AI call: {type(e).__name__}: {e}"
+        verdict = str(r.get("verdict", "")).upper() if isinstance(r, dict) else ""
+        if verdict not in ("SAFE", "SUSPICIOUS"):  # garbage must never count as "no trap found"
+            return [], f"unexpected reply from the AI: {str(r)[:200]}"
         findings += _to_findings(r)
     return findings, None
 
@@ -102,7 +107,9 @@ def _to_findings(r: Any) -> list[ScanFinding]:
         conf = float(r.get("confidence", 0))
     except (TypeError, ValueError):
         conf = 0.0
-    evidence = [e for e in r.get("evidence", []) if isinstance(e, dict)] or [{}]
+    raw = r.get("evidence")
+    evidence = [e for e in raw if isinstance(e, dict)] if isinstance(raw, list) else []
+    evidence = evidence or [{}]
     return [
         ScanFinding(
             id="",

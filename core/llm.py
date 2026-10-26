@@ -106,6 +106,8 @@ def _ask_claude_code(prompt: str, model: str, system: str, timeout: int) -> str:
             )
         except subprocess.TimeoutExpired as e:
             raise LLMError(f"Claude Code timed out after {timeout}s") from e
+        except OSError as e:  # e.g. not executable, broken pipe: the AI could not run
+            raise LLMNotInstalled(f"Claude Code could not be started: {e}") from e
 
     raw = proc.stdout.strip()
     try:
@@ -113,8 +115,10 @@ def _ask_claude_code(prompt: str, model: str, system: str, timeout: int) -> str:
     except json.JSONDecodeError as e:
         raise _classify_error(proc.stderr or raw or f"exit code {proc.returncode}") from e
 
+    if not isinstance(data, dict):
+        raise _classify_error(f"unexpected Claude Code output: {raw[:200]}")
     result = data.get("result") or ""
-    if data.get("is_error") or proc.returncode != 0:
+    if data.get("is_error") or proc.returncode != 0 or not isinstance(result, str):
         raise _classify_error(f"{result} {proc.stderr}")
     return result
 

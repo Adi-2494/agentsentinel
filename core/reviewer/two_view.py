@@ -295,18 +295,27 @@ def _review(pr_text: str, model: str) -> ViewResult:
         r = ask_json(REVIEW_PROMPT.format(pr=pr_text), model)
     except LLMError as e:
         return ViewResult("error", error=str(e))
+    except Exception as e:  # noqa: BLE001 - a bug or OS error in the AI path must not crash the gate
+        return ViewResult("error", error=f"unexpected error in the AI call: {type(e).__name__}: {e}")
     verdict = str(r.get("verdict", "")).lower() if isinstance(r, dict) else ""
     if verdict not in ("safe", "vulnerable"):
         return ViewResult("error", error=f"unexpected reply: {str(r)[:200]}")
     try:
-        conf = float(r.get("confidence", 0))
+        conf = min(max(float(r.get("confidence", 0)), 0.0), 1.0)
     except (TypeError, ValueError):
         conf = 0.0
-    return ViewResult(verdict, conf, r.get("issues", []) or [])
+    if conf != conf:  # NaN
+        conf = 0.0
+    raw = r.get("issues", [])
+    issues = [i for i in raw if isinstance(i, dict)] if isinstance(raw, list) else []
+    if raw is not None and (not isinstance(raw, list) or (raw and not issues)):  # e.g. "lots", ["sqli", 3]
+        return ViewResult("error", error=f"unexpected reply (issue list unreadable): {str(r)[:200]}")
+    return ViewResult(verdict, conf, issues)
 
 
 def _max_sev(view: ViewResult) -> int:
-    return max((SEV_RANK.get(str(i.get("severity", "")).upper(), 0) for i in view.issues), default=0)
+    # an unknown severity word ("MEGA") counts as HIGH: a garbled answer must not hide an issue
+    return max((SEV_RANK.get(str(i.get("severity", "")).upper(), SEV_RANK["HIGH"]) for i in view.issues), default=0)
 
 
 def _serious(view: ViewResult) -> bool:

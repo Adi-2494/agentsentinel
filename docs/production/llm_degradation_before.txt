@@ -1,0 +1,68 @@
+AgentSentinel warning [llm_unavailable]: triage: Claude Code is not installed
+AgentSentinel warning [llm_limit]: triage: Pro limit reached, try again later or switch LLM_BACKEND=ollama
+AgentSentinel warning [llm_unavailable]: triage: Claude Code timed out after 180s
+AgentSentinel warning [llm_reply]: triage: No valid JSON in model reply: 'sure!'
+AgentSentinel warning [llm_unavailable]: AI-trap check: Claude Code is not installed
+AgentSentinel warning [llm_unavailable]: AI-trap check: Claude Code is not installed
+AgentSentinel warning [llm_unavailable]: AI-trap check: Claude Code is not installed
+AgentSentinel warning [llm_limit]: AI-trap check: Pro limit reached, try again later or switch LLM_BACKEND=ollama
+AgentSentinel warning [llm_limit]: AI-trap check: Pro limit reached, try again later or switch LLM_BACKEND=ollama
+AgentSentinel warning [llm_limit]: AI-trap check: Pro limit reached, try again later or switch LLM_BACKEND=ollama
+AgentSentinel warning [llm_unavailable]: AI-trap check: Claude Code timed out after 180s
+AgentSentinel warning [llm_unavailable]: AI-trap check: Claude Code timed out after 180s
+AgentSentinel warning [llm_unavailable]: AI-trap check: Claude Code timed out after 180s
+AgentSentinel warning [llm_reply]: AI-trap check: No valid JSON in model reply: 'sure!'
+AgentSentinel warning [llm_reply]: AI-trap check: No valid JSON in model reply: 'sure!'
+AgentSentinel warning [llm_reply]: AI-trap check: No valid JSON in model reply: 'sure!'
+AgentSentinel warning [llm_unavailable]: two-view check incomplete: Claude Code is not installed
+AgentSentinel warning [llm_unavailable]: two-view check incomplete: Claude Code is not installed
+AgentSentinel warning [llm_unavailable]: two-view check incomplete: Claude Code is not installed
+AgentSentinel warning [llm_limit]: two-view check incomplete: Pro limit reached, try again later or switch LLM_BACKEND=ollama
+AgentSentinel warning [llm_limit]: two-view check incomplete: Pro limit reached, try again later or switch LLM_BACKEND=ollama
+AgentSentinel warning [llm_limit]: two-view check incomplete: Pro limit reached, try again later or switch LLM_BACKEND=ollama
+AgentSentinel warning [llm_unavailable]: two-view check incomplete: Claude Code timed out after 180s
+AgentSentinel warning [llm_unavailable]: two-view check incomplete: Claude Code timed out after 180s
+AgentSentinel warning [llm_unavailable]: two-view check incomplete: Claude Code timed out after 180s
+AgentSentinel warning [llm_reply]: two-view check incomplete: No valid JSON in model reply: 'sure!'
+AgentSentinel warning [llm_reply]: two-view check incomplete: No valid JSON in model reply: 'sure!'
+AgentSentinel warning [llm_reply]: two-view check incomplete: No valid JSON in model reply: 'sure!'
+AgentSentinel warning [llm_reply]: two-view check incomplete: unexpected reply: []
+AgentSentinel warning [llm_reply]: two-view check incomplete: unexpected reply: []
+AgentSentinel warning [llm_reply]: two-view check incomplete: unexpected reply: []
+AgentSentinel warning [llm_reply]: two-view check incomplete: unexpected reply: looks fine
+AgentSentinel warning [llm_reply]: two-view check incomplete: unexpected reply: looks fine
+AgentSentinel warning [llm_reply]: two-view check incomplete: unexpected reply: looks fine
+AgentSentinel warning [llm_reply]: two-view check incomplete: unexpected reply: None
+AgentSentinel warning [llm_reply]: two-view check incomplete: unexpected reply: None
+AgentSentinel warning [llm_reply]: two-view check incomplete: unexpected reply: None
+AgentSentinel warning [llm_reply]: two-view check incomplete: unexpected reply: {}
+AgentSentinel warning [llm_reply]: two-view check incomplete: unexpected reply: {}
+AgentSentinel warning [llm_reply]: two-view check incomplete: unexpected reply: {}
+AgentSentinel warning [llm_reply]: two-view check incomplete: unexpected reply: {'verdict': 7, 'confidence': 'high', 'issues': 'lots', 'findings': 'x', 'evidence': None}
+AgentSentinel warning [llm_reply]: two-view check incomplete: unexpected reply: {'verdict': 7, 'confidence': 'high', 'issues': 'lots', 'findings': 'x', 'evidence': None}
+AgentSentinel warning [llm_reply]: two-view check incomplete: unexpected reply: {'verdict': 7, 'confidence': 'high', 'issues': 'lots', 'findings': 'x', 'evidence': None}
+AgentSentinel warning [llm_reply]: two-view check incomplete: unexpected reply: {'verdict': 'SAFE!!', 'confidence': 99, 'severity': 'SUPER', 'issues': [{'severity': 'MEGA'}]}
+AgentSentinel warning [llm_reply]: two-view check incomplete: unexpected reply: {'verdict': 'SAFE!!', 'confidence': 99, 'severity': 'SUPER', 'issues': [{'severity': 'MEGA'}]}
+AgentSentinel warning [llm_reply]: two-view check incomplete: unexpected reply: {'verdict': 'SAFE!!', 'confidence': 99, 'severity': 'SUPER', 'issues': [{'severity': 'MEGA'}]}
+WRONG  triage           reply is a string      vulnerable                    got CRASH    want BLOCKED  AttributeError: 'str' object has no attribute 'get'
+WRONG  triage           reply is null          vulnerable                    got CRASH    want BLOCKED  TypeError: 'NoneType' object is not iterable
+WRONG  triage           wrong field types      vulnerable                    got CRASH    want BLOCKED  AttributeError: 'str' object has no attribute 'get'
+WRONG  triage           wrong item types       vulnerable                    got CRASH    want BLOCKED  AttributeError: 'str' object has no attribute 'get'
+WRONG  triage           unexpected exception   vulnerable                    got CRASH    want BLOCKED  OSError: broken pipe
+WRONG  AI-trap check    reply is a list        safe                          got passed   want BLOCKED  
+WRONG  AI-trap check    reply is a string      safe                          got passed   want BLOCKED  
+WRONG  AI-trap check    reply is null          safe                          got passed   want BLOCKED  
+WRONG  AI-trap check    empty object           safe                          got passed   want BLOCKED  
+WRONG  AI-trap check    wrong field types      safe                          got passed   want BLOCKED  
+WRONG  AI-trap check    wrong item types       safe                          got passed   want BLOCKED  
+WRONG  AI-trap check    out-of-range values    safe                          got passed   want BLOCKED  
+WRONG  AI-trap check    unexpected exception   vulnerable                    got CRASH    want BLOCKED  OSError: broken pipe
+WRONG  AI-trap check    unexpected exception   safe                          got CRASH    want BLOCKED  OSError: broken pipe
+WRONG  AI-trap check    unexpected exception   safe       --allow-llm-outage got CRASH    want passed   OSError: broken pipe
+WRONG  two-view review  wrong item types       vulnerable                    got CRASH    want BLOCKED  AttributeError: 'str' object has no attribute 'get'
+WRONG  two-view review  wrong item types       safe                          got CRASH    want BLOCKED  AttributeError: 'str' object has no attribute 'get'
+WRONG  two-view review  wrong item types       safe       --allow-llm-outage got CRASH    want passed   AttributeError: 'str' object has no attribute 'get'
+WRONG  two-view review  unexpected exception   vulnerable                    got CRASH    want BLOCKED  OSError: broken pipe
+WRONG  two-view review  unexpected exception   safe                          got CRASH    want BLOCKED  OSError: broken pipe
+WRONG  two-view review  unexpected exception   safe       --allow-llm-outage got CRASH    want passed   OSError: broken pipe
+108 cells: 87 correct, 21 wrong (14 crashes)

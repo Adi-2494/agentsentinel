@@ -1,0 +1,2 @@
+trick after     0 chars of normal text: static rules nothing | AI-trap check SUSPICIOUS
+trick after  5994 chars of normal text: static rules nothing | AI-trap check SUSPICIOUS

@@ -6,6 +6,7 @@ noisier, so CI sets PERF_SLACK=3; locally the budgets apply as written.
 
 import os
 import statistics
+import sys
 
 import pytest
 
@@ -13,6 +14,10 @@ from benchmark.hook_latency import BUDGET_MS, CASES, ROOT, p95, process_ms, timi
 from guard.claude_hook import evaluate
 
 SLACK = float(os.environ.get("PERF_SLACK", "1"))
+
+# Under coverage (or a debugger) every line is traced and runs several times slower, so a
+# timing would measure the tracer, not AgentSentinel. CI runs this file in its own step.
+pytestmark = pytest.mark.skipif(sys.gettrace() is not None, reason="timings are meaningless under a tracer (coverage)")
 
 
 @pytest.mark.parametrize("name", list(CASES))

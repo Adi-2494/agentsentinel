@@ -40,10 +40,25 @@ class GateResult:
     def reviewer_blocking(self) -> list[dict[str, Any]]:
         if not self.two_view or self.two_view.view2.verdict != "vulnerable":
             return []
+        issues = self.two_view.view2.issues
+        if not issues:  # "vulnerable" with nothing listed: same rule as two_view._serious (assume serious)
+            return [
+                {
+                    "file": "(not given)",
+                    "line": 0,
+                    "type": "unspecified",
+                    "severity": "HIGH",
+                    "explanation": "The reviewer said the code is vulnerable but did not list the issue.",
+                }
+            ]
         return [
             i
-            for i in self.two_view.view2.issues
-            if isinstance(i, dict) and str(i.get("severity", "")).upper() in config.FAIL_ON_SEVERITIES
+            for i in issues
+            if isinstance(i, dict)
+            and (
+                str(i.get("severity", "")).upper() in config.FAIL_ON_SEVERITIES
+                or str(i.get("severity", "")).upper() not in SEV_RANK  # unknown word: never hides an issue
+            )
         ]
 
     @property
