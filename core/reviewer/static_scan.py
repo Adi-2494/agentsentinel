@@ -11,8 +11,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path, PurePath
 from typing import Any
 
-from core.detectors import injection, pii, secrets
-from core.detectors.base import mask
+from core.heuristics import injection, pii, secrets
+from core.heuristics.base import mask
 
 SEMGREP_CONFIG = "p/owasp-top-ten"
 LOCAL_RULES = Path(__file__).resolve().parent / "rules" / "agentsentinel.yml"  # gaps in the public ruleset

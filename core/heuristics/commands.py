@@ -5,8 +5,8 @@ import shlex
 from collections.abc import Callable
 
 from core import config
-from core.detectors.base import Finding
-from core.detectors.files import is_protected_path
+from core.heuristics.base import Finding
+from core.heuristics.files import is_protected_path
 
 _SHELLS = (
     r"(?:sudo\s+)?(?:ba|z|da|k|fi)?sh|python[0-9.]*|perl|ruby|node|"

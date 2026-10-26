@@ -86,7 +86,7 @@ def test_app_renders_without_errors(db, tmp_path, monkeypatch, use_data):
 def test_demo_log_is_labelled_and_safe(tmp_path, monkeypatch):
     from streamlit.testing.v1 import AppTest
 
-    from core.detectors import pii, secrets
+    from core.heuristics import pii, secrets
     from dashboard.seed_demo import seed
 
     demo = seed(tmp_path / "demo.db")

@@ -6,7 +6,7 @@ import re
 from functools import lru_cache
 
 from core import config
-from core.detectors.base import Finding
+from core.heuristics.base import Finding
 
 
 def is_protected_path(path: str) -> bool:

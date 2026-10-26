@@ -51,7 +51,7 @@ Developer's laptop                          GitHub
 └──────────────────────────┘  │  │  └──────────────────────────┘
                               ▼  ▼
                    AgentSentinel core (Python)
-       detectors: secrets · personal data · commands · files · AI traps
+       heuristics: secrets · personal data · commands · files · AI traps
        reviewer:  Semgrep (OWASP + own rules) + Gitleaks + Claude triage
                   + AI-trap check + two-view (batched, fails closed)
        MCP server: check_command · check_file_content · scan_text
@@ -387,7 +387,7 @@ The speed fixes were checked for equivalence: the new protected-file matcher giv
 
 ```
 core/        config, llm.py (single LLM doorway), store.py (SQLite)
-  detectors/ secrets, pii, commands, files, injection (AI traps)
+  heuristics/ fast rule-based pre-filters: secrets, pii, commands, files, injection (AI traps)
   reviewer/  static_scan, triage, injection_check, two_view, report
     rules/   agentsentinel.yml (own Semgrep rules: zip-slip, SSRF, path traversal, Node SQLi)
 guard/       claude_hook.py (Pre/PostToolUse), cursor_hook.py, mcp_server.py, install.py

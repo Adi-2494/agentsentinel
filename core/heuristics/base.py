@@ -1,4 +1,4 @@
-"""Shared result type for every detector."""
+"""Shared result type for every heuristic check."""
 
 from dataclasses import asdict, dataclass
 from typing import Any

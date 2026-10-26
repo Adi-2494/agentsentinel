@@ -13,8 +13,8 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from core.detectors import files, injection, pii, secrets
-from core.detectors.base import Finding, max_severity
+from core.heuristics import files, injection, pii, secrets
+from core.heuristics.base import Finding, max_severity
 from guard.claude_hook import DENY, MAX_READ_BYTES, _log, _read_event, _reason, _utf8_stdio, evaluate
 
 SOURCE = "cursor"

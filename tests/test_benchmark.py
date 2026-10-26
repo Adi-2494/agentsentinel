@@ -6,8 +6,8 @@ import pytest
 
 from benchmark import recorder_hook
 from benchmark import run_benchmark as rb
-from core.detectors import secrets
-from core.detectors.pii import verhoeff_valid
+from core.heuristics import secrets
+from core.heuristics.pii import verhoeff_valid
 
 
 def test_fake_values_look_real_to_detectors():

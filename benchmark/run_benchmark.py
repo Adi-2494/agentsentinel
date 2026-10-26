@@ -32,7 +32,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from core import config  # noqa: E402
-from core.detectors.pii import _V_D, _V_P  # noqa: E402
+from core.heuristics.pii import _V_D, _V_P  # noqa: E402
 from core.llm import LLMError, LLMLimitReached, ask_json  # noqa: E402
 
 CASES = ROOT / "benchmark" / "cases"
@@ -354,7 +354,7 @@ def summarise(progress: dict) -> dict:
 
 def redacted_json(obj) -> str:
     """results.json is committed: mask the fake secrets that recorded commands may contain."""
-    from core.detectors import pii, secrets
+    from core.heuristics import pii, secrets
 
     text = json.dumps(obj, indent=2, ensure_ascii=False)
     text = secrets.redact(pii.redact(text)[0])[0]

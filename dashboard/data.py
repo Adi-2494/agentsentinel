@@ -8,7 +8,7 @@ from typing import Any
 import pandas as pd
 
 from core import config
-from core.detectors import commands, secrets
+from core.heuristics import commands, secrets
 
 SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
 GUARD_SOURCES = {"claude_code", "cursor", "mcp"}

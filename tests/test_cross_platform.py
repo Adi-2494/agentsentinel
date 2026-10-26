@@ -2,8 +2,8 @@
 
 import pytest
 
-from core.detectors import commands
-from core.detectors.files import is_protected_path
+from core.heuristics import commands
+from core.heuristics.files import is_protected_path
 from guard.claude_hook import evaluate
 
 

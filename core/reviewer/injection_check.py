@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from core import config
-from core.detectors import injection, pii, secrets
+from core.heuristics import injection, pii, secrets
 from core.llm import LLMError, ask_json
 from core.reviewer.static_scan import ScanFinding
 

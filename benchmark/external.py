@@ -25,7 +25,7 @@ sys.path.insert(0, str(ROOT))
 import pandas as pd  # noqa: E402
 
 from core import config  # noqa: E402
-from core.detectors import injection  # noqa: E402
+from core.heuristics import injection  # noqa: E402
 from core.llm import LLMError, LLMLimitReached, ask_json  # noqa: E402
 
 DATA = ROOT / "benchmark" / "external_data"  # git-ignored

@@ -1,7 +1,7 @@
 import pytest
 
-from core.detectors import pii
-from core.detectors.pii import _V_D, _V_P, luhn_valid, verhoeff_valid
+from core.heuristics import pii
+from core.heuristics.pii import _V_D, _V_P, luhn_valid, verhoeff_valid
 
 _V_INV = [0, 4, 3, 2, 1, 5, 6, 7, 8, 9]
 

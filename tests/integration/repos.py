@@ -7,7 +7,7 @@ never contains a secret-shaped string.
 import subprocess
 from pathlib import Path
 
-from core.detectors.pii import _V_D, _V_P
+from core.heuristics.pii import _V_D, _V_P
 
 _V_INV = [0, 4, 3, 2, 1, 5, 6, 7, 8, 9]
 

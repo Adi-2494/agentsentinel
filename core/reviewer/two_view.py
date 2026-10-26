@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from core import config
-from core.detectors import pii, secrets
+from core.heuristics import pii, secrets
 from core.llm import LLMError, ask_json
 
 MAX_CHARS = 60_000  # code per review batch (one batch = 2 LLM calls)

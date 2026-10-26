@@ -3,7 +3,7 @@ secret-shaped string (keeps GitHub push protection and Gitleaks quiet)."""
 
 import pytest
 
-from core.detectors import secrets
+from core.heuristics import secrets
 
 FAKE = {
     "aws_access_key": "AKIA" + "Q" * 16,

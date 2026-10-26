@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from core import store
-from core.detectors import commands
+from core.heuristics import commands
 from guard.claude_hook import evaluate
 
 HOOK = Path(__file__).resolve().parent.parent / "guard" / "claude_hook.py"
@@ -177,7 +177,7 @@ def _reference_is_protected(path):
 
 
 def test_2_fast_protected_path_matches_reference():
-    from core.detectors.files import is_protected_path
+    from core.heuristics.files import is_protected_path
 
     rnd = random.Random(3)
     parts = [

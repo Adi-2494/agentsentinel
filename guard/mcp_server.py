@@ -11,8 +11,8 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core import store
-from core.detectors import injection, pii, secrets
-from core.detectors.base import Finding, max_severity
+from core.heuristics import injection, pii, secrets
+from core.heuristics.base import Finding, max_severity
 from guard.claude_hook import DENY, evaluate
 
 INSTRUCTIONS = (

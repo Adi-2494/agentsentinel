@@ -1,6 +1,6 @@
 import pytest
 
-from core.detectors import commands
+from core.heuristics import commands
 
 
 def rules(cmd):

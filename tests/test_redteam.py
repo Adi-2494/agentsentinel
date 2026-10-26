@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from core.detectors import injection
+from core.heuristics import injection
 from guard.claude_hook import evaluate
 
 HOOK = Path(__file__).resolve().parent.parent / "guard" / "claude_hook.py"

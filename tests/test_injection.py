@@ -2,7 +2,7 @@
 
 import pytest
 
-from core.detectors import injection
+from core.heuristics import injection
 
 ZWSP, RLO = chr(0x200B), chr(0x202E)
 

@@ -1,6 +1,11 @@
 """AI-trap scanner (A5/B4): instructions aimed at an AI agent or reviewer, and
-invisible Unicode. Rules only; the Merge Gate adds an LLM layer on top
-(core/reviewer/injection_check.py).
+invisible Unicode.
+
+This is a fast PRE-FILTER, not a classifier. Phrase rules catch the common ways
+injections are worded (and survive look-alike letters, hidden characters and base64
+wrapping, because the text is normalised and decoded first), but a paraphrase that
+avoids every phrase gets through. That is why the Merge Gate adds an LLM layer on top
+(core/reviewer/injection_check.py) instead of trusting these rules alone.
 """
 
 import io
@@ -9,7 +14,7 @@ import tokenize
 import unicodedata
 from pathlib import PurePosixPath
 
-from core.detectors.base import Finding
+from core.heuristics.base import Finding
 
 _AI = r"(?:ai|llm|gpt|claude|copilot|cursor|automated|bot|code)\s*(?:reviewer|review|assistant|agent|model)s?"
 

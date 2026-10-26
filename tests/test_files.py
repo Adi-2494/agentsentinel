@@ -1,6 +1,6 @@
 import pytest
 
-from core.detectors.files import is_protected_path
+from core.heuristics.files import is_protected_path
 
 
 @pytest.mark.parametrize(

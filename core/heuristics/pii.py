@@ -6,7 +6,7 @@ to keep false alarms low.
 
 import re
 
-from core.detectors.base import Finding, mask, redact_spans
+from core.heuristics.base import Finding, mask, redact_spans
 
 EMAIL = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 # RFC 2606 / 6761 reserved names: can never belong to a real person

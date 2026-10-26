@@ -9,7 +9,7 @@ import math
 import re
 from dataclasses import dataclass
 
-from core.detectors.base import Finding, mask, redact_spans
+from core.heuristics.base import Finding, mask, redact_spans
 
 
 @dataclass(frozen=True)

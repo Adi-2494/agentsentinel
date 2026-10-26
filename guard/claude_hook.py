@@ -21,8 +21,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 try:  # an import failure (broken install) must still produce a safe decision
     from core import store
-    from core.detectors import commands, files, injection, pii, secrets
-    from core.detectors.base import Finding, max_severity, redact_spans
+    from core.heuristics import commands, files, injection, pii, secrets
+    from core.heuristics.base import Finding, max_severity, redact_spans
 
     _IMPORT_ERROR = None
 except Exception as _e:  # noqa: BLE001 - any import failure must still fail closed
