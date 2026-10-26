@@ -24,6 +24,7 @@ ignore = [
 "tests/**" = ["S105", "S106", "S108", "S110", "BLE001"]  # fake secrets, /tmp paths, broad excepts in fixtures
 "benchmark/**" = ["S108", "S310"]
 "examples/**" = ["S"]  # deliberately vulnerable demo PRs
+"tests/fixtures/**" = ["S", "UP031", "UP032", "F841"]  # deliberately vulnerable taint cases
 
 [tool.ruff.format]
 quote-style = "double"

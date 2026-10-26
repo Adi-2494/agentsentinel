@@ -1,0 +1,399 @@
+{
+  "source": {
+    "repo": "https://github.com/OWASP-Benchmark/BenchmarkPython.git",
+    "commit": "f1291485808b66e20ddb6b01b10dc71b3df8c8ba",
+    "license": "GPL-3.0 (downloaded at runtime, not redistributed)"
+  },
+  "categories": [
+    "cmdi",
+    "codeinj",
+    "deserialization",
+    "pathtraver",
+    "sqli"
+  ],
+  "split": "odd case numbers = dev (looked at while improving); even = held out",
+  "taint": {
+    "heldout": {
+      "n": 158,
+      "tp": 42,
+      "fp": 13,
+      "fn": 12,
+      "tn": 91,
+      "precision_pct": 76.4,
+      "recall_pct": 77.8,
+      "false_positive_rate_pct": 12.5,
+      "accuracy_pct": 84.2,
+      "per_category": {
+        "pathtraver": {
+          "tp": 20,
+          "fp": 4,
+          "fn": 8,
+          "tn": 53,
+          "precision_pct": 83.3,
+          "recall_pct": 71.4,
+          "false_positive_rate_pct": 7.0,
+          "accuracy_pct": 85.9
+        },
+        "cmdi": {
+          "tp": 5,
+          "fp": 2,
+          "fn": 0,
+          "tn": 3,
+          "precision_pct": 71.4,
+          "recall_pct": 100.0,
+          "false_positive_rate_pct": 40.0,
+          "accuracy_pct": 80.0
+        },
+        "sqli": {
+          "tp": 2,
+          "fp": 0,
+          "fn": 0,
+          "tn": 4,
+          "precision_pct": 100.0,
+          "recall_pct": 100.0,
+          "false_positive_rate_pct": 0.0,
+          "accuracy_pct": 100.0
+        },
+        "codeinj": {
+          "tp": 9,
+          "fp": 4,
+          "fn": 1,
+          "tn": 14,
+          "precision_pct": 69.2,
+          "recall_pct": 90.0,
+          "false_positive_rate_pct": 22.2,
+          "accuracy_pct": 82.1
+        },
+        "deserialization": {
+          "tp": 6,
+          "fp": 3,
+          "fn": 3,
+          "tn": 17,
+          "precision_pct": 66.7,
+          "recall_pct": 66.7,
+          "false_positive_rate_pct": 15.0,
+          "accuracy_pct": 79.3
+        }
+      }
+    },
+    "dev": {
+      "n": 153,
+      "tp": 53,
+      "fp": 11,
+      "fn": 14,
+      "tn": 75,
+      "precision_pct": 82.8,
+      "recall_pct": 79.1,
+      "false_positive_rate_pct": 12.8,
+      "accuracy_pct": 83.7,
+      "per_category": {
+        "pathtraver": {
+          "tp": 25,
+          "fp": 10,
+          "fn": 12,
+          "tn": 36,
+          "precision_pct": 71.4,
+          "recall_pct": 67.6,
+          "false_positive_rate_pct": 21.7,
+          "accuracy_pct": 73.5
+        },
+        "cmdi": {
+          "tp": 8,
+          "fp": 1,
+          "fn": 0,
+          "tn": 1,
+          "precision_pct": 88.9,
+          "recall_pct": 100.0,
+          "false_positive_rate_pct": 50.0,
+          "accuracy_pct": 90.0
+        },
+        "sqli": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "tn": 7,
+          "precision_pct": 100.0,
+          "recall_pct": 100.0,
+          "false_positive_rate_pct": 0.0,
+          "accuracy_pct": 100.0
+        },
+        "codeinj": {
+          "tp": 10,
+          "fp": 0,
+          "fn": 0,
+          "tn": 15,
+          "precision_pct": 100.0,
+          "recall_pct": 100.0,
+          "false_positive_rate_pct": 0.0,
+          "accuracy_pct": 100.0
+        },
+        "deserialization": {
+          "tp": 7,
+          "fp": 0,
+          "fn": 2,
+          "tn": 16,
+          "precision_pct": 100.0,
+          "recall_pct": 77.8,
+          "false_positive_rate_pct": 0.0,
+          "accuracy_pct": 92.0
+        }
+      }
+    }
+  },
+  "semgrep": {
+    "heldout": {
+      "n": 158,
+      "tp": 10,
+      "fp": 22,
+      "fn": 44,
+      "tn": 82,
+      "precision_pct": 31.2,
+      "recall_pct": 18.5,
+      "false_positive_rate_pct": 21.2,
+      "accuracy_pct": 58.2,
+      "per_category": {
+        "pathtraver": {
+          "tp": 2,
+          "fp": 14,
+          "fn": 26,
+          "tn": 43,
+          "precision_pct": 12.5,
+          "recall_pct": 7.1,
+          "false_positive_rate_pct": 24.6,
+          "accuracy_pct": 52.9
+        },
+        "cmdi": {
+          "tp": 4,
+          "fp": 5,
+          "fn": 1,
+          "tn": 0,
+          "precision_pct": 44.4,
+          "recall_pct": 80.0,
+          "false_positive_rate_pct": 100.0,
+          "accuracy_pct": 40.0
+        },
+        "sqli": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "tn": 4,
+          "precision_pct": null,
+          "recall_pct": 0.0,
+          "false_positive_rate_pct": 0.0,
+          "accuracy_pct": 66.7
+        },
+        "codeinj": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 10,
+          "tn": 18,
+          "precision_pct": null,
+          "recall_pct": 0.0,
+          "false_positive_rate_pct": 0.0,
+          "accuracy_pct": 64.3
+        },
+        "deserialization": {
+          "tp": 4,
+          "fp": 3,
+          "fn": 5,
+          "tn": 17,
+          "precision_pct": 57.1,
+          "recall_pct": 44.4,
+          "false_positive_rate_pct": 15.0,
+          "accuracy_pct": 72.4
+        }
+      }
+    },
+    "dev": {
+      "n": 153,
+      "tp": 18,
+      "fp": 9,
+      "fn": 49,
+      "tn": 77,
+      "precision_pct": 66.7,
+      "recall_pct": 26.9,
+      "false_positive_rate_pct": 10.5,
+      "accuracy_pct": 62.1,
+      "per_category": {
+        "pathtraver": {
+          "tp": 10,
+          "fp": 4,
+          "fn": 27,
+          "tn": 42,
+          "precision_pct": 71.4,
+          "recall_pct": 27.0,
+          "false_positive_rate_pct": 8.7,
+          "accuracy_pct": 62.7
+        },
+        "cmdi": {
+          "tp": 3,
+          "fp": 2,
+          "fn": 5,
+          "tn": 0,
+          "precision_pct": 60.0,
+          "recall_pct": 37.5,
+          "false_positive_rate_pct": 100.0,
+          "accuracy_pct": 30.0
+        },
+        "sqli": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 3,
+          "tn": 7,
+          "precision_pct": null,
+          "recall_pct": 0.0,
+          "false_positive_rate_pct": 0.0,
+          "accuracy_pct": 70.0
+        },
+        "codeinj": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 10,
+          "tn": 15,
+          "precision_pct": null,
+          "recall_pct": 0.0,
+          "false_positive_rate_pct": 0.0,
+          "accuracy_pct": 60.0
+        },
+        "deserialization": {
+          "tp": 5,
+          "fp": 3,
+          "fn": 4,
+          "tn": 13,
+          "precision_pct": 62.5,
+          "recall_pct": 55.6,
+          "false_positive_rate_pct": 18.8,
+          "accuracy_pct": 72.0
+        }
+      }
+    }
+  },
+  "taint_or_semgrep": {
+    "heldout": {
+      "n": 158,
+      "tp": 44,
+      "fp": 33,
+      "fn": 10,
+      "tn": 71,
+      "precision_pct": 57.1,
+      "recall_pct": 81.5,
+      "false_positive_rate_pct": 31.7,
+      "accuracy_pct": 72.8,
+      "per_category": {
+        "pathtraver": {
+          "tp": 20,
+          "fp": 18,
+          "fn": 8,
+          "tn": 39,
+          "precision_pct": 52.6,
+          "recall_pct": 71.4,
+          "false_positive_rate_pct": 31.6,
+          "accuracy_pct": 69.4
+        },
+        "cmdi": {
+          "tp": 5,
+          "fp": 5,
+          "fn": 0,
+          "tn": 0,
+          "precision_pct": 50.0,
+          "recall_pct": 100.0,
+          "false_positive_rate_pct": 100.0,
+          "accuracy_pct": 50.0
+        },
+        "sqli": {
+          "tp": 2,
+          "fp": 0,
+          "fn": 0,
+          "tn": 4,
+          "precision_pct": 100.0,
+          "recall_pct": 100.0,
+          "false_positive_rate_pct": 0.0,
+          "accuracy_pct": 100.0
+        },
+        "codeinj": {
+          "tp": 9,
+          "fp": 4,
+          "fn": 1,
+          "tn": 14,
+          "precision_pct": 69.2,
+          "recall_pct": 90.0,
+          "false_positive_rate_pct": 22.2,
+          "accuracy_pct": 82.1
+        },
+        "deserialization": {
+          "tp": 8,
+          "fp": 6,
+          "fn": 1,
+          "tn": 14,
+          "precision_pct": 57.1,
+          "recall_pct": 88.9,
+          "false_positive_rate_pct": 30.0,
+          "accuracy_pct": 75.9
+        }
+      }
+    },
+    "dev": {
+      "n": 153,
+      "tp": 59,
+      "fp": 19,
+      "fn": 8,
+      "tn": 67,
+      "precision_pct": 75.6,
+      "recall_pct": 88.1,
+      "false_positive_rate_pct": 22.1,
+      "accuracy_pct": 82.4,
+      "per_category": {
+        "pathtraver": {
+          "tp": 30,
+          "fp": 14,
+          "fn": 7,
+          "tn": 32,
+          "precision_pct": 68.2,
+          "recall_pct": 81.1,
+          "false_positive_rate_pct": 30.4,
+          "accuracy_pct": 74.7
+        },
+        "cmdi": {
+          "tp": 8,
+          "fp": 2,
+          "fn": 0,
+          "tn": 0,
+          "precision_pct": 80.0,
+          "recall_pct": 100.0,
+          "false_positive_rate_pct": 100.0,
+          "accuracy_pct": 80.0
+        },
+        "sqli": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "tn": 7,
+          "precision_pct": 100.0,
+          "recall_pct": 100.0,
+          "false_positive_rate_pct": 0.0,
+          "accuracy_pct": 100.0
+        },
+        "codeinj": {
+          "tp": 10,
+          "fp": 0,
+          "fn": 0,
+          "tn": 15,
+          "precision_pct": 100.0,
+          "recall_pct": 100.0,
+          "false_positive_rate_pct": 0.0,
+          "accuracy_pct": 100.0
+        },
+        "deserialization": {
+          "tp": 8,
+          "fp": 3,
+          "fn": 1,
+          "tn": 13,
+          "precision_pct": 72.7,
+          "recall_pct": 88.9,
+          "false_positive_rate_pct": 18.8,
+          "accuracy_pct": 84.0
+        }
+      }
+    }
+  }
+}

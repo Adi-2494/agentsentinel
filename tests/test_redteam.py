@@ -188,9 +188,12 @@ def test_B2_llm_outage_fails_closed(tmp_path, monkeypatch):
     def down(*a, **k):
         raise LLMError("Claude Code timed out after 180s")
 
-    # pickle deserialization of request data: Semgrep CE misses it, so only the AI layer could block it
-    rce = "import pickle\nfrom flask import request\n\ndef load():\n    return pickle.loads(request.data)\n"
-    result, _ = _gate({"rce.py": rce}, tmp_path, monkeypatch, reviewer=down, classifier=down)
+    # a missing ownership check (IDOR): no static rule can see it, so only the AI layer could block it
+    idor = (
+        "import sqlite3\n\ndef invoice(invoice_id):\n"
+        '    return sqlite3.connect("db").execute("SELECT * FROM invoices WHERE id = ?", (invoice_id,)).fetchone()\n'
+    )
+    result, _ = _gate({"invoice.py": idor}, tmp_path, monkeypatch, reviewer=down, classifier=down)
     assert not [f for f in result.findings if f.category == "vuln"], "precondition: static scan finds nothing"
     assert result.failed, "gate must not PASS when the AI review did not run"
 

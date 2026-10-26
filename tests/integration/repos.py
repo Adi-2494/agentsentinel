@@ -146,7 +146,18 @@ def user():
                     '@app.route("/restore", methods=["POST"])\ndef restore():\n'
                     '    return {"n": len(pickle.loads(request.data))}\n'
                 },
-                # insecure deserialization: no static rule catches it, only the LLM review
+                # insecure deserialization of request data: the Python taint analysis blocks it
+                "expect": {"exit": 1, "rules": {"taint-deserialization"}},
+            },
+            "pr-idor": {
+                "files": {
+                    "invoice.py": "import sqlite3\nfrom flask import Flask\napp = Flask(__name__)\n\n\n"
+                    '@app.route("/invoice/<int:invoice_id>")\ndef invoice(invoice_id):\n'
+                    "    # no check that the invoice belongs to the logged-in user (IDOR)\n"
+                    '    row = sqlite3.connect("app.db").execute("SELECT * FROM invoices WHERE id = ?", (invoice_id,))\n'
+                    '    return {"invoice": row.fetchone()}\n'
+                },
+                # broken access control: a logic bug no static rule can see, only the LLM review
                 "expect": {"exit": 0, "rules": set()},
             },
             "pr-docs-only": {

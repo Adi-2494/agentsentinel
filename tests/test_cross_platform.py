@@ -221,7 +221,12 @@ def _default_encoding_calls(path: Path) -> list[str]:
 def test_B_no_text_io_depends_on_the_platform_encoding():
     """On Windows the default is the local code page (cp1252), which garbles UTF-8 and hides
     invisible / look-alike characters from the detectors. Every text read/write must say utf-8."""
-    files = [p for d in ("core", "guard", "gate", "dashboard", "benchmark", "tests") for p in (ROOT / d).rglob("*.py")]
+    files = [
+        p
+        for d in ("core", "guard", "gate", "dashboard", "benchmark", "tests")
+        for p in (ROOT / d).rglob("*.py")
+        if not {"external_data", "fixtures"} & set(p.parts)  # downloaded datasets / sample vulnerable code
+    ]
     bad = [b for f in files for b in _default_encoding_calls(f)]
     assert not bad, "\n".join(bad)
 

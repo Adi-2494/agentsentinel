@@ -1,0 +1,70 @@
+Python taint analysis (core/reviewer/taint.py): evidence
+=========================================================
+
+1. Hand-written case set (tests/fixtures/taint: 18 vulnerable, 12 safe look-alikes)
+   Written together with the engine, so this is a REGRESSION check, not an accuracy claim.
+     Semgrep before (docs/core/taint_before.txt): 11/18 caught, 4/12 safe flagged
+     taint analysis:                               18/18 caught, 0/12 safe flagged
+   Reproduce: python benchmark/taint_cases.py
+
+2. OWASP Benchmark for Python (independent ground truth; GPL-3, downloaded at runtime,
+   pinned commit f1291485808b66e20ddb6b01b10dc71b3df8c8ba). 5 categories in scope:
+   path traversal, command injection, SQL injection, code injection, deserialization.
+   ODD case numbers = dev (looked at while improving), EVEN = held out.
+
+   Dev half, as the engine was improved (taint only):
+     first version                                  recall 30/67 (45%)  false alarms 18/86 (21%)
+     + file-check sinks, mutators, request object,
+       constant branches, path guards               recall 48/67 (72%)  false alarms 17/86
+     + per-key dicts, constant ternaries            recall 48/67 (72%)  false alarms 11/86
+     + ["sh", "-c", text] lists count as a shell    recall 53/67 (79%)  false alarms 11/86 (13%)
+
+   HELD-OUT half (scored twice: after the dev work, and again after the real-code fixes
+   in section 3; both runs gave the same numbers):
+     taint analysis       recall 42/54 = 77.8%   false alarms 13/104 = 12.5%   precision 76.4%
+     Semgrep (before)     recall 10/54 = 18.5%   false alarms 22/104 = 21.2%   precision 31.2%
+     either (the gate)    recall 44/54 = 81.5%   false alarms 33/104 = 31.7%   precision 57.1%
+   Reproduce: python benchmark/owasp_python.py   (saves benchmark/results/owasp_python.json)
+
+3. Real code, not written for testing (false-alarm check; every finding read by hand)
+   == site-packages: 5557 .py files, 6 findings
+      streamlit/web/server/starlette/starlette_routes.py:1122 taint-path :: User input (request.path_params) reaches Path.is_dir(): possible path traversal
+      streamlit/web/server/starlette/starlette_routes.py:1190 taint-path :: User input (request.path_params) reaches Path.exists(): possible path traversal
+      streamlit/web/server/starlette/starlette_routes.py:1193 taint-path :: User input (request.path_params) reaches Path.stat(): possible path traversal
+      numpy/distutils/lib2def.py:114 taint-command :: User input (sys.argv) reaches subprocess.Popen(shell=True) inside getnm(): possible command injection
+      setuptools/launch.py:31 taint-code :: User input (sys.argv) reaches compile(): possible code injection
+      setuptools/launch.py:32 taint-code :: User input (sys.argv) reaches exec(): possible code injection
+   == repos: 148 .py files, 12 findings
+      dvpwa/sqli/views.py:57 taint-sql :: User input (request.post) reaches .execute() inside create(): possible SQL injection
+      dvpwa/sqli/views.py:89 taint-sql :: User input (request.post) reaches .execute() inside create(): possible SQL injection
+      pygoat/challenge/views.py:582 taint-path :: User input (request.body) reaches Path.exists(): possible path traversal
+      pygoat/challenge/views.py:635 taint-path :: User input (request.body) reaches Path.exists(): possible path traversal
+      pygoat/dockerized_labs/a9_uckv_lab/app.py:62 taint-deserialization :: User input (request.files) reaches yaml.load (unsafe Loader): possible unsafe deserialization
+      pygoat/dockerized_labs/command_injection_lab/app.py:29 taint-command :: User input (request.form) reaches subprocess.Popen(shell=True): possible command injection
+      pygoat/dockerized_labs/command_injection_lab/app.py:49 taint-code :: User input (request.form) reaches eval(): possible code injection
+      pygoat/dockerized_labs/insec_des_lab/main.py:40 taint-deserialization :: User input (request.form) reaches pickle.loads: possible unsafe deserialization
+      pygoat/dockerized_labs/software_integrity_lab/app.py:44 taint-deserialization :: User input (request.cookies) reaches pickle.loads: possible unsafe deserialization
+      pygoat/dockerized_labs/sql_injection_lab/app.py:57 taint-sql :: User input (request.form) reaches .execute(): possible SQL injection
+      pygoat/dockerized_labs/ssrf_lab/app.py:22 taint-path :: User input (request.form) reaches open(): possible path traversal
+      pygoat/dockerized_labs/ssrf_lab/app.py:37 taint-ssrf :: User input (request.form) reaches requests.get(): possible server-side request forgery
+
+   Library findings, judged by hand:
+     streamlit x3   probably safe (guarded by a custom path check the engine can't recognise)
+     numpy x1       real but low impact (a build script passes argv to a shell)
+     setuptools x2  by design (a launcher that runs the script you name)
+   All 12 repo findings are in deliberately vulnerable lab apps (pygoat, dvpwa).
+
+   Bugs this real-code run found in the engine (all fixed, each has a regression test):
+     - "replace" / "rename" counted as Path sinks, but str.replace() looks identical:  9,429 -> 39 findings
+     - any variable named `request` counted as web input; now only in files importing a
+       web framework (pip/urllib3 use `request` for OUTGOING requests):              39 -> 9
+     - a CLI opening a file named in sys.argv was flagged as path traversal; the person
+       running a CLI owns their files (argv / input() still count for shell, eval, SQL)
+     - aiohttp's request.post() / .query / .match_info were not sources (dvpwa SQLi missed)
+
+4. Robustness (attacker controls the code being analysed)
+     3,000-term "a + b + ..." that Python itself can't parse: reported, no crash
+       (such a file cannot run either, so it is not an exploitable gap)
+     2,000-term expression Python CAN parse: analysed (recursion limit raised during analysis)
+     'a' * 10**9 and repeated squaring in constant folding: never built (size cap)
+     60-hop helper chain: resolved; 3,000-function file: analysed in well under 10 s

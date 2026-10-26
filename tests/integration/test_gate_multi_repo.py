@@ -155,20 +155,20 @@ def test_safe_pr_not_flagged_even_with_fooled_reviewer(repos, tmp_path, stub_llm
 
 
 def test_llm_catches_what_semgrep_misses(repos, tmp_path, stub_llm):
-    """pickle deserialization is invisible to the static rules, but the reviewer view blocks it."""
+    """A missing ownership check (IDOR) is invisible to the static rules, but the reviewer view blocks it."""
 
     def reviewer(prompt, model=None):
-        vulnerable = "pickle.loads" in prompt
+        vulnerable = "FROM invoices WHERE id" in prompt
         return {
             "verdict": "vulnerable" if vulnerable else "safe",
             "confidence": 0.9,
-            "issues": [{"file": "x", "line": 1, "type": "deserialization", "severity": "CRITICAL"}]
+            "issues": [{"file": "x", "line": 1, "type": "broken access control", "severity": "HIGH"}]
             if vulnerable
             else [],
         }
 
     stub_llm(reviewer)
-    code, result, md = gate(repos["py-flask-service"], "pr-pickle", tmp_path, llm=True)
+    code, result, md = gate(repos["py-flask-service"], "pr-idor", tmp_path, llm=True)
     assert not [f for f in result["findings"] if f["category"] == "vuln"]
     assert code == 1 and "Issues found by the reviewer" in md
 

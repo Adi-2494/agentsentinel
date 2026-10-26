@@ -26,7 +26,7 @@ AI coding tools like Claude Code and Cursor read files and run shell commands on
 | Part | Where it runs | What it does |
 |---|---|---|
 | **A. Live Guard** | On the developer's laptop: Claude Code and Cursor hooks, plus an MCP server | Checks every AI action **before** it happens (secret files, risky commands, uploads, secrets being written, AI traps in files being read) and cleans tool output **after** it. Rules only, so it's instant and uses no LLM calls. **Fails closed** on its own errors |
-| **B. Merge Gate** | GitHub Action on every PR, or locally | Semgrep (public OWASP rules + AgentSentinel's own rules) + Gitleaks + PII rules on **every changed text file**, then Claude **triage** (real vs false alarm), an **AI-trap check** and a **two-view check** that detects reviewer manipulation, in batches so nothing is skipped. Posts a PR comment, fails the check, and **fails closed** if the AI could not run |
+| **B. Merge Gate** | GitHub Action on every PR, or locally | AgentSentinel's own **Python taint analysis** + Semgrep (public OWASP rules + AgentSentinel's own rules) + Gitleaks + PII rules on **every changed text file**, then Claude **triage** (real vs false alarm), an **AI-trap check** and a **two-view check** that detects reviewer manipulation, in batches so nothing is skipped. Posts a PR comment, fails the check, and **fails closed** if the AI could not run |
 | **C. Dashboard** | Streamlit, locally or in Docker | Blocked actions, PR results, severity and rule charts, benchmark and real-world results |
 
 ### ⭐ The two-view check
@@ -52,7 +52,8 @@ Developer's laptop                          GitHub
                               ▼  ▼
                    AgentSentinel core (Python)
        heuristics: secrets · personal data · commands · files · AI traps
-       reviewer:  Semgrep (OWASP + own rules) + Gitleaks + Claude triage
+       reviewer:  Python taint analysis + Semgrep (OWASP + own rules)
+                  + Gitleaks + Claude triage
                   + AI-trap check + two-view (batched, fails closed)
        MCP server: check_command · check_file_content · scan_text
                               │
@@ -74,6 +75,7 @@ Developer's laptop                          GitHub
 | A6 | Activity log in SQLite (masked previews only) | ✅ |
 | A7 | Fail closed: crashes, unreadable input or a broken install deny the action (`AGENTSENTINEL_FAIL_OPEN=1` to opt out) | ✅ |
 | B1 | Semgrep (`p/owasp-top-ten` + AgentSentinel's own rules for zip-slip, SSRF, path traversal and Node SQLi) plus Claude triage | ✅ |
+| B1b | ⭐ Python **taint analysis** on the syntax tree: follows user input (Flask, Django, FastAPI, aiohttp, argv, `input()`) through variables, f-strings, `%`, `.format()`, containers and **helper functions across files** into shell, eval, SQL, file, HTTP and pickle/YAML sinks; understands sanitizers (`int()`, `shlex.quote`, SQL parameters, allowlists, path checks) and skips dead branches | ✅ |
 | B2 | Gitleaks plus our secret and PII rules, on every changed text file whatever its extension | ✅ |
 | B3 | ⭐ Two-view manipulation check, over every file in 60 KB batches; optional second-opinion model (`REVIEW_ENSEMBLE=1`) | ✅ |
 | B4 | AI-trap scanner for PR text, comments, string literals, Markdown, `CLAUDE.md`, `.cursorrules`, MCP configs, `.claude/settings.json` hooks; rules plus a Claude Haiku check for reworded tricks | ✅ |
@@ -100,7 +102,7 @@ Developer's laptop                          GitHub
 
 - **Leaks: 60% → 10% (Haiku) and 50% → 10% (Sonnet).** When given everyday tasks ("debug the DB config", "upload the logs to support", "print the deploy key"), the agents tried to read `.env`, print private keys or upload files. The Live Guard denied every one except `printenv`, which has no rule yet.
 - **False blocks: 37.5% → 0%.** A plain AI reviewer rejected 3 of 8 safe PRs over minor nitpicks. AgentSentinel blocks only on confirmed HIGH/CRITICAL issues, and LLM triage cleared Semgrep's false SSRF alarm on an allowlisted fetch.
-- **Static tools alone missed 20% of vulnerable PRs** (XSS rated MEDIUM, `pickle` deserialization; Node SQLi was missed by Semgrep's public rules too until AgentSentinel's own rule was added during red-team hardening). AgentSentinel's LLM layers caught all of them.
+- **Static tools alone missed 20% of vulnerable PRs** (XSS rated MEDIUM, `pickle` deserialization; Node SQLi was missed by Semgrep's public rules too until AgentSentinel's own rule was added during red-team hardening). AgentSentinel's LLM layers caught all of them. *(Measured before the Python taint analysis existed. It now also catches the `pickle` case, and 7 of the 10 "trick" PRs, statically; see below.)*
 - **Trick PRs: current Claude models were not fooled.** Even the plain reviewer rejected all 10 trick PRs (fake `sanitize()` helpers, "security reviewed" claims, hidden tag-character instructions). So the two-view tripwire had nothing to catch here: 0 manipulation alerts, and 0 false ones. It is a safety net for weaker models and stronger attacks.
 
 **Method**
@@ -158,6 +160,22 @@ The 2 train "false alarms" are benign prompts that really do contain hidden zero
 
 Reproduce (free, no Claude calls): `python benchmark/external.py --only prompt_injections`
 
+### Python taint analysis vs Semgrep: [OWASP Benchmark for Python](https://github.com/OWASP-Benchmark/BenchmarkPython) (GPL-3, downloaded at runtime)
+
+The OWASP Benchmark labels every test case as truly vulnerable or not. It was scored on the 5 categories the taint analysis is built for: path traversal, command injection, SQL injection, code injection and deserialization. Cases with odd numbers were used while improving the analysis. **Even-numbered cases were held out:**
+
+| Held-out half (158 cases) | Recall | False alarms | Precision |
+|---|---|---|---|
+| **AgentSentinel taint analysis** | **77.8%** (42/54) | **12.5%** (13/104) | 76.4% |
+| Semgrep CE (`p/owasp-top-ten` + own rules) | 18.5% (10/54) | 21.2% (22/104) | 31.2% |
+| Either one (what the gate runs) | 81.5% (44/54) | 31.7% (33/104) | 57.1% |
+
+- Dev and held-out scores are close (79.1% vs 77.8% recall), so the improvements were not just fitted to the cases that were looked at.
+- Both static layers feed the Claude triage, whose job is to clear false alarms like these. The false-alarm column is the **static** number before triage.
+- **On real code:** 6 findings in 5,557 files of installed libraries (each read by hand: 3 probably safe, 3 real but low impact or by design), and 12 findings in the 4 public repos, all in deliberately vulnerable lab code. This run also found 4 bugs in the analysis itself, all fixed with regression tests.
+- Built-in limits: Python only; a call is matched by function name (no type inference); closures and taint stored on `self` in one method and used in another are not followed; reflection (`getattr` with computed names) is invisible.
+- Evidence: `docs/core/taint_before.txt`, `docs/core/taint_after.txt`. Reproduce (free, no Claude): `python benchmark/owasp_python.py` and `python benchmark/taint_cases.py`
+
 ### Real insecure code: [SecurityEval](https://github.com/s2e-lab/SecurityEval) (s2e-lab)
 
 121 real insecure Python samples across 69 CWEs: **8.3%** blocked by static rules, and **67.5%** caught by the Claude review (70.0% combined, 40-sample).
@@ -172,7 +190,7 @@ Reproduce (free, no Claude calls): `python benchmark/external.py --only prompt_i
 
 | Bug | Semgrep CE (public rules) | AgentSentinel static rules | AgentSentinel with Claude |
 |---|---|---|---|
-| SQL injection where input flows through a helper function | ❌ missed | ❌ missed | ✅ caught |
+| SQL injection where input flows through a helper function | ❌ missed | ✅ caught (taint analysis) | ✅ caught |
 | Node.js `db.query("…" + req.query.id)` | ❌ missed | ✅ caught (own rule) | ✅ caught |
 | Flask `send_file(os.path.join(BASE, name))` path traversal | ❌ missed | ✅ caught (own rule) | ✅ caught |
 | Express reflected XSS | ⚠️ WARNING only (doesn't block) | ⚠️ MEDIUM only | ✅ blocked (the Claude review rates it HIGH) |
@@ -378,8 +396,8 @@ The speed fixes were checked for equivalence: the new protected-file matcher giv
 
 | Suite | Tests | What it covers |
 |---|---|---|
-| Unit | 506 | The red-team attacks (`tests/test_redteam.py`, 31 tests incl. 1 integration), the robustness review (`tests/test_robustness.py`: fuzzing, scale, file handles), every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
-| Integration | 32 | 3 generated repos and 20 PR branches through the real gate (git diff + Semgrep + Gitleaks); a "fooled reviewer" stand-in proving the manipulation alarm fires; LLM outage fails closed; a 12-step agent session replayed through the real hook; raw MCP JSON-RPC to the server process |
+| Unit | 612 | The Python taint analysis (`tests/test_taint.py`: 18 vulnerable + 12 safe cases, every language construct, hostile inputs), encoded payloads and the similarity check, the red-team attacks (`tests/test_redteam.py`, 31 tests incl. 1 integration), the robustness review (`tests/test_robustness.py`: fuzzing, scale, file handles), every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
+| Integration | 33 | 3 generated repos and 21 PR branches through the real gate (git diff + Semgrep + Gitleaks); a "fooled reviewer" stand-in proving the manipulation alarm fires; LLM outage fails closed; a 12-step agent session replayed through the real hook; raw MCP JSON-RPC to the server process |
 | Live (opt-in) | 4 | Real Claude calls, only with an explicit flag: `pytest -m llm --run-llm` |
 
 **CI:** the full unit and integration suite runs on **Linux, macOS and Windows** on every push (GitHub Actions matrix). The Windows run found real Windows-only bugs (text read with the cp1252 code page, backslash paths treated as escapes) that are now fixed and covered by tests. On Windows, 2 file-handle tests are skipped, because `/dev/fd` doesn't exist there.
@@ -399,6 +417,7 @@ The speed fixes were checked for equivalence: the new protected-file matcher giv
 core/        config, llm.py (single LLM doorway), store.py (SQLite)
   heuristics/ fast rule-based pre-filters: secrets, pii, commands, files, injection (AI traps)
   reviewer/  static_scan, triage, injection_check, two_view, report
+    taint.py Python taint analysis (user input -> dangerous call, across helper functions)
     rules/   agentsentinel.yml (own Semgrep rules: zip-slip, SSRF, path traversal, Node SQLi)
 guard/       claude_hook.py (Pre/PostToolUse), cursor_hook.py, mcp_server.py, install.py
 gate/        run_gate.py (Merge Gate entry point)

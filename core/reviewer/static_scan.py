@@ -13,6 +13,7 @@ from typing import Any
 
 from core.heuristics import injection, pii, secrets
 from core.heuristics.base import mask
+from core.reviewer import taint
 
 SEMGREP_CONFIG = "p/owasp-top-ten"
 LOCAL_RULES = Path(__file__).resolve().parent / "rules" / "agentsentinel.yml"  # gaps in the public ruleset
@@ -237,6 +238,13 @@ def scan_files(files: list[Path], root: Path) -> tuple[list[ScanFinding], list[s
             r["start"]["line"],
             r["extra"].get("message", "").strip()[:400],
         )
+
+    # our own Python taint analysis: follows user input through helpers and string building
+    tf_results, tf_errors = taint.analyze(files, {f: rel(f) for f in files})
+    errors += tf_errors
+    by_rel = {rel(f): f for f in files}
+    for t in tf_results:
+        add("agentsentinel", t.rule, "vuln", t.severity, by_rel.get(t.file, t.file), t.line, t.message)
 
     gl_results, gl_errors = run_gitleaks(files)
     errors += gl_errors
