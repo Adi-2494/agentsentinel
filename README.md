@@ -405,6 +405,19 @@ A second review (fuzzing and scale testing) found 3 issues. Each was reproduced 
 
 The speed fixes were checked for equivalence: the new protected-file matcher gives identical results to the old one on 5,000 random paths, and the linear tokenizer matches `shlex` on normal commands.
 
+## Performance budget
+
+The Live Guard runs before **every** agent action, so it has a tested budget (`tests/test_performance.py`; `python benchmark/hook_latency.py` prints the numbers):
+
+| Check | Budget (p95) | Measured (p95, laptop) |
+|---|---|---|
+| Shell command | < 5 ms | 0.02–0.12 ms |
+| File content up to 20 KB (typical agent write/edit) | < 50 ms | 7–29 ms |
+| File content 100 KB | < 200 ms | 126 ms (about 1 ms per KB, linear) |
+| Whole hook process, incl. Python start-up (median) | < 300 ms | 58 ms |
+
+CI runs the same tests with the budgets ×3 (`PERF_SLACK=3`), because shared runners are slower and noisier. Two speed-ups were tried and **rejected** after measuring: a combined regex was slower, and a derived keyword prefilter saved only 4% (`docs/production/performance.txt`).
+
 ## Security design
 
 - **The LLM can't act.** Claude runs with all tools and MCP servers disabled (`--tools "" --strict-mcp-config`), from an empty temp folder, so hostile PR code can't make it run commands or read files.
@@ -419,7 +432,7 @@ The speed fixes were checked for equivalence: the new protected-file matcher giv
 
 | Suite | Tests | What it covers |
 |---|---|---|
-| Unit | 653 | Config validation at every entry point and log categories (`tests/test_config_and_logging.py`), the Python taint analysis (`tests/test_taint.py`: 18 vulnerable + 12 safe cases, every language construct, hostile inputs), encoded payloads and the similarity check, the red-team attacks (`tests/test_redteam.py`, 31 tests incl. 1 integration), the robustness review (`tests/test_robustness.py`: fuzzing, scale, file handles), every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
+| Unit | 661 | The performance budget (`tests/test_performance.py`), config validation at every entry point and log categories (`tests/test_config_and_logging.py`), the Python taint analysis (`tests/test_taint.py`: 18 vulnerable + 12 safe cases, every language construct, hostile inputs), encoded payloads and the similarity check, the red-team attacks (`tests/test_redteam.py`, 31 tests incl. 1 integration), the robustness review (`tests/test_robustness.py`: fuzzing, scale, file handles), every detector (positive and negative cases), AI-trap rules incl. false-alarm checks on normal developer text, Claude Code and Cursor hook decisions (incl. output cleaning), MCP tools, the benchmark harness (leak rules, sandbox recorder, metric maths), the LLM layer with a fake `claude`, triage, neutralizer, report rules, dashboard data and a full-page render |
 | Integration | 33 | 3 generated repos and 21 PR branches through the real gate (git diff + Semgrep + Gitleaks); a "fooled reviewer" stand-in proving the manipulation alarm fires; LLM outage fails closed; a 12-step agent session replayed through the real hook; raw MCP JSON-RPC to the server process |
 | Live (opt-in) | 4 | Real Claude calls, only with an explicit flag: `pytest -m llm --run-llm` |
 

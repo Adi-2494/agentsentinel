@@ -79,6 +79,8 @@ jobs:
       - name: Versions
         run: python --version && gitleaks version && (semgrep --version || true)
       - name: Unit + integration tests (no Claude calls), with coverage
+        env:
+          PERF_SLACK: "3"  # shared CI runners are slower and noisier than a laptop; budgets x3
         # the floor stops coverage from silently dropping; hook subprocesses are counted too
         run: python -m pytest -q -rs --cov --cov-report=term --cov-fail-under=90
 

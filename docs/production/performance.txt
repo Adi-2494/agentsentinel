@@ -1,0 +1,38 @@
+Live Guard performance budget: evidence
+=======================================
+The hook runs before every agent action. Measured on an Apple-silicon laptop, Python 3.11.
+
+1. Where the time goes (cProfile, 100 KB file written by the agent)
+   AI-trap phrase rules  ~40 ms   (13 regexes over the text; twice for non-ASCII text)
+   similarity check      ~14 ms   (bounded: at most 400 sentences)
+   secret rules          ~30 ms   (slowest: hardcoded_credential 7 ms)
+   personal-data rules   ~10 ms
+   base64/hex decoding    ~8 ms
+   Commands are ~0.05 ms: they never touch the content scanners.
+
+2. Optimisations tried and REJECTED (measured, not kept)
+   a) one combined regex for all 13 phrase rules: 50.6 ms vs 34.2 ms separately (slower)
+   b) a keyword prefilter DERIVED from each regex (RE2/Hyperscan technique):
+      sound (0 different results on 2,768 texts incl. case / look-alike mutations), but
+      only 128 -> 123 ms on real docs (everyday words like "you", "send", "show" let the
+      rules run anyway), and slower on code (98.9 -> 103.5 ms). It also needed Python's
+      private regex parser (re._parser), which can change between versions. Not worth it.
+
+3. Budget (tests/test_performance.py; CI multiplies by PERF_SLACK=3)
+   case                           median      p95   budget   (ms)
+   Bash: ls                         0.01     0.02        5
+   Bash: pipeline                   0.11     0.12        5
+   Bash: curl | sh (blocked)        0.04     0.05        5
+   Write: 5 KB code                 6.60     7.04       50
+   Write: 20 KB code               25.00    25.52       50
+   Write: 20 KB docs               27.05    28.61       50
+   Write: 100 KB docs             124.82   126.30      200
+   whole hook process (ls)          57.9     61.2      300
+
+4. The budget test catches regressions: with the budgets cut to 20% (PERF_SLACK=0.2)
+   E       AssertionError: Write: 20 KB code: p95 25.4 ms > 10 ms
+   E       AssertionError: Write: 20 KB docs: p95 41.7 ms > 10 ms
+   E       AssertionError: Write: 100 KB docs: p95 131.4 ms > 40 ms
+   3 failed, 5 passed in 6.97s
+
+Reproduce: python benchmark/hook_latency.py   |   pytest tests/test_performance.py
