@@ -10,6 +10,10 @@
 - **False blocks on safe PRs:** 37.5% (plain AI review) → **0%**.
 - **50 real published vulnerabilities** (GitHub Security Advisories): static tools caught **0%** of the actual bugs. On a 15-advisory sample with Claude, AgentSentinel blocked **53%** of the vulnerable code, and for **20%** it blocked the bug and then passed the real fix.
 
+**See it in action** — the Live Guard blocks a secret-file read, a `curl | sh`, and an API key being written; then the Merge Gate catches a PR crafted to trick the AI reviewer:
+
+![AgentSentinel demo](docs/demo.gif)
+
 ![AgentSentinel dashboard (demo data)](docs/dashboard.png)
 
 ---
