@@ -11,7 +11,7 @@ Format: `ID | phase | question | conservative default taken | status (open / res
 | SG-002 | P00 | No single spec file | Wrote `docs/SPEC.md` from THREAT_MODEL + README | resolved |
 | SG-003 | P00 | No ADRs for decisions already made | Back-filled ADR-0001..0008 in `docs/adr/` | resolved |
 | SG-004 | P00 | Phase naming (Day labels forbidden) | Capability phases P00–P08 | accepted |
-| SG-005 | P00 | Java/Spring rewrite + SaaS in scope? | Out of scope; stay Python 3.11 for v1.0 | accepted |
+| SG-005 | P00 | Java/Spring rewrite + SaaS in scope? | v1: out of scope. **v2: reopened** — owner chose to **wrap** the Python engine, not rewrite (ADR-0009); SaaS still out (single-owner, ADR-0010) | updated |
 | SG-006 | P00 | Licence undecided | Keep current LICENSE; change is a human gate | accepted |
 | SG-007 | P02 | LLM backend / ToS for Pro in CI | `claude_code` default, Ollama fallback; never assume an API key | accepted |
 | SG-008 | P06 | Hosting (HF Spaces vs none) | No third-party hosting; local Docker + screenshots | accepted |
@@ -23,3 +23,6 @@ Format: `ID | phase | question | conservative default taken | status (open / res
 | SG-014 | P07 | External GPL/SecurityEval datasets | Pin commit; keep GPL data out of repo, fetch at runtime; redistribution = human gate | accepted |
 | SG-015 | P04 | Fork PRs can't use the token | Intended (static-only on forks); document, don't expose the secret | accepted |
 | SG-016 | P03 | Post-tool cleaning rewrites only Bash output; non-Bash tools (WebFetch, MCP) get a warning but raw output | Warn-only for non-Bash (current, tested: `test_post_tool_warns_without_rewriting_other_tools`). Redacting needs Claude Code's per-tool `updatedToolOutput` contract — don't guess it. Revisit if/when that contract is confirmed. | accepted |
+| SG-017 | v2/V0 | Where the v2 webhook backend runs | Owner's own host (VPS / Fly / home server), or the Actions-only fallback (ADR-0011). Owner decides; reverses SG-008 only for the owner's backend, not public demos. | open |
+| SG-018 | v2/V0 | Is a personal Claude subscription allowed to power an always-on GitHub App? | **Blocking for V1.** Confirm against Anthropic Consumer Terms. If not permitted, V1 runs on **free local Ollama** (never a paid API, firm constraint). | open |
+| SG-019 | v2 | Serving other users/teams (multi-tenant) | Out of scope — needs paid/managed or BYO-key LLM, which the owner forbade. A different product; requires a new decision. | accepted |
