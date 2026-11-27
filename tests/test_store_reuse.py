@@ -78,6 +78,27 @@ def test_threads_get_their_own_connection(tmp_path):
     assert len(store.recent_events(limit=1000, db_path=db)) == 401
 
 
+@pytest.mark.integration
+def test_many_processes_write_without_loss_or_crash(tmp_path):
+    # The real deployment: every hook call is its OWN process, so many processes set up
+    # and write the same DB at once. journal_mode=WAL must not crash a legitimate write.
+    import subprocess
+    from pathlib import Path
+
+    root = Path(store.__file__).resolve().parent.parent
+    db = tmp_path / "mp.db"
+    procs, writes = 8, 150
+    script = (
+        "import sys;sys.path.insert(0, sys.argv[1])\n"
+        "from core import store\n"
+        "for i in range(int(sys.argv[3])): store.log_event('claude_code','blocked',f'r{i}','HIGH',{'i':i},db_path=sys.argv[2])\n"
+    )
+    running = [subprocess.Popen([sys.executable, "-c", script, str(root), str(db), str(writes)]) for _ in range(procs)]
+    codes = [p.wait() for p in running]
+    assert all(c == 0 for c in codes), f"a writer process crashed: {codes}"
+    assert len(store.recent_events(limit=procs * writes + 10, db_path=db)) == procs * writes
+
+
 def test_an_sqlite_error_drops_the_connection(tmp_path, monkeypatch):
     db = tmp_path / "e.db"
     store.log_event("mcp", "warned", "ok", "LOW", db_path=db)

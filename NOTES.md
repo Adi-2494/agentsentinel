@@ -19,6 +19,9 @@ dashboard, Docker. 177 tests (unit + integration) and 4 opt-in live tests.
 - Dashboard: Streamlit "magic" printed help text, a theme override disabled dark mode, and the demo DB
   stayed in WAL mode (unreadable on a read-only FS). All fixed and checked with screenshots.
 - The Docker health check reports healthy even when the page crashes. Always check the rendered page.
+- Many processes writing the log at once (each hook call is its own process) lost events and could
+  crash on `PRAGMA journal_mode=WAL` (it returns "locked" without waiting on busy_timeout). Now every
+  connection sets `busy_timeout` and retries the WAL pragma; a write never fails a legitimate action.
 
 ## Also done
 - Testing across 3 generated repos (20 PR branches), 4 public repos, live Claude Code and Cursor runs.

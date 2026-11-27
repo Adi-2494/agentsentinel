@@ -18,6 +18,7 @@ import json
 import os
 import sqlite3
 import threading
+import time
 from collections import OrderedDict
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -41,6 +42,9 @@ CREATE INDEX IF NOT EXISTS idx_events_time ON events(time);
 """
 
 _READY: set[str] = set()  # databases whose schema was already set up in this process
+_BUSY_TIMEOUT_MS = 5000  # wait, don't crash, when another writer holds the lock
+_WAL_RETRIES = 20  # PRAGMA journal_mode=WAL ignores busy_timeout under contention; retry instead
+_WAL_RETRY_SLEEP = 0.05  # 20 x 50ms = up to 1s, well inside _BUSY_TIMEOUT_MS
 
 
 DbPath = Path | str | None  # None = config.DB_PATH
@@ -56,7 +60,18 @@ def _ensure_schema(conn: sqlite3.Connection, path: Path) -> None:
     key = str(path.resolve())
     if key in _READY:
         return
-    conn.execute("PRAGMA journal_mode=WAL")  # hook writes while dashboard reads (persists in the file)
+    # Each hook call is its own process, so many processes set up the same DB at once.
+    # journal_mode=WAL needs a write lock and returns "database is locked" WITHOUT waiting
+    # on busy_timeout, which would crash a legitimate action; retry instead. WAL is a
+    # persistent property of the file, so this race only happens at first setup.
+    for attempt in range(_WAL_RETRIES):
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")  # hook writes while dashboard reads (persists in the file)
+            break
+        except sqlite3.OperationalError:
+            if attempt == _WAL_RETRIES - 1:
+                raise
+            time.sleep(_WAL_RETRY_SLEEP)
     conn.executescript(SCHEMA)
     _READY.add(key)
 
@@ -70,6 +85,7 @@ def connect(db_path: Path | str | None = None) -> sqlite3.Connection:
     path = _path(db_path)
     conn = sqlite3.connect(path, timeout=5)
     conn.row_factory = sqlite3.Row
+    conn.execute(f"PRAGMA busy_timeout={_BUSY_TIMEOUT_MS}")  # writes wait for the lock instead of crashing
     _ensure_schema(conn, path)
     return conn
 
