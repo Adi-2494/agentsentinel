@@ -12,6 +12,17 @@ The engine is **not** touched — v2 is a delivery layer; the 878-test suite gua
 | **V3** | Install & config | App registration, per-install token handling, one owner config (repos, `FAIL_ON_SEVERITIES`, `REVIEW_ENSEMBLE`) | Install on a repo with no workflow file → it's protected | no multi-tenant schema |
 | **V4** | Dashboard tie-in | The existing Streamlit dashboard shows App runs from the shared store | App runs appear in the dashboard; still local-only (INV-7) | reuses the v1 dashboard |
 
+## Delivery decided (SG-017 / SG-018 resolved)
+
+The owner chose **Actions-only hosting** + **Ollama/manual LLM**. That selects the **existing GitHub
+Action** as the delivery (no always-on backend), with the gate running **static-only** in CI and the
+LLM two-view as a **manual local run** (Option A — see `docs/v2/V3-REPORT.md`). Consequently:
+- **V1 (webhook backend) and V2 (GitHub poster) are parked** — committed and tested, but not the
+  active path; they're the ready option if a central self-hosted App is ever wanted.
+- **V3 = configure the Action** (done): static-only, no Claude token in CI, trimmed setup.
+- **V4 (dashboard tie-in)** still applies: the CI gate's runs already log to the store the dashboard
+  reads.
+
 ## Guardrails (do not drift)
 - **Subscription/Ollama only — no paid API, no billing** (ADR-0010). If a feature needs paid/managed
   LLM, it's a different product (SG-019), not this roadmap.

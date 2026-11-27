@@ -89,7 +89,7 @@ jobs:
   merge-gate:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10  # static-only: analysis is seconds; the rest is scanner setup
     permissions:
       contents: read
       pull-requests: write
@@ -114,36 +114,28 @@ jobs:
         with:
           python-version: "3.11"
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Install scanners and Claude Code
+      - name: Install scanners
         run: |
           pipx install semgrep
           curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
             | tar -xz -C /usr/local/bin gitleaks
-          npm install -g @anthropic-ai/claude-code
-          semgrep --version && gitleaks version && claude --version
+          semgrep --version && gitleaks version
 
-      - name: Run AgentSentinel Merge Gate
+      - name: Run AgentSentinel Merge Gate (static-only)
         id: gate
         env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           PR_BODY: ${{ github.event.pull_request.body }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           AGENTSENTINEL_DB: ${{ runner.temp }}/agentsentinel.db
         run: |
-          LLM_FLAG=""
-          if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
-            echo "::warning::CLAUDE_CODE_OAUTH_TOKEN not available (fork PR or secret missing): static scan only"
-            LLM_FLAG="--no-llm"
-          fi
+          # Static engine only (taint + Semgrep + Gitleaks + rules): fast and free, no LLM,
+          # no Claude token in CI (SG-018). The LLM two-view / manipulation check is a manual
+          # local run: python gate/run_gate.py --path <dir>  (see docs/v2/V3-REPORT.md).
           set +e
           python _gate/gate/run_gate.py --repo . --base "$BASE_SHA" --head "$HEAD_SHA" \
-            --pr-body-env PR_BODY --label "PR #$PR_NUMBER" $LLM_FLAG \
+            --pr-body-env PR_BODY --label "PR #$PR_NUMBER" --no-llm \
             --comment-out "$RUNNER_TEMP/comment.md" --json-out "$RUNNER_TEMP/result.json"
           echo "exit_code=$?" >> "$GITHUB_OUTPUT"
 
