@@ -5,7 +5,7 @@ attack that runs against the real code in `tests/test_redteam_cases.py`. **Gaps 
 on purpose**: see `THREAT_MODEL.md` for what covers them. Earlier rounds: `tests/test_redteam.py`
 (31 attacks, all caught) and `tests/test_robustness.py`.
 
-**28 caught, 13 known gaps.**
+**28 caught, 14 known gaps.**
 
 | ID | Surface | Attack | Status | How it is caught / why it is a gap |
 |---|---|---|---|---|
@@ -15,6 +15,7 @@ on purpose**: see `THREAT_MODEL.md` for what covers them. Earlier rounds: `tests
 | LG-04 | Live Guard | DNS exfiltration of `.env` | ✅ caught | the secret file is touched |
 | LG-05 | Live Guard | `python -c` joins `'cu'+'rl …'` | ✅ caught | string concatenation in python -c is folded and re-checked |
 | LG-06 | Live Guard | write a script, then run it | ✅ caught | the script's commands are checked when it is run |
+| LG-17 | Live Guard | run a script by an absolute BACKSLASH path (bash C:\a\x.sh) | ⚠️ known gap | shlex eats the backslashes before the script path is resolved, so its content is not scanned. Theoretical: bash (incl. Git Bash on Windows) cannot run a backslash path; real script runs use forward slashes (LG-06, caught). Secret-file reads by backslash path ARE caught (_PATHLIKE). |
 | LG-07 | Live Guard | write a risky script (not yet run) | ✅ caught | asked, not denied: writing a script is not running it |
 | LG-08 | Live Guard | `find ~/.ssh -exec cat {} ;` | ✅ caught | recursive readers on a secret folder |
 | LG-09 | Live Guard | `tar` a credentials folder | ✅ caught | recursive readers on a secret folder |
