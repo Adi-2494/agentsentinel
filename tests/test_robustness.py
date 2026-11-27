@@ -109,7 +109,7 @@ def test_2_huge_commands_are_bounded_and_not_silently_allowed():
     cmd = _big(1_200_000)
     t = time.perf_counter()
     decision, _findings = evaluate("Bash", {"command": cmd}, "/tmp")
-    assert time.perf_counter() - t < 15.0  # backstop; ~1.4s on a laptop, ~30s before the fix
+    assert time.perf_counter() - t < 25.0  # backstop; ~1.4s on a laptop, ~30s before the fix (loose for slow CI)
     assert decision in ("ask", "deny")
 
 

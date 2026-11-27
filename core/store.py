@@ -45,6 +45,7 @@ _READY: set[str] = set()  # databases whose schema was already set up in this pr
 _BUSY_TIMEOUT_MS = 5000  # wait, don't crash, when another writer holds the lock
 _WAL_RETRIES = 20  # PRAGMA journal_mode=WAL ignores busy_timeout under contention; retry instead
 _WAL_RETRY_SLEEP = 0.05  # 20 x 50ms = up to 1s, well inside _BUSY_TIMEOUT_MS
+_WRITE_RETRIES = 10  # Windows file locking can still raise "locked" under many writers; retry the write
 
 
 DbPath = Path | str | None  # None = config.DB_PATH
@@ -168,11 +169,22 @@ def log_events(rows: list[tuple[str, str, str, str, Any]], db_path: DbPath = Non
     """Write many events through ONE connection: rows of (source, action, rule, severity, detail)."""
     if not rows:
         return
-    with session(db_path) as conn:
-        conn.executemany(
-            "INSERT INTO events (time, source, action, rule, severity, detail) VALUES (?,?,?,?,?,?)",
-            [_row(*r) for r in rows],
-        )
+    params = [_row(*r) for r in rows]
+    for attempt in range(_WRITE_RETRIES):
+        try:
+            with session(db_path) as conn:
+                conn.executemany(
+                    "INSERT INTO events (time, source, action, rule, severity, detail) VALUES (?,?,?,?,?,?)",
+                    params,
+                )
+            return
+        except sqlite3.OperationalError:
+            # Many concurrent writers (each hook call is its own process) can still hit "database is
+            # locked" despite busy_timeout, especially on Windows. session() dropped the connection;
+            # retry with a fresh one rather than crash a legitimate action.
+            if attempt == _WRITE_RETRIES - 1:
+                raise
+            time.sleep(_WAL_RETRY_SLEEP)
 
 
 def log_event(
