@@ -1,0 +1,58 @@
+{
+  "includeCoAuthoredBy": false,
+  "permissions": {
+    "allow": [
+      "Bash(pytest:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(python3 -m pytest:*)",
+      "Bash(ruff:*)",
+      "Bash(ruff check:*)",
+      "Bash(black:*)",
+      "Bash(mypy:*)",
+      "Bash(flake8:*)",
+      "Bash(semgrep:*)",
+      "Bash(gitleaks:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm run build:*)",
+      "Bash(docker build:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker-compose:*)",
+      "Bash(streamlit run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git tag:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Read(**/.env.example)",
+      "Read(**/.env.sample)",
+      "Read(**/.env.template)"
+    ],
+    "deny": [
+      "Bash(git push:*)",
+      "Bash(git remote:*)",
+      "Bash(git rebase:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git commit --amend:*)",
+      "Bash(git filter-branch:*)",
+      "Read(.env)",
+      "Read(./.env)",
+      "Read(**/.env)",
+      "Read(**/.env.local)",
+      "Read(**/.env.development)",
+      "Read(**/.env.production)",
+      "Read(**/.env.staging)",
+      "Read(**/.env.test)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/id_rsa)",
+      "Read(**/.ssh/**)",
+      "Read(**/.aws/credentials)"
+    ],
+    "ask": [
+      "Bash(git commit:*)"
+    ]
+  }
+}
