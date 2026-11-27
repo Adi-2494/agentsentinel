@@ -354,7 +354,7 @@ _CONFUSABLES = str.maketrans(
 )
 # Enclosed-alphanumeric look-alikes NFKC does NOT fold: negative-circled 🅐–🅩 (U+1F150)
 # and negative-squared 🅰–🆉 (U+1F170) Latin letters, used to disguise words like "ignore".
-_CONFUSABLES.update({base + i: ord("a") + i for base in (0x1F150, 0x1F170) for i in range(26)})
+_CONFUSABLES.update({base + i: chr(ord("a") + i) for base in (0x1F150, 0x1F170) for i in range(26)})
 _MIXED_WORD = re.compile(r"\b(?=\w*[A-Za-z])(?=\w*[\u0370-\u03ff\u0400-\u04ff\u0530-\u058f])\w{3,}\b")
 # leetspeak: "1gn0re all prev10us instruct10ns". Only words that mix letters and these digits
 # are rewritten, and only those lines are re-checked (code is full of "utf8", "x86", "sha256").
