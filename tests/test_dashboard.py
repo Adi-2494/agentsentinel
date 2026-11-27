@@ -25,6 +25,18 @@ def db(tmp_path):
     return p
 
 
+def test_load_events_survives_lone_surrogate_in_detail(tmp_path):
+    # The guard logs the offending path when it fail-closed-denies a garbage/surrogate path.
+    # json.loads reconstitutes the surrogate on read; the dashboard must not crash on it.
+    p = tmp_path / "s.db"
+    store.log_event(
+        "claude_code", "blocked", "protected_file", "CRITICAL", {"tool": "Read", "preview": "bad\ud800path"}, p
+    )
+    df = data.load_events(p)  # must not raise
+    assert len(df) == 1
+    assert "bad" in df.iloc[0]["where"]  # row is usable; the surrogate was scrubbed
+
+
 def test_metrics(db):
     m = data.metrics(data.load_events(db))
     assert m == {

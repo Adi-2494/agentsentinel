@@ -45,14 +45,26 @@ def categorise(rule: str, detail: dict[str, Any]) -> str:
     return "other"
 
 
+def _scrub(obj: Any) -> Any:
+    """Replace lone surrogates in strings. json.loads can reconstitute a surrogate the store
+    escaped for storage (e.g. a denied garbage path); pandas/pyarrow then can't encode it."""
+    if isinstance(obj, str):
+        return obj.encode("utf-8", "replace").decode("utf-8")
+    if isinstance(obj, dict):
+        return {k: _scrub(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_scrub(v) for v in obj]
+    return obj
+
+
 def _parse(detail: Any) -> dict[str, Any]:
     if not detail:
         return {}
     try:
         value = json.loads(detail)
-        return value if isinstance(value, dict) else {"text": str(value)}
+        return _scrub(value) if isinstance(value, dict) else {"text": _scrub(str(value))}
     except (TypeError, json.JSONDecodeError):
-        return {"text": str(detail)}
+        return {"text": _scrub(str(detail))}
 
 
 def load_events(db_path: Path | str | None = None) -> pd.DataFrame:
