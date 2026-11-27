@@ -21,7 +21,17 @@ Latest pass recorded in `docs/PHASE-REPORT.md`: **P00–P08 all verified** again
 scenarios + the full suite (now 875 passed, 14 xfailed). Hardening fixes found this pass:
 **P01** enclosed-alphanumeric confusable folding; **P02** multi-process store data-loss/crash
 (busy_timeout + WAL-pragma retry). **P03** deep pass found no new issues — the Live Guard is solid
-(one intentional residual, SG-016). Live-LLM scenarios are human-gated (SG-009) and were not run.
+(one intentional residual, SG-016). **P04** static/`--no-llm` pass: INV-2 (no secret to LLM) and
+taint (7/7 TP, 0 FP) proven; added an explicit INV-5 regression test (judge the commit, not the
+tree). Live-LLM confirmation of P04 (human-approved, SG-009) **done**: `trick_pr` and `vulnerable_pr` both
+blocked (exit 1) against real Claude; triage/two-view/AI-trap confirmed working end-to-end.
+**P05** verified clean — Cursor hook shares the core detectors and fails closed; MCP tools return the
+correct contract shape. No code change. **P06** verified + hardened — INV-6 proven end-to-end (no raw
+secret shown), read-only DB; fixed a reachable dashboard crash on a lone-surrogate log detail.
+**P07** verified clean (offline) — metric math, fake-only data, redaction, reproducible results with
+sample sizes all tested. Live benchmark execution (~180 LLM calls) human-gated, not run.
+**P08** verified — strict known-gap xfails hold (fixed gaps fail loudly), threat model maps to the
+registry; added I-11 (the closed confusable bypass) as a caught case. **Roadmap P00–P08 complete.**
 Git tags `pNN-verified` are applied by the human after reviewing each phase (commits are not made
 automatically this session).
 
