@@ -6,13 +6,14 @@ Breaking this shape is a human gate.
 ```python
 @dataclass
 class Finding:
-    rule: str        # stable id, e.g. "aws_access_key", "pipe_to_shell", "injection_reviewer_manipulation"
-    category: str    # secret | pii | command | injection | file | vuln
-    severity: str    # LOW | MEDIUM | HIGH | CRITICAL
-    message: str     # human-readable reason (safe to show)
+    rule: str  # stable id, e.g. "aws_access_key", "pipe_to_shell", "injection_reviewer_manipulation"
+    category: str  # secret | pii | command | injection | file | vuln
+    severity: str  # LOW | MEDIUM | HIGH | CRITICAL
+    message: str  # human-readable reason (safe to show)
     start: int = -1  # char span in the scanned text; -1 when not applicable
     end: int = -1
     preview: str = ""  # MASKED snippet only — never the raw secret
+
     def to_dict(self) -> dict: ...
 ```
 

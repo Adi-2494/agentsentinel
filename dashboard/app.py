@@ -377,11 +377,11 @@ with tab_bench:
             f"Generated {bench.get('generated', '')}. Plain review = one LLM asked to approve or request "
             f"changes. Leaks with AgentSentinel = the agent's recorded actions replayed through the Live Guard."
         )
-        cols = st.columns(2)
+        bench_cols = st.columns(2)
         for i, (_, title) in enumerate(data.BENCH_METRICS):
             chart = bench_chart(long, title)
             if chart:
-                cols[i % 2].altair_chart(chart, width="stretch")
+                bench_cols[i % 2].altair_chart(chart, width="stretch")
         st.subheader("All metrics")
         show = [
             "Condition",
